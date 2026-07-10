@@ -1,0 +1,75 @@
+@page
+@model NexStock.Web.Pages.Products.IndexModel
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = "Ürünler";
+}
+
+<div class="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+    <div><h2 class="text-2xl font-bold text-slate-800 dark:text-white">Ürün Yönetimi</h2><p class="mt-1 text-sm text-slate-500">Ürün kartı, stok ve çoklu para birimli fiyatlar aynı ekranda.</p></div>
+    <div class="flex flex-wrap items-center gap-2">
+        <label for="DisplayCurrency" class="text-sm font-medium text-slate-600 dark:text-slate-300">Liste para birimi</label>
+        <select id="DisplayCurrency" class="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"><option value="TRY">TRY (TL)</option><option value="USD">USD ($)</option><option value="EUR">EUR</option></select>
+        <button id="NewProductButton" type="button" class="inline-flex h-10 items-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"><span class="material-icons-round text-base">add</span>Yeni ürün</button>
+    </div>
+</div>
+
+@if (TempData["ProductCreated"] is string productCreated)
+{
+    <div class="mb-5 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><span class="material-icons-round text-base">check_circle</span>@productCreated</div>
+}
+
+<section id="ProductEditor" class="mb-6 rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800" hidden>
+    <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700"><div><h3 class="font-semibold text-slate-800 dark:text-white">Yeni ürün kartı</h3><p class="mt-0.5 text-xs text-slate-500">Dövizli fiyatların TL karşılığı son kayıtlı USD/EUR kuru ile hesaplanır.</p></div><button id="CloseProductEditor" type="button" class="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" title="Kapat"><span class="material-icons-round">close</span></button></div>
+    <form method="post" asp-page-handler="Create" class="p-5">
+        <div asp-validation-summary="ModelOnly" class="mb-4 text-sm text-red-600"></div>
+        <div class="grid gap-6 lg:grid-cols-12">
+            <div class="space-y-4 lg:col-span-5">
+                <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Kart bilgileri</h4>
+                <div><label asp-for="Product.Name" class="mb-1 block text-sm font-medium">Ürün adı</label><input asp-for="Product.Name" class="input-field" /><span asp-validation-for="Product.Name" class="text-xs text-red-600"></span></div>
+                <div class="grid gap-4 sm:grid-cols-2"><div><label asp-for="Product.Sku" class="mb-1 block text-sm font-medium">Stok kodu</label><input asp-for="Product.Sku" class="input-field" /></div><div><label asp-for="Product.Barcode" class="mb-1 block text-sm font-medium">Barkod</label><input asp-for="Product.Barcode" class="input-field" /></div></div>
+                <div class="grid gap-4 sm:grid-cols-2"><div><label asp-for="Product.CategoryId" class="mb-1 block text-sm font-medium">Kategori</label><select asp-for="Product.CategoryId" asp-items="Model.Categories" class="input-field"></select></div><div><label asp-for="Product.BrandId" class="mb-1 block text-sm font-medium">Marka</label><select asp-for="Product.BrandId" asp-items="Model.Brands" class="input-field"></select></div></div>
+                <div><label asp-for="Product.OemCodes" class="mb-1 block text-sm font-medium">OEM kodları</label><input asp-for="Product.OemCodes" placeholder="Örnek: 1234, 5678" class="input-field" /></div>
+                <div><label asp-for="Product.Description" class="mb-1 block text-sm font-medium">Açıklama</label><textarea asp-for="Product.Description" rows="3" class="input-field"></textarea></div>
+            </div>
+            <div class="space-y-4 lg:col-span-4">
+                <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Fiyatlandırma</h4>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div><label asp-for="Product.PurchasePrice" class="mb-1 block text-sm font-medium">Alış fiyatı</label><div class="flex"><input asp-for="Product.PurchasePrice" type="number" step="0.01" min="0" class="input-field rounded-r-none" /><select asp-for="Product.PurchaseCurrency" class="w-20 rounded-r-md border border-l-0 border-slate-300 bg-slate-50 text-sm"><option>TRY</option><option>USD</option><option>EUR</option></select></div><p id="PurchaseTryEquivalent" class="mt-1 min-h-4 text-xs text-emerald-600"></p></div>
+                    <div><label asp-for="Product.SalePrice" class="mb-1 block text-sm font-medium">Satış fiyatı</label><div class="flex"><input asp-for="Product.SalePrice" type="number" step="0.01" min="0" class="input-field rounded-r-none" /><select asp-for="Product.SaleCurrency" class="w-20 rounded-r-md border border-l-0 border-slate-300 bg-slate-50 text-sm"><option>TRY</option><option>USD</option><option>EUR</option></select></div><p id="SaleTryEquivalent" class="mt-1 min-h-4 text-xs text-emerald-600"></p><p id="SaleCalculationInfo" class="min-h-4 text-xs text-slate-500"></p></div>
+                </div>
+                <div class="flex items-end gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40"><div class="flex-1"><label for="ProfitMargin" class="mb-1 block text-xs font-medium">Kâr marjı (%)</label><input id="ProfitMargin" type="number" min="0" step="1" value="30" class="input-field" /></div><button id="CalculateSalePrice" type="button" class="inline-flex h-9 items-center gap-1 rounded-md border border-indigo-200 bg-white px-3 text-sm font-medium text-indigo-700 hover:bg-indigo-50"><span class="material-icons-round text-base">calculate</span>Hesapla</button></div>
+            </div>
+            <div class="space-y-4 lg:col-span-3">
+                <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Stok ve konum</h4>
+                <div><label asp-for="Product.Quantity" class="mb-1 block text-sm font-medium">Açılış stoğu</label><input asp-for="Product.Quantity" type="number" step="0.01" class="input-field" /></div>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1"><div><label asp-for="Product.Unit" class="mb-1 block text-sm font-medium">Birim</label><select asp-for="Product.Unit" class="input-field"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select></div><div><label asp-for="Product.CriticalStockLevel" class="mb-1 block text-sm font-medium">Kritik stok</label><input asp-for="Product.CriticalStockLevel" type="number" step="0.01" min="0" class="input-field" /></div><div><label asp-for="Product.ShelfLocation" class="mb-1 block text-sm font-medium">Raf / konum</label><input asp-for="Product.ShelfLocation" class="input-field" /></div></div>
+                <label class="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm"><input asp-for="Product.TrackStock" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />Stok takibi yap</label>
+                <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"><span class="material-icons-round text-base">save</span>Ürünü kaydet</button>
+            </div>
+        </div>
+    </form>
+</section>
+
+<section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+    <div class="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-900/40"><div class="relative w-full sm:max-w-md"><span class="material-icons-round absolute left-3 top-2.5 text-base text-slate-400">search</span><input id="ProductSearch" type="search" placeholder="Ürün adı, stok kodu veya barkod ara" class="input-field pl-9" /></div><span class="text-xs text-slate-500">Fiyatlar kayıtlı para birimiyle birlikte gösterilir.</span></div>
+    <div class="overflow-x-auto"><table id="ProductsTable" class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40"><tr><th class="px-4 py-3">İşlem</th><th class="px-4 py-3">Ürün</th><th class="px-4 py-3">Kodlar</th><th class="px-4 py-3">Marka / kategori</th><th class="px-4 py-3">Stok</th><th class="px-4 py-3">Alış</th><th class="px-4 py-3">Satış</th></tr></thead><tbody>
+        @foreach (var product in Model.Products)
+        {
+            var stockClass = product.Quantity <= product.CriticalStockLevel ? "text-red-600" : "text-slate-700";
+            <tr class="border-b border-slate-100 dark:border-slate-700">
+                <td class="px-4 py-3 text-xs text-slate-500">Detaylar yüklenecek</td>
+                <td class="px-4 py-3"><div class="font-medium text-slate-800 dark:text-slate-100">@product.Name</div><div class="mt-1 max-w-xs truncate text-xs text-slate-500">@product.Description</div></td>
+                <td class="px-4 py-3"><div>@product.Sku</div><div class="mt-1 text-xs text-slate-500">@(product.Barcode ?? "-")@(string.IsNullOrWhiteSpace(product.OemCodes) ? "" : " · " + product.OemCodes)</div></td>
+                <td class="px-4 py-3">@(product.BrandName ?? "-")<div class="mt-1 text-xs text-slate-500">@(product.CategoryName ?? "-")</div></td>
+                <td class="px-4 py-3"><span class="font-semibold @stockClass">@product.Quantity.ToString("N2") @product.Unit</span></td>
+                <td class="px-4 py-3 font-semibold">@product.PurchasePrice.ToString("N2") @product.PurchaseCurrency</td>
+                <td class="px-4 py-3 font-semibold">@product.SalePrice.ToString("N2") @product.SaleCurrency</td>
+            </tr>
+        }
+    </tbody></table></div>
+</section>
+
+@section Scripts { <abp-script src="/Pages/Products/Index.js" /> }
+
+@section Styles { <style>.input-field{display:block;width:100%;border-radius:.375rem;border:1px solid #cbd5e1;background:#fff;padding:.5rem .75rem;font-size:.875rem;line-height:1.25rem;box-shadow:0 1px 2px rgb(0 0 0 / .05)}.input-field:focus{border-color:#6366f1;outline:2px solid transparent;outline-offset:2px;box-shadow:0 0 0 2px #c7d2fe}.dark .input-field{border-color:#475569;background:#0f172a;color:#e2e8f0}</style> }

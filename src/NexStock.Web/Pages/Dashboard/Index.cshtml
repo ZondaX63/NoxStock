@@ -1,0 +1,127 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@model NexStock.Web.Pages.Dashboard.IndexModel
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = "Ana Sayfa";
+}
+
+<div class="mb-8">
+    <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Genel Bakış</h2>
+    <p class="text-sm text-slate-500 mt-1">İşletmenizin güncel durumunu takip edin.</p>
+</div>
+
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    
+    <!-- Stat 1 -->
+    <div class="card p-6 flex items-center shadow-lg shadow-indigo-500/5">
+        <div class="p-3 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 mr-4">
+            <span class="material-icons-round text-3xl">payments</span>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Bugünkü Satış</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.FormatMoney(Model.Summary.TodaySales)</p>
+        </div>
+    </div>
+
+    <!-- Stat 2 -->
+    <div class="card p-6 flex items-center shadow-lg shadow-emerald-500/5">
+        <div class="p-3 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 mr-4">
+            <span class="material-icons-round text-3xl">inventory_2</span>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Kritik Stok Uyarıları</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.Summary.CriticalStockCount Ürün</p>
+        </div>
+    </div>
+
+    <!-- Stat 3 -->
+    <div class="card p-6 flex items-center shadow-lg shadow-blue-500/5">
+        <div class="p-3 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 mr-4">
+            <span class="material-icons-round text-3xl">people</span>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Aktif Müşteri</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.Summary.ActiveCustomerCount</p>
+        </div>
+    </div>
+
+    <!-- Stat 4 -->
+    <div class="card p-6 flex items-center shadow-lg shadow-orange-500/5">
+        <div class="p-3 rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 mr-4">
+            <span class="material-icons-round text-3xl">receipt_long</span>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Bekleyen Faturalar</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.Summary.PendingInvoiceCount Adet</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="card p-6">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Aylık Ciro</p>
+        <p class="text-2xl font-bold text-slate-800 dark:text-white mt-2">@Model.FormatMoney(Model.Summary.MonthlyRevenue)</p>
+    </div>
+    <div class="card p-6">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Kasa/Banka Varlığı</p>
+        <p class="text-2xl font-bold text-slate-800 dark:text-white mt-2">@Model.FormatMoney(Model.Summary.TotalAccountBalance)</p>
+    </div>
+    <div class="card p-6">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Müşteri Alacağı</p>
+        <p class="text-2xl font-bold text-slate-800 dark:text-white mt-2">@Model.FormatMoney(Model.Summary.CustomerReceivables)</p>
+    </div>
+    <div class="card p-6">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Net Durum</p>
+        <p class="text-2xl font-bold text-slate-800 dark:text-white mt-2">@Model.FormatMoney(Model.Summary.NetPosition)</p>
+    </div>
+</div>
+
+<!-- Charts & Lists Area -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <div class="card p-6 lg:col-span-2">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">Aylık Satış Grafiği</h3>
+            <button class="text-indigo-600 text-sm font-medium hover:underline">Detay</button>
+        </div>
+        <div class="h-64 flex items-center justify-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+            <div class="text-center">
+                <p class="text-slate-700 dark:text-slate-200 text-3xl font-bold">@Model.FormatMoney(Model.Summary.MonthlyRevenue)</p>
+                <p class="text-slate-400 text-sm mt-2">Bu ay onaylı/aktif satış faturası toplamı.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">Son İşlemler</h3>
+        </div>
+        @if (Model.Summary.RecentDocuments.Count == 0)
+        {
+            <div class="h-full flex flex-col items-center justify-center text-slate-400 py-8">
+                <span class="material-icons-round text-4xl mb-2 opacity-50">receipt_long</span>
+                <p class="text-sm">Henüz bir işlem yok.</p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-3">
+                @foreach (var document in Model.Summary.RecentDocuments)
+                {
+                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-800 dark:text-white">@document.DocNumber</p>
+                            <p class="text-xs text-slate-500">@document.BusinessPartnerName</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-slate-800 dark:text-white">@Model.FormatMoney(document.GrandTotal)</p>
+                            <p class="text-xs text-slate-500">@document.Status</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

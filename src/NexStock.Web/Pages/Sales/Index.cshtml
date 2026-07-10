@@ -1,0 +1,130 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@model NexStock.Web.Pages.Sales.IndexModel
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = "Perakende Satış (POS)";
+}
+
+<div class="flex h-[calc(100vh-8rem)] -mt-6 -mx-6 lg:-mx-10 overflow-hidden" x-data="{
+    cart: [],
+    searchQuery: '',
+    addToCart: function(product) {
+        let existing = this.cart.find(p => p.id === product.id);
+        if(existing) {
+            existing.qty++;
+        } else {
+            this.cart.push({ ...product, qty: 1 });
+        }
+    },
+    removeFromCart: function(id) {
+        this.cart = this.cart.filter(p => p.id !== id);
+    },
+    get cartTotal() {
+        return this.cart.reduce((total, item) => total + (item.price * item.qty), 0);
+    }
+}">
+    <!-- Products Grid (Left) -->
+    <div class="flex-1 bg-slate-50 dark:bg-slate-900/50 flex flex-col border-r border-slate-200 dark:border-slate-700">
+        <!-- Search Bar -->
+        <div class="p-6 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <span class="material-icons-round">search</span>
+                </span>
+                <input type="text" x-model="searchQuery" placeholder="Barkod okutun veya ürün adı arayın..." class="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-900 border-transparent rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 transition-all text-slate-800 dark:text-white">
+            </div>
+            <div class="flex gap-2 mt-4 overflow-x-auto no-scrollbar">
+                <button class="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-sm font-medium whitespace-nowrap shadow-md shadow-indigo-500/30">Tümü</button>
+                <button class="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-slate-200">Gıda</button>
+                <button class="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-slate-200">Elektronik</button>
+                <button class="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-slate-200">Temizlik</button>
+            </div>
+        </div>
+
+        <!-- Products -->
+        <div class="p-6 overflow-y-auto flex-1">
+            <div class="h-full flex flex-col items-center justify-center text-slate-400">
+                <span class="material-icons-round text-6xl mb-4 opacity-30">inventory_2</span>
+                <p class="font-medium text-lg text-slate-500">Kayıtlı ürün bulunamadı.</p>
+                <p class="text-sm mt-1 text-center max-w-sm">Arama kriterlerinize uygun veya kategoride ürün yok. Ürünler API'den geldiğinde burada listelenecektir.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart (Right) -->
+    <div class="w-96 bg-white dark:bg-slate-800 flex flex-col shadow-xl z-10 shrink-0">
+        
+        <!-- Cart Header -->
+        <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center">
+                <span class="material-icons-round mr-2 text-indigo-600">shopping_cart</span>
+                Sepet
+            </h3>
+            <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded-full dark:bg-indigo-900 dark:text-indigo-300" x-text="cart.length + ' Çeşit'"></span>
+        </div>
+
+        <!-- Cart Items -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50 dark:bg-slate-900/20">
+            
+            <template x-if="cart.length === 0">
+                <div class="h-full flex flex-col items-center justify-center text-slate-400">
+                    <span class="material-icons-round text-6xl mb-4 opacity-50">remove_shopping_cart</span>
+                    <p class="font-medium">Sepetiniz boş</p>
+                    <p class="text-sm mt-1 text-center">Ürün eklemek için ürünlere tıklayın veya barkod okutun.</p>
+                </div>
+            </template>
+
+            <template x-for="item in cart" :key="item.id">
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center group">
+                    <div class="flex-1">
+                        <p class="font-bold text-slate-800 dark:text-white text-sm" x-text="item.name"></p>
+                        <p class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5" x-text="'₺' + item.price.toFixed(2)"></p>
+                    </div>
+                    <div class="flex items-center space-x-3 bg-slate-50 dark:bg-slate-900 rounded-lg p-1">
+                        <button @@click="if(item.qty > 1) item.qty--; else removeFromCart(item.id)" class="w-8 h-8 rounded-md bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-sm flex items-center justify-center hover:text-indigo-600 transition-colors">
+                            <span class="material-icons-round text-sm" x-text="item.qty > 1 ? 'remove' : 'delete'"></span>
+                        </button>
+                        <span class="font-bold text-sm w-4 text-center" x-text="item.qty"></span>
+                        <button @@click="item.qty++" class="w-8 h-8 rounded-md bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-sm flex items-center justify-center hover:text-indigo-600 transition-colors">
+                            <span class="material-icons-round text-sm">add</span>
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+
+        <!-- Checkout Section -->
+        <div class="p-6 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-slate-500 font-medium">Ara Toplam</span>
+                <span class="font-bold text-slate-800 dark:text-white" x-text="'₺' + cartTotal.toFixed(2)"></span>
+            </div>
+            <div class="flex justify-between items-center mb-6">
+                <span class="text-slate-500 font-medium">KDV (%20)</span>
+                <span class="font-bold text-slate-800 dark:text-white" x-text="'₺' + (cartTotal * 0.20).toFixed(2)"></span>
+            </div>
+            
+            <div class="flex justify-between items-center mb-6 py-4 border-t border-dashed border-slate-200 dark:border-slate-700">
+                <span class="text-lg font-bold text-slate-800 dark:text-white">Genel Toplam</span>
+                <span class="text-3xl font-black text-indigo-600 dark:text-indigo-400" x-text="'₺' + (cartTotal * 1.20).toFixed(2)"></span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button @@click="cart = []" class="py-4 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center">
+                    <span class="material-icons-round mr-2">delete_sweep</span>
+                    Temizle
+                </button>
+                <button class="py-4 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/30 flex items-center justify-center">
+                    <span class="material-icons-round mr-2">payments</span>
+                    Tahsil Et
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Sales JS if needed -->
+}

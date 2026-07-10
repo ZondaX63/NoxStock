@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: nexstock-postgres
+    environment:
+      POSTGRES_DB: NexStock
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1121"
+    ports:
+      - "5435:5432"
+    volumes:
+      - nexstock-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d NexStock"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  db-migrator:
+    image: nexstock-dbmigrator
+    build:
+      context: .
+      dockerfile: src/NexStock.DbMigrator/Dockerfile
+    container_name: nexstock-dbmigrator
+    environment:
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NexStock;User ID=postgres;Password=1121;"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    image: nexstock-web
+    build:
+      context: .
+      dockerfile: src/NexStock.Web/Dockerfile
+    container_name: nexstock-web
+    ports:
+      - "5000:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:80"
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NexStock;User ID=postgres;Password=1121;"
+      App__SelfUrl: "http://localhost:5000"
+      AuthServer__Authority: "http://localhost:5000"
+      AuthServer__RequireHttpsMetadata: "false"
+    depends_on:
+      db-migrator:
+        condition: service_completed_successfully
+
+volumes:
+  nexstock-postgres-data:

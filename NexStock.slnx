@@ -1,0 +1,24 @@
+<Solution>
+    <Configurations>
+        <Platform Name="Any CPU" />
+    </Configurations>
+    <Folder Name="/src/">
+        <Project Path="src/NexStock.Domain/NexStock.Domain.csproj" />
+        <Project Path="src/NexStock.Application/NexStock.Application.csproj" />
+        <Project Path="src/NexStock.EntityFrameworkCore/NexStock.EntityFrameworkCore.csproj" />
+        <Project Path="src/NexStock.Web/NexStock.Web.csproj" />
+        <Project Path="src/NexStock.Domain.Shared/NexStock.Domain.Shared.csproj" />
+        <Project Path="src/NexStock.Application.Contracts/NexStock.Application.Contracts.csproj" />
+        <Project Path="src/NexStock.HttpApi/NexStock.HttpApi.csproj" />
+        <Project Path="src/NexStock.HttpApi.Client/NexStock.HttpApi.Client.csproj" />
+        <Project Path="src/NexStock.DbMigrator/NexStock.DbMigrator.csproj" />
+    </Folder>
+    <Folder Name="/test/">
+        <Project Path="test/NexStock.Application.Tests/NexStock.Application.Tests.csproj" />
+        <Project Path="test/NexStock.Web.Tests/NexStock.Web.Tests.csproj" />
+        <Project Path="test/NexStock.EntityFrameworkCore.Tests/NexStock.EntityFrameworkCore.Tests.csproj" />
+        <Project Path="test/NexStock.TestBase/NexStock.TestBase.csproj" />
+        <Project Path="test/NexStock.Domain.Tests/NexStock.Domain.Tests.csproj" />
+        <Project Path="test/NexStock.HttpApi.Client.ConsoleTestApp/NexStock.HttpApi.Client.ConsoleTestApp.csproj" />
+    </Folder>
+</Solution>

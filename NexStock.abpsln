@@ -1,0 +1,55 @@
+{
+  "id": "e44fd578-1d1a-4382-8f69-69ab9e070abc",
+  "creationTime": "06/22/2026 21:58:52 +00:00",
+  "template": "app",
+  "versions": {
+    "AbpFramework": "10.4.1",
+    "AbpStudio": "3.0.6",
+    "TargetDotnetFramework": "net10.0"
+  },
+  "modules": {
+    "NexStock": {
+      "path": "NexStock.abpmdl"
+    }
+  },
+  "runProfiles": {
+    "Default": {
+      "path": "etc/abp-studio/run-profiles/Default.abprun.json"
+    }  },
+  "options": {
+    "httpRequests": {
+      "ignoredUrls": [
+      
+      ]
+    }
+  },
+  "creatingStudioConfiguration": {
+    "template": "app",
+    "createdAbpStudioVersion": "3.0.6",
+    "creationTool": "ABP Studio UI",
+    "tiered": "false",
+    "runInstallLibs": "",
+    "useLocalReferences": "false",
+    "multiTenancy": "true",
+    "includeTests": "true",
+    "kubernetesConfiguration": "false",
+    "uiFramework": "mvc",
+    "mobileFramework": "none",
+    "distributedEventBus": "none",
+    "databaseProvider": "ef",
+    "runDbMigrator": "",
+    "databaseManagementSystem": "postgresql",
+    "separateTenantSchema": "false",
+    "createInitialMigration": "",
+    "theme": "leptonx-lite",
+    "themeStyle": "",
+    "themeMenuPlacement": "",
+    "mobileFramework": "none",
+    "publicWebsite": "false",
+    "socialLogin": "false",
+    "sampleCrudPage": "true",
+    "selectedLanguages": ["English", "Turkish", ],
+    "defaultLanguage": "English",
+    "createCommand": "abp new NexStock -t app --ui-framework mvc --database-provider ef --database-management-system postgresql --theme leptonx-lite --skip-migration  --skip-migrator  --without-cms-kit --sample-crud-page --dont-run-install-libs --dont-run-bundling --no-social-logins -no-gdpr -no-openiddict-admin-ui -no-audit-logging -no-file-management -no-language-management -no-text-template-management"
+  }
+}

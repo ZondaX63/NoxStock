@@ -1,0 +1,15 @@
+using System;
+using Volo.Abp.Application.Dtos;
+using Volo.Abp.Application.Services;
+
+namespace NexStock.Accounts;
+
+public interface IAccountAppService :
+    ICrudAppService<
+        AccountDto,
+        Guid,
+        PagedAndSortedResultRequestDto,
+        CreateUpdateAccountDto>
+{
+}
+

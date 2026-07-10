@@ -1,0 +1,30 @@
+@page
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NexStock.Web.Pages.Accounts.TransactionsModalModel
+@{
+    Layout = null;
+}
+
+<abp-modal size="Large">
+    <abp-modal-header title="Hesap Hareketleri"></abp-modal-header>
+    <abp-modal-body>
+        <input type="hidden" id="TransactionsAccountId" value="@Model.AccountId" />
+        <div class="overflow-x-auto">
+            <table id="AccountTransactionsTable" class="table w-full text-left whitespace-nowrap">
+                <thead>
+                    <tr>
+                        <th class="py-2 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Tarih</th>
+                        <th class="py-2 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">İşlem Tipi</th>
+                        <th class="py-2 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Tutar</th>
+                        <th class="py-2 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Para Birimi</th>
+                        <th class="py-2 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Açıklama</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                </tbody>
+            </table>
+        </div>
+    </abp-modal-body>
+    <abp-modal-footer buttons="@(AbpModalButtons.Close)"></abp-modal-footer>
+</abp-modal>
+<abp-script src="/Pages/Accounts/TransactionsModal.js" />
