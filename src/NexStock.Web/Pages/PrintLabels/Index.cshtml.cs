@@ -1,10 +1,30 @@
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using NexStock.PrintLabels;
+using NexStock.Settings;
+using Volo.Abp.Settings;
 
 namespace NexStock.Web.Pages.PrintLabels;
 
-public class IndexModel : PageModel
+public class IndexModel : NexStockPageModel
 {
-    public void OnGet()
+    public List<LabelProductDto> Products { get; private set; } = new();
+    public string DefaultLabelFormat { get; private set; } = "barcode";
+
+    private readonly ILabelProductLookupAppService _labelProductLookupAppService;
+    private readonly ISettingProvider _settingProvider;
+
+    public IndexModel(
+        ILabelProductLookupAppService labelProductLookupAppService,
+        ISettingProvider settingProvider)
     {
+        _labelProductLookupAppService = labelProductLookupAppService;
+        _settingProvider = settingProvider;
+    }
+
+    public async Task OnGetAsync()
+    {
+        Products = await _labelProductLookupAppService.GetListAsync();
+        DefaultLabelFormat = await _settingProvider.GetOrNullAsync(NexStockSettings.DefaultLabelFormat) ?? "barcode";
     }
 }

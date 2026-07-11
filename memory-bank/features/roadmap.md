@@ -1,6 +1,6 @@
 # NexStock Phase Roadmap
 
-Last updated: 2026-07-10
+Last updated: 2026-07-11
 
 ## Phase 1: Commercial Foundation
 
@@ -16,14 +16,10 @@ Completed backend deliverables:
 - Tests proving sale invoice approval decreases stock and increases customer receivable.
 - Tests proving cancellation reverses stock and financial effects.
 
-Remaining deliverables:
+Completed UI/reporting additions:
 
-- Account management UI connected to the new account service.
-- Sales invoice create/detail/approve/cancel UI connected to workflow service.
-- Purchase invoice create/detail/approve/cancel UI connected to workflow service.
-- Tests proving purchase invoice approval increases stock and increases supplier payable.
-- Business partner transaction/history views.
-- Account transaction and stock movement list/detail views.
+- Dashboard KPIs backed by the dashboard application service.
+- Six-month sales trend, critical-stock list, top-selling products, and recent document views.
 
 Exit criteria:
 
@@ -34,22 +30,33 @@ Exit criteria:
 
 ## Phase 2: Invoice and Current Account Workflow
 
+Status: Completed on 2026-07-11.
+
 Goal: make invoices usable for real customer/supplier accounting.
 
 Deliverables:
 
 - Sales invoice create/edit/detail.
 - Purchase invoice create/edit/detail.
-- Payment and collection modals.
-- Partial payment logic.
-- Due-date and overdue views.
-- Customer/supplier detail with invoices and balance history.
+- Invoice-level payment and collection modal.
+- Partial payment logic and reversal coverage.
+- Dashboard due-date and overdue view.
+- Customer/supplier document view with due date and outstanding balance.
+- Customer/supplier invoice-linked payment history with cash/bank and reversal visibility.
 
 Exit criteria:
 
 - A user can create, approve, partially collect/pay, and cancel invoices without inconsistent balances.
 
+Verification completed:
+
+- Sales and purchase invoices support partial and closing payments.
+- Cancellation creates reversal records for every linked stock and account movement.
+- Due-date monitoring and current-account payment history are available in the web UI.
+
 ## Phase 3: POS
+
+Status: Completed on 2026-07-11.
 
 Goal: support fast retail sales.
 
@@ -67,7 +74,15 @@ Exit criteria:
 - POS sale affects stock and account/current-account balances correctly.
 - Cancellation fully reverses effects.
 
+Verification completed:
+
+- Cash POS sale changes stock and the selected account; cancellation reverses both movements.
+- Customer-credit POS sale changes stock and the customer balance; cancellation restores both.
+- POS sales are shown in recent-sales UI and contribute to dashboard sales figures.
+
 ## Phase 4: Offers and Orders
+
+Status: Completed on 2026-07-11.
 
 Goal: connect pre-sale/pre-purchase workflows to invoices.
 
@@ -83,7 +98,15 @@ Exit criteria:
 
 - Converted documents preserve source linkage and totals.
 
+Verification completed:
+
+- Source document ID, items, currency, totals, and due date are copied into each converted target document.
+- Source offer/order becomes `Completed`; target document starts in `Draft`, so financial and stock effects only occur on normal invoice approval.
+- Sales and purchase conversion paths are covered by focused tests.
+
 ## Phase 5: Reporting
+
+Status: Next (intentionally deferred while Phase 6 was completed).
 
 Goal: give owners operational visibility.
 
@@ -105,6 +128,8 @@ Exit criteria:
 
 ## Phase 6: Settings and Printing
 
+Status: Completed on 2026-07-11.
+
 Goal: make the product configurable.
 
 Deliverables:
@@ -120,6 +145,14 @@ Deliverables:
 Exit criteria:
 
 - New documents and labels use configured defaults.
+
+Verification completed:
+
+- Company profile, defaults, numbering, and default accounts are tenant-aware ABP settings with server-side validation.
+- New product cards inherit the configured unit/currency; document creation inherits currency, VAT rate, and type-specific prefixes.
+- POS receipt prefix and compatible default cash/bank accounts are applied in checkout.
+- Label printing supports product search, quantities, Code 128 barcode, QR, and print media styling.
+- Light/dark preference persists using browser storage.
 
 ## Phase 7: Notifications, Audit Views, AI
 

@@ -1,10 +1,10 @@
 $(function () {
     var stockMovementService = nexStock.stockMovements.stockMovement;
 
-    var dataTable = $('.table').DataTable(abp.libs.datatables.normalizeConfiguration({
+    var dataTable = $('#StockMovementsTable').DataTable(abp.libs.datatables.normalizeConfiguration({
         serverSide: true,
         paging: true,
-        order: [[6, "desc"]], // MovementDate is index 6 in data theoretically, but let's see. Wait, in table it's 0. Let's just use 0.
+        order: [[0, "desc"]],
         searching: false,
         scrollX: true,
         ajax: abp.libs.datatables.createAjax(stockMovementService.getList),

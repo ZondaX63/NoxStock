@@ -1,4 +1,4 @@
-﻿using Localization.Resources.AbpUi;
+using Localization.Resources.AbpUi;
 using NexStock.Localization;
 using Volo.Abp.Account;
 using Volo.Abp.SettingManagement;

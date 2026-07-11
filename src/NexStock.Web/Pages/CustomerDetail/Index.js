@@ -5,6 +5,7 @@ $(function () {
     }
 
     var bpService = nexStock.businessPartners.businessPartner;
+    var statementService = nexStock.businessPartners.businessPartnerStatement;
     var documentService = nexStock.documents.document;
     
     var createPaymentModal = new abp.ModalManager(abp.appPath + 'Payments/CreateModal');
@@ -13,6 +14,7 @@ $(function () {
         // reload the datatable and bp details
         $('#BpDocumentsTable').DataTable().ajax.reload();
         loadBpDetails();
+        loadPaymentHistory();
     });
 
     $('#NewCollectionBtn').click(function(e) {
@@ -23,6 +25,10 @@ $(function () {
     $('#NewPaymentBtn').click(function(e) {
         e.preventDefault();
         createPaymentModal.open({ type: 'Payment' });
+    });
+
+    $('#PrintStatementButton').click(function () {
+        window.print();
     });
 
     function loadBpDetails() {
@@ -44,8 +50,46 @@ $(function () {
         });
     }
 
+    function escapeHtml(value) {
+        return $('<div>').text(value || '').html();
+    }
+
+    function paymentTypeText(type) {
+        if (type === 6) return '<span class="bg-emerald-100 text-emerald-800 text-xs font-medium px-2 py-0.5 rounded">Tahsilat</span>';
+        if (type === 7) return '<span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded">Ödeme</span>';
+        return '<span class="bg-slate-100 text-slate-700 text-xs font-medium px-2 py-0.5 rounded">Ters Kayıt</span>';
+    }
+
+    function loadPaymentHistory() {
+        statementService.getPaymentHistory(businessPartnerId).then(function (items) {
+            var $body = $('#BpPaymentHistoryBody');
+            $body.empty();
+
+            if (!items.length) {
+                $body.append('<tr><td colspan="6" class="py-8 px-6 text-center text-slate-400">Faturalara bağlı tahsilat veya ödeme hareketi yok.</td></tr>');
+                return;
+            }
+
+            items.forEach(function (item) {
+                var amountClass = item.amount < 0 ? 'text-red-600' : 'text-emerald-600';
+                var sign = item.amount > 0 ? '+' : '';
+                $body.append(
+                    '<tr>' +
+                    '<td class="py-3 px-6 text-slate-600 dark:text-slate-300">' + luxon.DateTime.fromISO(item.transactionDate).toFormat('dd.MM.yyyy') + '</td>' +
+                    '<td class="py-3 px-6 font-semibold text-slate-800 dark:text-white">' + escapeHtml(item.documentNumber) + '</td>' +
+                    '<td class="py-3 px-6 text-slate-600 dark:text-slate-300">' + escapeHtml(item.accountName) + '</td>' +
+                    '<td class="py-3 px-6">' + paymentTypeText(item.transactionType) + '</td>' +
+                    '<td class="py-3 px-6 text-right font-bold ' + amountClass + '">' + sign + item.amount + ' ' + escapeHtml(item.currency) + '</td>' +
+                    '<td class="py-3 px-6 text-slate-500 max-w-xs truncate">' + escapeHtml(item.description) + '</td>' +
+                    '</tr>'
+                );
+            });
+        });
+    }
+
     // Load initially
     loadBpDetails();
+    loadPaymentHistory();
 
     // Load Documents
     var dataTable = $('#BpDocumentsTable').DataTable(abp.libs.datatables.normalizeConfiguration({
@@ -76,6 +120,21 @@ $(function () {
                 }
             },
             {
+                title: 'Vade',
+                data: 'dueDate',
+                render: function (data, type, row) {
+                    if (!data) {
+                        return '<span class="text-slate-400">-</span>';
+                    }
+
+                    var dueDate = luxon.DateTime.fromISO(data);
+                    var isOpen = row.status === 3 || row.status === 8;
+                    var isOverdue = isOpen && dueDate.startOf('day') < luxon.DateTime.now().startOf('day');
+                    var style = isOverdue ? 'font-semibold text-red-600' : 'text-slate-600';
+                    return '<span class="' + style + '">' + dueDate.toFormat('dd.MM.yyyy') + '</span>';
+                }
+            },
+            {
                 title: 'Tip',
                 data: "type",
                 render: function(data) {
@@ -101,6 +160,15 @@ $(function () {
                 render: function(data, type, row) {
                     var color = data > 0 ? 'text-emerald-600' : 'text-slate-500';
                     return '<span class="font-semibold ' + color + '">' + data + ' ' + row.currency + '</span>';
+                }
+            },
+            {
+                title: 'Kalan',
+                data: null,
+                className: 'text-right',
+                render: function(data, type, row) {
+                    var outstandingAmount = row.grandTotal - row.paidAmount;
+                    return '<span class="font-semibold text-slate-800">' + outstandingAmount + ' ' + row.currency + '</span>';
                 }
             },
             {

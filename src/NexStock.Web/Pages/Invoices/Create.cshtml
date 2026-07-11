@@ -3,23 +3,25 @@
 @model NexStock.Web.Pages.Invoices.CreateModel
 @{
     Layout = "_AppLayout";
-    var title = Model.Type == DocumentType.SaleInvoice ? "Yeni Satış Faturası" : "Yeni Alış Faturası";
+    var title = Model.GetDocumentTitle();
     ViewData["Title"] = title;
 }
 
 <div class="flex justify-between items-center mb-8">
     <div>
         <h2 class="text-3xl font-bold text-slate-800 dark:text-white">@title</h2>
-        <p class="text-sm text-slate-500 mt-1">Lütfen fatura detaylarını eksiksiz doldurun.</p>
+        <p class="text-sm text-slate-500 mt-1">Belge kalemlerini ve cari hesap bilgilerini eksiksiz doldurun.</p>
     </div>
-    <a href="/Invoices" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium flex items-center">
+    <a href="@Model.GetRedirectPage(Model.Type)" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium flex items-center">
         <span class="material-icons-round text-sm mr-1">arrow_back</span>
-        Faturalara Dön
+        Listeye Dön
     </a>
 </div>
 
-<form method="post" id="InvoiceForm">
+<form method="post" id="InvoiceForm" data-currency="@Model.Invoice.Currency" data-default-vat-rate="@Model.DefaultVatRate.ToString(System.Globalization.CultureInfo.InvariantCulture)">
     <input type="hidden" asp-for="Invoice.Type" />
+    <input type="hidden" asp-for="Invoice.Currency" />
+    <input type="hidden" asp-for="Invoice.ExchangeRate" />
     
     <div asp-validation-summary="All" class="text-red-600 mb-4 bg-red-50 p-4 rounded-lg"></div>
 
@@ -28,12 +30,12 @@
         <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Genel Bilgiler</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
-                <label asp-for="Invoice.DocNumber" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fatura No</label>
+                <label asp-for="Invoice.DocNumber" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Belge No</label>
                 <input asp-for="Invoice.DocNumber" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required />
             </div>
             <div>
                 <label asp-for="Invoice.BusinessPartnerId" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    @(Model.Type == DocumentType.SaleInvoice ? "Müşteri" : "Tedarikçi")
+                    @Model.GetPartnerLabel()
                 </label>
                 <select asp-for="Invoice.BusinessPartnerId" asp-items="Model.BusinessPartners" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required></select>
             </div>
@@ -42,7 +44,7 @@
                 <input asp-for="Invoice.Date" type="date" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required />
             </div>
             <div>
-                <label asp-for="Invoice.DueDate" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vade Tarihi</label>
+                <label asp-for="Invoice.DueDate" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vade / Geçerlilik Tarihi</label>
                 <input asp-for="Invoice.DueDate" type="date" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" />
             </div>
         </div>
@@ -102,7 +104,7 @@
             <div class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-md shadow-indigo-500/30 flex justify-center items-center">
                     <span class="material-icons-round mr-2 text-sm">save</span>
-                    Faturayı Kaydet
+                    Belgeyi Kaydet
                 </button>
             </div>
         </div>
@@ -130,7 +132,7 @@
             <input type="number" name="Invoice.Items[{id}].DiscountRate" class="calc-input discount-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="0" min="0" max="100" step="any" />
         </td>
         <td class="py-2 px-4">
-            <input type="number" name="Invoice.Items[{id}].VatRate" class="calc-input vat-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="20" min="0" max="100" step="any" />
+            <input type="number" name="Invoice.Items[{id}].VatRate" class="calc-input vat-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@Model.DefaultVatRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" />
         </td>
         <td class="py-2 px-4 text-right font-semibold text-slate-800 dark:text-white row-total">
             0.00

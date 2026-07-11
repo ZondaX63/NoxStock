@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using NexStock.Brands;
 using NexStock.Categories;
 using NexStock.Products;
+using NexStock.Settings;
 using Volo.Abp.Application.Dtos;
 
 namespace NexStock.Web.Pages.Products;
@@ -23,20 +24,24 @@ public class IndexModel : NexStockPageModel
     private readonly IProductAppService _productAppService;
     private readonly IBrandAppService _brandAppService;
     private readonly ICategoryAppService _categoryAppService;
+    private readonly ICompanySettingsAppService _companySettingsAppService;
 
     public IndexModel(
         IProductAppService productAppService,
         IBrandAppService brandAppService,
-        ICategoryAppService categoryAppService)
+        ICategoryAppService categoryAppService,
+        ICompanySettingsAppService companySettingsAppService)
     {
         _productAppService = productAppService;
         _brandAppService = brandAppService;
         _categoryAppService = categoryAppService;
+        _companySettingsAppService = companySettingsAppService;
     }
 
     public async Task OnGetAsync()
     {
-        Product = CreateDefaultProduct();
+        var settings = await _companySettingsAppService.GetAsync();
+        Product = CreateDefaultProduct(settings.DefaultUnit, settings.DefaultCurrency);
         await LoadLookupsAsync();
         await LoadProductsAsync();
     }
@@ -78,15 +83,15 @@ public class IndexModel : NexStockPageModel
         Products = result.Items.ToList();
     }
 
-    private static CreateUpdateProductDto CreateDefaultProduct()
+    private static CreateUpdateProductDto CreateDefaultProduct(string defaultUnit, string defaultCurrency)
     {
         return new CreateUpdateProductDto
         {
             Sku = $"STK-{DateTime.UtcNow:yyyyMMddHHmmss}",
-            Unit = "Adet",
-            Currency = "TRY",
-            PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY",
+            Unit = defaultUnit,
+            Currency = defaultCurrency,
+            PurchaseCurrency = defaultCurrency,
+            SaleCurrency = defaultCurrency,
             TrackStock = true
         };
     }

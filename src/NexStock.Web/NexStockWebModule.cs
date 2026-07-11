@@ -159,6 +159,12 @@ public class NexStockWebModule : AbpModule
         {
             options.IsDynamicPermissionStoreEnabled = true;
         });
+
+        Configure<Volo.Abp.AspNetCore.Mvc.AntiForgery.AbpAntiForgeryOptions>(options =>
+        {
+            options.TokenCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+            options.TokenCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+        });
         
         Configure<RazorPagesOptions>(options =>
         {

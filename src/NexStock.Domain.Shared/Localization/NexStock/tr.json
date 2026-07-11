@@ -102,6 +102,7 @@
     "Search": "Ara",
     "LoadMore": "Daha fazla yükle",
     "Settings": "Ayarlar",
+
     "Theme": "Tema",
     "DeviceTheme": "Cihaz Teması",
     "Dark": "Koyu",
@@ -109,6 +110,21 @@
     "Unspecified": "Sistem",
     "SeeAllUsers": "Tüm Kullanıcıları Gör",
     "TakePhoto": "Fotoğraf Çek",
-    "ChoosePhoto": "Fotoğraf Seç"
+    "ChoosePhoto": "Fotoğraf Seç",
+    "ACTIONS": "İşlemler",
+    "NAME": "Ad",
+    "NewBrand": "Yeni Marka",
+    "NewCategory": "Yeni Kategori",
+    "ParentId": "Üst Kategori",
+    "--- Top Level Category ---": "--- En Üst Seviye ---",
+    "Cancel": "İptal",
+    "Save": "Kaydet",
+    "NoDataAvailableInDatatable": "Tabloda veri bulunmamaktadır",
+    "PagerShowMenuEntries": "_MENU_ kayıt göster",
+    "PagerInfoEmpty": "Kayıt yok",
+    "PagerFirst": "İlk",
+    "PagerPrevious": "Önceki",
+    "PagerNext": "Sonraki",
+    "PagerLast": "Son"
   }
 }

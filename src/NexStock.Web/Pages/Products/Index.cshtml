@@ -58,13 +58,18 @@
         {
             var stockClass = product.Quantity <= product.CriticalStockLevel ? "text-red-600" : "text-slate-700";
             <tr class="border-b border-slate-100 dark:border-slate-700">
-                <td class="px-4 py-3 text-xs text-slate-500">Detaylar yüklenecek</td>
+                <td class="px-4 py-3 text-xs">
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="text-indigo-600 hover:text-indigo-900" title="Düzenle"><span class="material-icons-round text-lg">edit</span></button>
+                        <button type="button" class="text-red-600 hover:text-red-900" title="Sil"><span class="material-icons-round text-lg">delete</span></button>
+                    </div>
+                </td>
                 <td class="px-4 py-3"><div class="font-medium text-slate-800 dark:text-slate-100">@product.Name</div><div class="mt-1 max-w-xs truncate text-xs text-slate-500">@product.Description</div></td>
                 <td class="px-4 py-3"><div>@product.Sku</div><div class="mt-1 text-xs text-slate-500">@(product.Barcode ?? "-")@(string.IsNullOrWhiteSpace(product.OemCodes) ? "" : " · " + product.OemCodes)</div></td>
                 <td class="px-4 py-3">@(product.BrandName ?? "-")<div class="mt-1 text-xs text-slate-500">@(product.CategoryName ?? "-")</div></td>
                 <td class="px-4 py-3"><span class="font-semibold @stockClass">@product.Quantity.ToString("N2") @product.Unit</span></td>
-                <td class="px-4 py-3 font-semibold">@product.PurchasePrice.ToString("N2") @product.PurchaseCurrency</td>
-                <td class="px-4 py-3 font-semibold">@product.SalePrice.ToString("N2") @product.SaleCurrency</td>
+                <td class="px-4 py-3 font-semibold"><span class="product-purchase-price" data-price="@product.PurchasePrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-currency="@product.PurchaseCurrency">@product.PurchasePrice.ToString("N2") @product.PurchaseCurrency</span></td>
+                <td class="px-4 py-3 font-semibold"><span class="product-sale-price" data-price="@product.SalePrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-currency="@product.SaleCurrency">@product.SalePrice.ToString("N2") @product.SaleCurrency</span></td>
             </tr>
         }
     </tbody></table></div>

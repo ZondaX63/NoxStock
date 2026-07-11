@@ -483,6 +483,9 @@ namespace NexStock.Migrations
                     b.Property<decimal>("PaidAmount")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<Guid?>("SourceDocumentId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -502,6 +505,8 @@ namespace NexStock.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BusinessPartnerId");
+
+                    b.HasIndex("SourceDocumentId");
 
                     b.ToTable("AppDocuments", (string)null);
                 });
@@ -2881,6 +2886,10 @@ namespace NexStock.Migrations
                         .HasForeignKey("BusinessPartnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("NexStock.Documents.Document", null)
+                        .WithMany()
+                        .HasForeignKey("SourceDocumentId");
                 });
 
             modelBuilder.Entity("NexStock.Documents.DocumentItem", b =>

@@ -31,6 +31,20 @@ $(function () {
         updateEquivalent($('#Product_SalePrice'), $('#Product_SaleCurrency'), $('#SaleTryEquivalent'));
     }
 
+    function updateDisplayedPrices() {
+        $('.product-purchase-price, .product-sale-price').each(function () {
+            var $price = $(this);
+            var sourceCurrency = $price.data('currency');
+            var sourcePrice = Number($price.data('price'));
+            if (sourceCurrency !== displayCurrency &&
+                ((!rates[sourceCurrency] && sourceCurrency !== 'TRY') || (!rates[displayCurrency] && displayCurrency !== 'TRY'))) {
+                $price.text(formatMoney(sourcePrice, sourceCurrency));
+                return;
+            }
+            $price.text(formatMoney(convert(sourcePrice, sourceCurrency, displayCurrency), displayCurrency));
+        });
+    }
+
     function openEditor() {
         editor.prop('hidden', false);
         editor[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -88,8 +102,9 @@ $(function () {
                     EUR: data.eur || data.EUR
                 };
                 updatePriceEquivalents();
+                updateDisplayedPrices();
             })
-            .catch(function () { updatePriceEquivalents(); });
+            .catch(function () { updatePriceEquivalents(); updateDisplayedPrices(); });
     }
 
     // Fetch currency data before initializing the table. A table/proxy error must not prevent price calculation.
@@ -105,6 +120,7 @@ $(function () {
     $('#DisplayCurrency').on('change', function () {
         displayCurrency = this.value;
         localStorage.setItem('productDisplayCurrency', displayCurrency);
+        updateDisplayedPrices();
     });
 
 });

@@ -172,6 +172,8 @@ public class NexStockDbContext :
             b.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("TRY");
             b.Property(x => x.ExchangeRate).HasColumnType("decimal(18,4)");
             b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.BusinessPartnerId).IsRequired();
+            b.HasOne<Document>().WithMany().HasForeignKey(x => x.SourceDocumentId).IsRequired(false);
+            b.HasIndex(x => x.SourceDocumentId);
         });
 
         builder.Entity<DocumentItem>(b =>

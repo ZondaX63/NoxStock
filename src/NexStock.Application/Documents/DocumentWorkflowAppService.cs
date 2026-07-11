@@ -77,7 +77,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         await ApplyBusinessPartnerBalanceAsync(document, paymentAmount);
         
         // For Collections/Payments, AccountId comes from the document or input. Let's assume input has it.
-        await ApplyPaymentAsync(document, input.AccountId, paymentAmount);
+        await ApplyPaymentAsync(document, input.AccountId, paymentAmount, document.Date);
 
         document.PaidAmount = paymentAmount;
         
@@ -94,6 +94,56 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
             else
                 document.Status = DocumentStatus.Approved;
         }
+
+        await _documentRepository.UpdateAsync(document, autoSave: true);
+        return await MapDocumentAsync(document);
+    }
+
+    [Authorize(NexStockPermissions.Documents.Approve)]
+    public async Task<DocumentDto> RecordPaymentAsync(Guid id, RecordDocumentPaymentInputDto input)
+    {
+        var document = await GetDocumentWithItemsAsync(id);
+
+        if (document.Type is not (DocumentType.SaleInvoice or DocumentType.PurchaseInvoice))
+        {
+            throw new BusinessException("NexStock:DocumentTypeDoesNotSupportPayment");
+        }
+
+        if (document.Status is not (DocumentStatus.Approved or DocumentStatus.PartiallyPaid))
+        {
+            throw new BusinessException("NexStock:DocumentStatusDoesNotAcceptPayment")
+                .WithData("Status", document.Status);
+        }
+
+        if (input.Amount <= 0)
+        {
+            throw new BusinessException("NexStock:PaymentAmountMustBePositive");
+        }
+
+        var outstandingAmount = document.GrandTotal - document.PaidAmount;
+        if (input.Amount > outstandingAmount)
+        {
+            throw new BusinessException("NexStock:PaymentExceedsOutstandingAmount")
+                .WithData("OutstandingAmount", outstandingAmount);
+        }
+
+        var businessPartner = await _businessPartnerRepository.GetAsync(document.BusinessPartnerId);
+        if (document.Type == DocumentType.SaleInvoice)
+        {
+            businessPartner.Balance -= input.Amount;
+        }
+        else
+        {
+            businessPartner.Balance += input.Amount;
+        }
+
+        await _businessPartnerRepository.UpdateAsync(businessPartner);
+        await ApplyPaymentAsync(document, input.AccountId, input.Amount, input.PaymentDate, input.Description);
+
+        document.PaidAmount += input.Amount;
+        document.Status = document.PaidAmount >= document.GrandTotal
+            ? DocumentStatus.Paid
+            : DocumentStatus.PartiallyPaid;
 
         await _documentRepository.UpdateAsync(document, autoSave: true);
         return await MapDocumentAsync(document);
@@ -245,7 +295,12 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         await _businessPartnerRepository.UpdateAsync(businessPartner);
     }
 
-    private async Task ApplyPaymentAsync(Document document, Guid? accountId, decimal paymentAmount)
+    private async Task ApplyPaymentAsync(
+        Document document,
+        Guid? accountId,
+        decimal paymentAmount,
+        DateTime transactionDate,
+        string? description = null)
     {
         if (paymentAmount <= 0)
         {
@@ -284,9 +339,9 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
                 transactionType,
                 amountDelta,
                 document.Currency,
-                document.Date,
+                transactionDate,
                 document.Id,
-                $"{document.DocNumber} ödeme hareketi"
+                description ?? $"{document.DocNumber} ödeme hareketi"
             )
         );
     }
@@ -328,4 +383,3 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         return dto;
     }
 }
-

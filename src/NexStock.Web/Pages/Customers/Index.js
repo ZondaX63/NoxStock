@@ -3,6 +3,11 @@ $(function () {
     var businessPartnerService = nexStock.businessPartners.businessPartner;
     var createModal = new abp.ModalManager(abp.appPath + 'Customers/CreateModal');
     var editModal = new abp.ModalManager(abp.appPath + 'Customers/EditModal');
+    var paymentModal = new abp.ModalManager(abp.appPath + 'Shared/PaymentModal');
+
+    paymentModal.onResult(function () {
+        dataTable.ajax.reload();
+    });
 
     var dataTable = $('#CustomersTable').DataTable(abp.libs.datatables.normalizeConfiguration({
         serverSide: true,
@@ -19,6 +24,12 @@ $(function () {
                 rowAction: {
                     items:
                         [
+                            {
+                                text: 'Tahsilat Al',
+                                action: function (data) {
+                                    paymentModal.open({ businessPartnerId: data.record.id, isCollection: true });
+                                }
+                            },
                             {
                                 text: 'Düzenle',
                                 action: function (data) {

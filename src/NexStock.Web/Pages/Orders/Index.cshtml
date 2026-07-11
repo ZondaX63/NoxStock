@@ -1,5 +1,4 @@
 @page
-@using Microsoft.AspNetCore.Mvc.Localization
 @model NexStock.Web.Pages.Orders.IndexModel
 @{
     Layout = "_AppLayout";
@@ -9,36 +8,27 @@
 <div class="flex justify-between items-center mb-8">
     <div>
         <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Siparişler</h2>
-        <p class="text-sm text-slate-500 mt-1">Alınan ve verilen siparişleri listeleyin.</p>
+        <p class="text-sm text-slate-500 mt-1">Alış ve satış siparişlerini faturaya dönüştürmeden önce takip edin.</p>
     </div>
-    <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-indigo-500/30 flex items-center">
-        <span class="material-icons-round mr-2 text-sm">add</span>
-        Yeni Sipariş Oluştur
-    </button>
+    <div class="flex gap-2">
+        <a href="/Invoices/Create?type=SaleOrder" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-indigo-500/30 flex items-center"><span class="material-icons-round mr-2 text-sm">add</span>Satış Siparişi</a>
+        <a href="/Invoices/Create?type=PurchaseOrder" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-emerald-500/30 flex items-center"><span class="material-icons-round mr-2 text-sm">add</span>Alış Siparişi</a>
+    </div>
 </div>
 
-<div class="card overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-none">
-    <div class="p-0">
-        <table class="table w-full text-left whitespace-nowrap">
-            <thead class="bg-slate-50/50 dark:bg-slate-800/50">
+<div class="card overflow-hidden">
+    <div class="p-6 overflow-x-auto">
+        <table id="OrdersTable" class="table w-full text-left whitespace-nowrap">
+            <thead>
                 <tr>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Sipariş No</th>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Cari Hesap</th>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Tarih</th>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Tutar</th>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Durum</th>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Teslimat</th>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">İşlemler</th>
+                    <th>İşlemler</th><th>Sipariş No</th><th>Tip</th><th>Cari Hesap</th><th>Tarih</th><th>Vade</th><th>Toplam</th><th>Durum</th>
                 </tr>
             </thead>
-            <tbody class="text-sm">
-                <tr>
-                    <td colspan="7" class="text-center py-12 text-slate-400">
-                        <span class="material-icons-round text-5xl mb-3 opacity-30 block">local_shipping</span>
-                        <span class="text-lg font-medium text-slate-500">Hiç sipariş bulunamadı.</span>
-                    </td>
-                </tr>
-            </tbody>
+            <tbody></tbody>
         </table>
     </div>
 </div>
+
+@section Scripts {
+    <abp-script src="/Pages/Orders/Index.js" />
+}

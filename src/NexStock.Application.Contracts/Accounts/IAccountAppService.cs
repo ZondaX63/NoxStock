@@ -11,5 +11,8 @@ public interface IAccountAppService :
         PagedAndSortedResultRequestDto,
         CreateUpdateAccountDto>
 {
+    System.Threading.Tasks.Task TransferAsync(TransferDto input);
+    System.Threading.Tasks.Task AddTransactionAsync(AddTransactionDto input);
+    System.Threading.Tasks.Task<PagedResultDto<AccountTransactionDto>> GetTransactionsAsync(Guid accountId, PagedAndSortedResultRequestDto input);
 }
 

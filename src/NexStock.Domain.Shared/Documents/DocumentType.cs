@@ -8,5 +8,6 @@ public enum DocumentType
     PurchaseOrder = 4,
     Offer = 5,
     Collection = 6,
-    Payment = 7
+    Payment = 7,
+    PosSale = 8
 }

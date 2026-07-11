@@ -14,5 +14,8 @@ public class DashboardSummaryDto
     public int PendingInvoiceCount { get; set; }
     public int ActiveCustomerCount { get; set; }
     public List<DashboardDocumentSummaryDto> RecentDocuments { get; set; } = new();
+    public List<DashboardCriticalStockDto> CriticalStocks { get; set; } = new();
+    public List<DashboardSalesTrendDto> SalesTrend { get; set; } = new();
+    public List<DashboardTopProductDto> TopProducts { get; set; } = new();
+    public List<DashboardDueDocumentDto> DueDocuments { get; set; } = new();
 }
-

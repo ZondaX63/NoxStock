@@ -47,7 +47,7 @@
     <abp-style-bundle name="@Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling.LeptonXLiteThemeBundles.Styles.Global" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="font-sans antialiased text-slate-600 bg-slate-50 dark:bg-slate-900 dark:text-slate-300 transition-colors duration-200" x-data="{ sidebarOpen: false, darkMode: false }" x-init="darkMode = localStorage.getItem('darkMode') === 'true'; $watch('darkMode', val => { localStorage.setItem('darkMode', val); if(val) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }); if(darkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');">
+<body class="font-sans antialiased text-slate-600 bg-slate-50 dark:bg-slate-900 dark:text-slate-300 transition-colors duration-200" x-data="{ sidebarOpen: false, darkMode: false }" x-init="darkMode = (localStorage.getItem('nexstock.theme') || (localStorage.getItem('darkMode') === 'true' ? 'dark' : 'light')) === 'dark'; $watch('darkMode', val => { localStorage.setItem('darkMode', val); localStorage.setItem('nexstock.theme', val ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', val); }); document.documentElement.classList.toggle('dark', darkMode);">
 
     <div class="flex h-screen overflow-hidden">
 
@@ -84,6 +84,8 @@
     </div>
 
     <abp-script-bundle name="@Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling.LeptonXLiteThemeBundles.Scripts.Global" />
+    <script src="~/Abp/ApplicationConfigurationScript"></script>
+    <script src="~/Abp/ServiceProxyScript"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

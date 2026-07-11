@@ -1,6 +1,7 @@
 $(function () {
     var $tbody = $('#ItemsTbody');
     var $template = $('#ItemRowTemplate').html();
+    var currency = $('#InvoiceForm').data('currency') || 'TRY';
 
     function uuidv4() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -43,10 +44,10 @@ $(function () {
 
         var grandTotal = subtotal - discountTotal + vatTotal;
 
-        $('#SumSubtotal').text(subtotal.toFixed(2) + ' TRY');
-        $('#SumDiscount').text(discountTotal.toFixed(2) + ' TRY');
-        $('#SumVat').text(vatTotal.toFixed(2) + ' TRY');
-        $('#SumGrandTotal').text(grandTotal.toFixed(2) + ' TRY');
+        $('#SumSubtotal').text(subtotal.toFixed(2) + ' ' + currency);
+        $('#SumDiscount').text(discountTotal.toFixed(2) + ' ' + currency);
+        $('#SumVat').text(vatTotal.toFixed(2) + ' ' + currency);
+        $('#SumGrandTotal').text(grandTotal.toFixed(2) + ' ' + currency);
     }
 
     $('#AddRowBtn').click(function () {

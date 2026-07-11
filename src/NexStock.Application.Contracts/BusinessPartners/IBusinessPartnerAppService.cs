@@ -11,4 +11,5 @@ public interface IBusinessPartnerAppService :
         BusinessPartnerGetListInput,
         CreateUpdateBusinessPartnerDto>
 {
+    System.Threading.Tasks.Task ProcessPaymentAsync(ProcessPaymentDto input);
 }

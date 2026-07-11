@@ -1,0 +1,21 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace NexStock.Accounts;
+
+public class TransferDto
+{
+    [Required]
+    public Guid FromAccountId { get; set; }
+
+    [Required]
+    public Guid ToAccountId { get; set; }
+
+    [Range(0.01, double.MaxValue)]
+    public decimal Amount { get; set; }
+
+    public DateTime Date { get; set; } = DateTime.Now;
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
+}

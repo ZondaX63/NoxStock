@@ -10,6 +10,7 @@ public class Document : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public Guid? TenantId { get; protected set; }
     
     public Guid BusinessPartnerId { get; set; }
+    public Guid? SourceDocumentId { get; set; }
     public string DocNumber { get; set; }
     public DocumentType Type { get; set; }
     public DocumentStatus Status { get; set; }

@@ -3,6 +3,11 @@ $(function () {
     var businessPartnerService = nexStock.businessPartners.businessPartner;
     var createModal = new abp.ModalManager(abp.appPath + 'Suppliers/CreateModal');
     var editModal = new abp.ModalManager(abp.appPath + 'Suppliers/EditModal');
+    var paymentModal = new abp.ModalManager(abp.appPath + 'Shared/PaymentModal');
+
+    paymentModal.onResult(function () {
+        dataTable.ajax.reload();
+    });
 
     var dataTable = $('#SuppliersTable').DataTable(abp.libs.datatables.normalizeConfiguration({
         serverSide: true,
@@ -19,6 +24,12 @@ $(function () {
                 rowAction: {
                     items:
                         [
+                            {
+                                text: 'Ödeme Yap',
+                                action: function (data) {
+                                    paymentModal.open({ businessPartnerId: data.record.id, isCollection: false });
+                                }
+                            },
                             {
                                 text: 'Düzenle',
                                 action: function (data) {

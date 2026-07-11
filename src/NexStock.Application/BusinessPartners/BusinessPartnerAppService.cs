@@ -45,4 +45,56 @@ public class BusinessPartnerAppService :
 
         return query;
     }
+
+    public async Task ProcessPaymentAsync(ProcessPaymentDto input)
+    {
+        await CheckUpdatePolicyAsync();
+
+        var partner = await Repository.GetAsync(input.BusinessPartnerId);
+        
+        var accountRepository = LazyServiceProvider.LazyGetRequiredService<IRepository<NexStock.Accounts.Account, Guid>>();
+        var account = await accountRepository.GetAsync(input.AccountId);
+
+        var transactionRepository = LazyServiceProvider.LazyGetRequiredService<IRepository<NexStock.Accounts.AccountTransaction, Guid>>();
+
+        if (input.IsCollection)
+        {
+            // Müşteriden para alıyoruz (Tahsilat). Müşterinin borcu azalır, kasamızın bakiyesi artar.
+            partner.Balance -= input.Amount;
+            account.Balance += input.Amount;
+
+            await transactionRepository.InsertAsync(new NexStock.Accounts.AccountTransaction(
+                GuidGenerator.Create(),
+                CurrentTenant.Id,
+                account.Id,
+                NexStock.Accounts.AccountTransactionType.Collection,
+                input.Amount,
+                account.Currency,
+                input.Date,
+                null,
+                input.Description ?? $"{partner.Name} - Tahsilat"
+            ));
+        }
+        else
+        {
+            // Tedarikçiye para ödüyoruz (Ödeme). Tedarikçiye olan borcumuz azalır (veyahut bakiye artar/azalır duruma göre, standart olarak Balance'ı tedarikçinin alacağı gibi düşünürsek eksi), kasamız azalır.
+            partner.Balance -= input.Amount; // In standard accounting: if it's a supplier, balance is usually their credit. If we pay them, their credit balance decreases.
+            account.Balance -= input.Amount;
+
+            await transactionRepository.InsertAsync(new NexStock.Accounts.AccountTransaction(
+                GuidGenerator.Create(),
+                CurrentTenant.Id,
+                account.Id,
+                NexStock.Accounts.AccountTransactionType.Payment,
+                input.Amount,
+                account.Currency,
+                input.Date,
+                null,
+                input.Description ?? $"{partner.Name} - Ödeme"
+            ));
+        }
+
+        await accountRepository.UpdateAsync(account);
+        await Repository.UpdateAsync(partner);
+    }
 }

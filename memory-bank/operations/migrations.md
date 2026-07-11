@@ -11,6 +11,7 @@ Known migration order:
 3. `20260623195606_Add_BusinessPartner_Document`
 4. `20260710113202_Add_CommercialCore_Remove_BookStore`
 5. `20260710121438_Add_Prototype_Ledgers_Dashboard`
+6. `20260711090224_Add_Document_Source_Link`
 
 ## Important Notes
 
@@ -19,6 +20,7 @@ Known migration order:
   - `AppAccounts`
   - `AppAccountTransactions`
   - `AppStockMovements`
+- `20260711090224_Add_Document_Source_Link` adds optional `SourceDocumentId` plus an index and self-reference on `AppDocuments` for offer/order conversion lineage.
 - Historical designer files may still contain Book/Author model snapshots. This is expected and should not be treated as live source.
 - Do not delete old applied migration files casually.
 - If EF tooling removes or rewrites an older migration unexpectedly, restore the migration history before continuing.

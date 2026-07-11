@@ -17,6 +17,7 @@ public class DocumentWorkflowAppServiceTests : NexStockEntityFrameworkCoreTestBa
 {
     private readonly IAccountAppService _accountAppService;
     private readonly IBusinessPartnerAppService _businessPartnerAppService;
+    private readonly IBusinessPartnerStatementAppService _businessPartnerStatementAppService;
     private readonly IDocumentAppService _documentAppService;
     private readonly IDocumentWorkflowAppService _documentWorkflowAppService;
     private readonly IProductAppService _productAppService;
@@ -30,6 +31,7 @@ public class DocumentWorkflowAppServiceTests : NexStockEntityFrameworkCoreTestBa
     {
         _accountAppService = ServiceProvider.GetRequiredService<IAccountAppService>();
         _businessPartnerAppService = ServiceProvider.GetRequiredService<IBusinessPartnerAppService>();
+        _businessPartnerStatementAppService = ServiceProvider.GetRequiredService<IBusinessPartnerStatementAppService>();
         _documentAppService = ServiceProvider.GetRequiredService<IDocumentAppService>();
         _documentWorkflowAppService = ServiceProvider.GetRequiredService<IDocumentWorkflowAppService>();
         _productAppService = ServiceProvider.GetRequiredService<IProductAppService>();
@@ -125,6 +127,31 @@ public class DocumentWorkflowAppServiceTests : NexStockEntityFrameworkCoreTestBa
         transactionsAfterApprove.Single().Type.ShouldBe(AccountTransactionType.Collection);
         transactionsAfterApprove.Single().Amount.ShouldBe(50);
 
+        var paid = await _documentWorkflowAppService.RecordPaymentAsync(document.Id, new RecordDocumentPaymentInputDto
+        {
+            AccountId = cashAccount.Id,
+            Amount = 150,
+            PaymentDate = DateTime.UtcNow,
+            Description = "Kalan tutar tahsil edildi"
+        });
+
+        paid.Status.ShouldBe(DocumentStatus.Paid);
+        paid.PaidAmount.ShouldBe(200);
+
+        var customerAfterPayment = await _businessPartnerRepository.GetAsync(customer.Id);
+        var cashAfterPayment = await _accountRepository.GetAsync(cashAccount.Id);
+        var transactionsAfterPayment = await _accountTransactionRepository.GetListAsync(x => x.DocumentId == document.Id);
+
+        customerAfterPayment.Balance.ShouldBe(0);
+        cashAfterPayment.Balance.ShouldBe(200);
+        transactionsAfterPayment.Count(x => x.Type == AccountTransactionType.Collection).ShouldBe(2);
+        transactionsAfterPayment.Sum(x => x.Amount).ShouldBe(200);
+
+        var paymentHistory = await _businessPartnerStatementAppService.GetPaymentHistoryAsync(customer.Id);
+        paymentHistory.Count.ShouldBe(2);
+        paymentHistory.All(x => x.DocumentNumber == document.DocNumber).ShouldBeTrue();
+        paymentHistory.All(x => x.AccountName == cashAccount.Name).ShouldBeTrue();
+
         var cancelled = await _documentWorkflowAppService.CancelAsync(document.Id);
 
         cancelled.Status.ShouldBe(DocumentStatus.Cancelled);
@@ -140,8 +167,8 @@ public class DocumentWorkflowAppServiceTests : NexStockEntityFrameworkCoreTestBa
         cashAfterCancel.Balance.ShouldBe(0);
         movementsAfterCancel.Count(x => x.Type == StockMovementType.Reversal).ShouldBe(1);
         movementsAfterCancel.Single(x => x.Type == StockMovementType.Reversal).Quantity.ShouldBe(2);
-        transactionsAfterCancel.Count(x => x.Type == AccountTransactionType.Reversal).ShouldBe(1);
-        transactionsAfterCancel.Single(x => x.Type == AccountTransactionType.Reversal).Amount.ShouldBe(-50);
+        transactionsAfterCancel.Count(x => x.Type == AccountTransactionType.Reversal).ShouldBe(2);
+        transactionsAfterCancel.Where(x => x.Type == AccountTransactionType.Reversal).Sum(x => x.Amount).ShouldBe(-200);
     }
 
     [Fact]
@@ -229,6 +256,26 @@ public class DocumentWorkflowAppServiceTests : NexStockEntityFrameworkCoreTestBa
         transactionsAfterApprove.Single().Type.ShouldBe(AccountTransactionType.Payment);
         transactionsAfterApprove.Single().Amount.ShouldBe(-100);
 
+        var paid = await _documentWorkflowAppService.RecordPaymentAsync(document.Id, new RecordDocumentPaymentInputDto
+        {
+            AccountId = bankAccount.Id,
+            Amount = 300,
+            PaymentDate = DateTime.UtcNow,
+            Description = "Kalan tedarikçi borcu ödendi"
+        });
+
+        paid.Status.ShouldBe(DocumentStatus.Paid);
+        paid.PaidAmount.ShouldBe(400);
+
+        var supplierAfterPayment = await _businessPartnerRepository.GetAsync(supplier.Id);
+        var bankAfterPayment = await _accountRepository.GetAsync(bankAccount.Id);
+        var transactionsAfterPayment = await _accountTransactionRepository.GetListAsync(x => x.DocumentId == document.Id);
+
+        supplierAfterPayment.Balance.ShouldBe(0);
+        bankAfterPayment.Balance.ShouldBe(600);
+        transactionsAfterPayment.Count(x => x.Type == AccountTransactionType.Payment).ShouldBe(2);
+        transactionsAfterPayment.Sum(x => x.Amount).ShouldBe(-400);
+
         var cancelled = await _documentWorkflowAppService.CancelAsync(document.Id);
 
         cancelled.Status.ShouldBe(DocumentStatus.Cancelled);
@@ -244,8 +291,8 @@ public class DocumentWorkflowAppServiceTests : NexStockEntityFrameworkCoreTestBa
         bankAfterCancel.Balance.ShouldBe(1000);
         movementsAfterCancel.Count(x => x.Type == StockMovementType.Reversal).ShouldBe(1);
         movementsAfterCancel.Single(x => x.Type == StockMovementType.Reversal).Quantity.ShouldBe(-5);
-        transactionsAfterCancel.Count(x => x.Type == AccountTransactionType.Reversal).ShouldBe(1);
-        transactionsAfterCancel.Single(x => x.Type == AccountTransactionType.Reversal).Amount.ShouldBe(100);
+        transactionsAfterCancel.Count(x => x.Type == AccountTransactionType.Reversal).ShouldBe(2);
+        transactionsAfterCancel.Where(x => x.Type == AccountTransactionType.Reversal).Sum(x => x.Amount).ShouldBe(400);
     }
 
     [Fact]

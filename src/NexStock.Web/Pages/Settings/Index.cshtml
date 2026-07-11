@@ -1,75 +1,72 @@
 @page
-@using Microsoft.AspNetCore.Mvc.Localization
 @model NexStock.Web.Pages.Settings.IndexModel
 @{
     Layout = "_AppLayout";
     ViewData["Title"] = "Firma Ayarları";
 }
 
-<div class="flex justify-between items-center mb-8">
-    <div>
-        <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Firma Ayarları</h2>
-        <p class="text-sm text-slate-500 mt-1">Sistem tercihlerini, yazdırma ve firma bilgilerini yönetin.</p>
-    </div>
-    <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-indigo-500/30 flex items-center">
-        <span class="material-icons-round mr-2 text-sm">save</span>
-        Değişiklikleri Kaydet
-    </button>
-</div>
-
-<div class="flex flex-col lg:flex-row gap-8">
-    <!-- Sol Menü -->
-    <div class="w-full lg:w-64 shrink-0 space-y-2">
-        <button class="w-full flex items-center px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold transition-colors">
-            <span class="material-icons-round mr-3">business</span> Firma Bilgileri
-        </button>
-        <button class="w-full flex items-center px-4 py-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
-            <span class="material-icons-round mr-3">receipt_long</span> Fiş & Fatura Ayarları
-        </button>
-        <button class="w-full flex items-center px-4 py-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
-            <span class="material-icons-round mr-3">point_of_sale</span> POS Cihazları
-        </button>
-        <button class="w-full flex items-center px-4 py-3 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors">
-            <span class="material-icons-round mr-3">notifications</span> Bildirimler
-        </button>
-    </div>
-
-    <!-- Sağ İçerik -->
-    <div class="flex-1 card p-8 shadow-lg shadow-slate-200/50 dark:shadow-none">
-        <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-6 border-b border-slate-100 dark:border-slate-700 pb-4">Temel Firma Bilgileri</h3>
-        
-        <div class="space-y-6 max-w-2xl">
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Firma Ünvanı</label>
-                <input type="text" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-800 dark:text-white" placeholder="Örn: NexStock Ticaret A.Ş.">
-            </div>
-
-            <div class="grid grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Vergi Dairesi</label>
-                    <input type="text" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-800 dark:text-white">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Vergi No</label>
-                    <input type="text" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-800 dark:text-white">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Adres</label>
-                <textarea rows="3" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-800 dark:text-white resize-none"></textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Telefon</label>
-                    <input type="text" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-800 dark:text-white">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">E-Posta</label>
-                    <input type="email" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-800 dark:text-white">
-                </div>
-            </div>
+<form method="post" id="CompanySettingsForm">
+    <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Firma Ayarları</h2>
+            <p class="mt-1 text-sm text-slate-500">Firma, belge ve stok varsayımları.</p>
         </div>
+        <button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
+            <span class="material-icons-round text-base">save</span>Kaydet
+        </button>
     </div>
-</div>
+
+    @if (TempData["SettingsSaved"] is string settingsSaved)
+    {
+        <div class="mb-5 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><span class="material-icons-round text-base">check_circle</span>@settingsSaved</div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="mb-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <section class="border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6">
+            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Firma Bilgileri</h3></div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div class="xl:col-span-2"><label asp-for="Settings.CompanyName" class="field-label">Firma unvanı</label><input asp-for="Settings.CompanyName" class="field-input" /><span asp-validation-for="Settings.CompanyName" class="field-error"></span></div>
+                <div><label asp-for="Settings.TaxNumber" class="field-label">Vergi no</label><input asp-for="Settings.TaxNumber" inputmode="numeric" class="field-input" /><span asp-validation-for="Settings.TaxNumber" class="field-error"></span></div>
+                <div><label asp-for="Settings.TaxOffice" class="field-label">Vergi dairesi</label><input asp-for="Settings.TaxOffice" class="field-input" /><span asp-validation-for="Settings.TaxOffice" class="field-error"></span></div>
+                <div><label asp-for="Settings.Phone" class="field-label">Telefon</label><input asp-for="Settings.Phone" class="field-input" /><span asp-validation-for="Settings.Phone" class="field-error"></span></div>
+                <div><label asp-for="Settings.Email" class="field-label">E-posta</label><input asp-for="Settings.Email" type="email" class="field-input" /><span asp-validation-for="Settings.Email" class="field-error"></span></div>
+                <div class="md:col-span-2 xl:col-span-3"><label asp-for="Settings.Address" class="field-label">Adres</label><textarea asp-for="Settings.Address" rows="3" class="field-input resize-y"></textarea><span asp-validation-for="Settings.Address" class="field-error"></span></div>
+            </div>
+        </section>
+
+        <section class="border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6">
+            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Ticari Varsayımlar</h3></div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div><label asp-for="Settings.DefaultCurrency" class="field-label">Varsayılan para birimi</label><select asp-for="Settings.DefaultCurrency" class="field-input"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option></select><span asp-validation-for="Settings.DefaultCurrency" class="field-error"></span></div>
+                <div><label asp-for="Settings.DefaultVatRate" class="field-label">Varsayılan KDV (%)</label><input asp-for="Settings.DefaultVatRate" type="number" min="0" max="100" step="0.01" class="field-input" /><span asp-validation-for="Settings.DefaultVatRate" class="field-error"></span></div>
+                <div><label asp-for="Settings.DefaultUnit" class="field-label">Varsayılan birim</label><select asp-for="Settings.DefaultUnit" class="field-input"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select><span asp-validation-for="Settings.DefaultUnit" class="field-error"></span></div>
+                <div><label asp-for="Settings.DefaultLabelFormat" class="field-label">Etiket kodu</label><select asp-for="Settings.DefaultLabelFormat" class="field-input"><option value="barcode">Barkod</option><option value="qr">QR</option></select><span asp-validation-for="Settings.DefaultLabelFormat" class="field-error"></span></div>
+                <div><label asp-for="Settings.DefaultCashAccountId" class="field-label">Varsayılan kasa</label><select asp-for="Settings.DefaultCashAccountId" asp-items="Model.CashAccounts" class="field-input"></select></div>
+                <div><label asp-for="Settings.DefaultBankAccountId" class="field-label">Varsayılan banka / kart</label><select asp-for="Settings.DefaultBankAccountId" asp-items="Model.BankAccounts" class="field-input"></select></div>
+                <div><label for="ThemeMode" class="field-label">Görünüm</label><select id="ThemeMode" class="field-input"><option value="light">Açık</option><option value="dark">Koyu</option></select></div>
+            </div>
+        </section>
+
+        <section class="p-5 sm:p-6">
+            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Belge Numaralandırma</h3></div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div><label asp-for="Settings.SaleInvoiceNumberPrefix" class="field-label">Satış faturası öneki</label><input asp-for="Settings.SaleInvoiceNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.SaleInvoiceNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.PurchaseInvoiceNumberPrefix" class="field-label">Alış faturası öneki</label><input asp-for="Settings.PurchaseInvoiceNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PurchaseInvoiceNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.OfferNumberPrefix" class="field-label">Teklif öneki</label><input asp-for="Settings.OfferNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.OfferNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.SaleOrderNumberPrefix" class="field-label">Satış siparişi öneki</label><input asp-for="Settings.SaleOrderNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.SaleOrderNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.PurchaseOrderNumberPrefix" class="field-label">Alış siparişi öneki</label><input asp-for="Settings.PurchaseOrderNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PurchaseOrderNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.PosSaleNumberPrefix" class="field-label">POS fişi öneki</label><input asp-for="Settings.PosSaleNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PosSaleNumberPrefix" class="field-error"></span></div>
+            </div>
+        </section>
+    </div>
+</form>
+
+@section Scripts { <abp-script src="/Pages/Settings/Index.js" /> }
+
+@section Styles {
+    <style>
+        .field-label{display:block;margin-bottom:.375rem;font-size:.875rem;font-weight:500;color:#334155}.field-input{display:block;width:100%;border:1px solid #cbd5e1;border-radius:.375rem;background:#fff;padding:.5rem .75rem;font-size:.875rem;line-height:1.25rem;color:#0f172a}.field-input:focus{border-color:#6366f1;outline:2px solid transparent;outline-offset:2px;box-shadow:0 0 0 2px #c7d2fe}.field-error{margin-top:.25rem;display:block;font-size:.75rem;color:#dc2626}.dark .field-label{color:#cbd5e1}.dark .field-input{border-color:#475569;background:#0f172a;color:#e2e8f0}
+    </style>
+}

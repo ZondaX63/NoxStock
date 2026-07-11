@@ -7,6 +7,7 @@ namespace NexStock.Documents;
 public class DocumentDto : FullAuditedEntityDto<Guid>
 {
     public Guid BusinessPartnerId { get; set; }
+    public Guid? SourceDocumentId { get; set; }
     public string? BusinessPartnerName { get; set; }
     public string DocNumber { get; set; }
     public DocumentType Type { get; set; }

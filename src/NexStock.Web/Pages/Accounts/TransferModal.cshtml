@@ -1,0 +1,20 @@
+@page
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NexStock.Web.Pages.Accounts.TransferModalModel
+@{
+    Layout = null;
+}
+
+<form asp-page="/Accounts/TransferModal">
+    <abp-modal>
+        <abp-modal-header title="Hesaplar Arası Transfer (Virman)"></abp-modal-header>
+        <abp-modal-body>
+            <abp-select asp-for="Transfer.FromAccountId" asp-items="Model.Accounts" label="Kaynak Hesap" />
+            <abp-select asp-for="Transfer.ToAccountId" asp-items="Model.Accounts" label="Hedef Hesap" />
+            <abp-input asp-for="Transfer.Amount" label="Tutar" />
+            <abp-input asp-for="Transfer.Date" label="Tarih" />
+            <abp-input asp-for="Transfer.Description" label="Açıklama" />
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

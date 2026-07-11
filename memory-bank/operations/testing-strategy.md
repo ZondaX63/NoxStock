@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Last updated: 2026-07-10
+Last updated: 2026-07-11
 
 ## Current Test Status
 
@@ -10,18 +10,40 @@ Current command:
 dotnet test NexStock.slnx --no-build -m:1
 ```
 
-Status on 2026-07-10:
+Status on 2026-07-11:
 
-- EntityFrameworkCore tests: 4 passed
+- EntityFrameworkCore tests: 12 passed
 - Web tests: 1 passed
 - Application, Domain, and TestBase assemblies report no available tests
 
 In this environment VSTest requires local socket access, so tests may need approval/escalation.
 
+Frontend interaction verification on 2026-07-11:
+
+- Static button-to-handler audit found no unbound visible command buttons in implemented workflows.
+- `node --check` passes for changed Products, Print Labels, Current Account, and Stock Movements scripts.
+- `dotnet build NexStock.slnx -m:1 --no-restore` passes (one pre-existing Web test entry-point warning).
+
 Latest focused prototype test:
 
 - `DocumentWorkflowAppServiceTests.Should_Approve_And_Cancel_Sales_Invoice_With_Ledger_Effects`
-- Covers sale invoice approval and cancellation effects on stock, customer balance, account balance, stock movement rows, and account transaction rows.
+- Covers partial and closing sale collection, invoice payment history, and cancellation effects on stock, customer balance, account balance, stock movement rows, and account transaction rows.
+- `DashboardAppServiceTests.Should_List_Only_Open_Overdue_And_Due_Soon_Invoices`
+- Covers the due-date dashboard query and excludes paid invoices from open-item monitoring.
+- `DocumentWorkflowAppServiceTests.Should_Approve_And_Cancel_Sales_Invoice_With_Ledger_Effects`
+- Also verifies that current-account payment history returns the invoice's collection entries and account name.
+- `DocumentWorkflowAppServiceTests.Should_Approve_And_Cancel_Purchase_Invoice_With_Ledger_Effects`
+- Covers partial and closing purchase payment plus reversal of all linked payment movements on cancellation.
+- `PosSaleAppServiceTests.Should_Create_And_Cancel_Cash_Pos_Sale_With_Stock_And_Account_Effects`
+- Covers barcode lookup, POS stock decrease, cash collection, recent-sale visibility, and reversal-based cancellation.
+- `PosSaleAppServiceTests.Should_Create_And_Cancel_Customer_Credit_Pos_Sale_With_Current_Account_Effects`
+- Covers customer-credit POS sale, current-account balance update, and cancellation reversal.
+- `CommercialDocumentWorkflowAppServiceTests.Should_Convert_Offer_To_Sales_Order_And_Then_Invoice_Preserving_Source_And_Totals`
+- Covers offer send, offer-to-order conversion, order-to-invoice conversion, source IDs, totals, copied items, and completed source states.
+- `CommercialDocumentWorkflowAppServiceTests.Should_Convert_Purchase_Order_To_Purchase_Invoice_Preserving_Source_And_Items`
+- Covers purchase order conversion into a linked purchase invoice.
+- `CompanySettingsAppServiceTests.Should_Save_Operational_Defaults_And_Expose_Default_Pos_Accounts`
+- Covers persisted commercial defaults and POS default cash/bank account exposure.
 
 ## Testing Priorities
 

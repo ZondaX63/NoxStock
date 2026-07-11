@@ -108,7 +108,9 @@ public partial class NexStockDocumentToDocumentDtoMapper : MapperBase<Document, 
 [Mapper]
 public partial class NexStockCreateUpdateDocumentDtoToDocumentMapper : MapperBase<CreateUpdateDocumentDto, Document>
 {
+    [MapperIgnoreTarget(nameof(Document.SourceDocumentId))]
     public override partial Document Map(CreateUpdateDocumentDto source);
+    [MapperIgnoreTarget(nameof(Document.SourceDocumentId))]
     public override partial void Map(CreateUpdateDocumentDto source, Document destination);
 }
 

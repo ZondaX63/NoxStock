@@ -23,4 +23,13 @@ public class BusinessPartner : FullAuditedAggregateRoot<Guid>, IMultiTenant
     {
         Currency = "TRY";
     }
+
+    public BusinessPartner(Guid id, Guid? tenantId, string name, BusinessPartnerType type, string currency = "TRY")
+        : base(id)
+    {
+        TenantId = tenantId;
+        Name = name;
+        Type = type;
+        Currency = currency;
+    }
 }

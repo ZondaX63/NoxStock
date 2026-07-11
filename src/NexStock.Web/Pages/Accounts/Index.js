@@ -2,7 +2,11 @@ $(function () {
     var accountService = nexStock.accounts.account;
     var createModal = new abp.ModalManager(abp.appPath + 'Accounts/CreateModal');
     var editModal = new abp.ModalManager(abp.appPath + 'Accounts/EditModal');
-    var transactionsModal = new abp.ModalManager(abp.appPath + 'Accounts/TransactionsModal');
+    var transactionsModal = new abp.ModalManager({
+        viewUrl: abp.appPath + 'Accounts/TransactionsModal',
+        scriptUrl: '/Pages/Accounts/TransactionsModal.js',
+        modalClass: 'TransactionsModal'
+    });
 
     function accountTypeText(type) {
         if (type === 1) return 'Kasa';
@@ -98,5 +102,26 @@ $(function () {
     $('#NewAccountButton').click(function (e) {
         e.preventDefault();
         createModal.open();
+    });
+
+    var transferModal = new abp.ModalManager(abp.appPath + 'Accounts/TransferModal');
+    var addTransactionModal = new abp.ModalManager(abp.appPath + 'Accounts/AddTransactionModal');
+
+    transferModal.onResult(function () {
+        dataTable.ajax.reload();
+    });
+
+    addTransactionModal.onResult(function () {
+        dataTable.ajax.reload();
+    });
+
+    $('#TransferButton').click(function (e) {
+        e.preventDefault();
+        transferModal.open();
+    });
+
+    $('#AddTransactionButton').click(function (e) {
+        e.preventDefault();
+        addTransactionModal.open();
     });
 });

@@ -7,13 +7,14 @@ $(function () {
             var accountTransactionService = nexStock.accounts.accountTransaction;
 
             var dataTable = $modal.find('#AccountTransactionsTable').DataTable(abp.libs.datatables.normalizeConfiguration({
+                destroy: true,
                 serverSide: true,
                 paging: true,
                 order: [[0, "desc"]],
                 searching: false,
                 scrollX: true,
-                ajax: abp.libs.datatables.createAjax(accountTransactionService.getList, function () {
-                    return { accountId: accountId };
+                ajax: abp.libs.datatables.createAjax(function (input) {
+                    return nexStock.accounts.account.getTransactions(accountId, input);
                 }),
                 columnDefs: [
                     {
@@ -21,7 +22,8 @@ $(function () {
                         data: "transactionDate",
                         render: function (data) {
                             if (data) {
-                                return luxon.DateTime.fromISO(data).toFormat('dd.MM.yyyy HH:mm');
+                                var date = new Date(data);
+                                return date.toLocaleDateString('tr-TR') + ' ' + date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
                             }
                             return "";
                         }
@@ -31,9 +33,13 @@ $(function () {
                         data: "type",
                         render: function(data) {
                             if(data === 1) return '<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Açılış Bakiyesi</span>';
-                            if(data === 2) return '<span class="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded">Tahsilat</span>';
-                            if(data === 3) return '<span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">Ödeme</span>';
-                            if(data === 4) return '<span class="bg-slate-100 text-slate-800 text-xs font-medium px-2.5 py-0.5 rounded">Ters Kayıt</span>';
+                            if(data === 2) return '<span class="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded">Gelir</span>';
+                            if(data === 3) return '<span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">Gider</span>';
+                            if(data === 4) return '<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Transfer Giriş</span>';
+                            if(data === 5) return '<span class="bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded">Transfer Çıkış</span>';
+                            if(data === 6) return '<span class="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded">Tahsilat</span>';
+                            if(data === 7) return '<span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">Ödeme</span>';
+                            if(data === 8) return '<span class="bg-slate-100 text-slate-800 text-xs font-medium px-2.5 py-0.5 rounded">Ters Kayıt</span>';
                             return data;
                         }
                     },

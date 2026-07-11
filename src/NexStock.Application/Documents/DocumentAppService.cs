@@ -159,10 +159,42 @@ public class DocumentAppService :
             query = query.Where(x => x.BusinessPartnerId == input.BusinessPartnerId.Value);
         }
 
+        if (input.Scope == DocumentListScope.InvoicesOnly)
+        {
+            query = query.Where(x => x.Type == DocumentType.SaleInvoice || x.Type == DocumentType.PurchaseInvoice);
+        }
+        else if (input.Scope == DocumentListScope.OffersOnly)
+        {
+            query = query.Where(x => x.Type == DocumentType.Offer);
+        }
+        else if (input.Scope == DocumentListScope.OrdersOnly)
+        {
+            query = query.Where(x => x.Type == DocumentType.SaleOrder || x.Type == DocumentType.PurchaseOrder);
+        }
+
         if (!string.IsNullOrWhiteSpace(input.Filter))
         {
             var filter = input.Filter.ToLower();
             query = query.Where(x => x.DocNumber.ToLower().Contains(filter));
+        }
+
+        if (input.DueFilter != DocumentDueFilter.All)
+        {
+            var today = Clock.Now.Date;
+            query = query.Where(x =>
+                (x.Type == DocumentType.SaleInvoice || x.Type == DocumentType.PurchaseInvoice) &&
+                (x.Status == DocumentStatus.Approved || x.Status == DocumentStatus.PartiallyPaid) &&
+                x.DueDate.HasValue);
+
+            if (input.DueFilter == DocumentDueFilter.Overdue)
+            {
+                query = query.Where(x => x.DueDate!.Value < today);
+            }
+            else if (input.DueFilter == DocumentDueFilter.DueSoon)
+            {
+                var dueSoonDate = today.AddDays(7);
+                query = query.Where(x => x.DueDate!.Value >= today && x.DueDate!.Value <= dueSoonDate);
+            }
         }
 
         return query;

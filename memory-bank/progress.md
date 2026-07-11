@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-07-10
+Last updated: 2026-07-11
 
 ## What Works
 
@@ -28,6 +28,12 @@ Last updated: 2026-07-10
 - Approval currently mutates stock, customer/supplier balance, account balance, and creates ledger rows.
 - Cancellation currently creates reversal stock/account rows and restores the source balances.
 - Dashboard has a real query service and no longer depends on static zero values for implemented KPIs.
+- Dashboard shows a six-month sales trend, five critical-stock products, and five top-selling products from live commercial data.
+- Approved and partially paid sales/purchase invoices can receive additional invoice-level collection/payment entries from the invoice list.
+- Invoice payment completion updates document status to `Paid`; cancellation reverses all linked account movements while retaining audit history.
+- Dashboard lists overdue and next-seven-day open invoices; paid and cancelled documents are excluded.
+- Current account document list exposes due date and outstanding balance, highlighting overdue open items.
+- Current-account detail includes a dedicated invoice-linked payment history with the account used, transaction direction, amount, date, description, and reversal records.
 - Real NexStock permission constants and definitions exist.
 - BookStore tutorial source modules were removed.
 - Root page redirects to Dashboard.
@@ -42,34 +48,32 @@ Last updated: 2026-07-10
   - Account transaction history
   - Stock movement history
   - Purchase invoice approval/cancellation test
+- **Phase 2: Invoice and Current Account Workflow Completed**:
+  - Invoice-level partial and closing collection/payment
+  - Reversal of every payment movement on cancellation
+  - Due-date monitoring on dashboard and invoice list
+  - Current-account statement with payment history
+- **Phase 3: POS Completed**:
+  - Barcode, product name, and SKU lookup
+  - Fast single-currency cart with server-side stock and price validation
+  - Cash, bank/card, and customer-credit checkout
+  - Recent POS sales and reversal-based cancellation
+  - POS turnover included in dashboard revenue and product rankings
+- **Phase 4: Offers and Orders Completed**:
+  - Offer and sales/purchase order creation using the existing commercial document editor
+  - Draft-to-sent transition before conversion
+  - Offer to sales order or invoice conversion
+  - Sales/purchase order to matching invoice conversion
+  - Source-document link, totals, and item preservation through conversion
+- **Phase 6: Settings and Printing Completed**:
+  - Tenant-aware company profile and commercial defaults saved through ABP Setting Management
+  - Default currency, unit, VAT rate, cash/bank accounts, document prefixes, POS prefix, and label format
+  - New product and document defaults wired to saved settings
+  - POS checkout uses compatible default cash/bank accounts
+  - Barcode/QR label selection, preview, and printing screen
+  - Persistent light/dark preference
 
 ## What's Left To Build
-
-### Phase 2: Invoice, Payment, and Current Account Workflows
-
-- Sales invoice creation and approval
-- Purchase invoice creation and approval
-- Collection and payment flows
-- Partial payment support
-- Due-date tracking
-- Customer/supplier detail history
-
-### Phase 3: POS
-
-- Barcode/search product lookup
-- Cart and payment flow
-- Cash/bank/customer-credit sale handling
-- POS sale cancellation
-- POS reports integration
-
-### Phase 4: Offer and Order Workflows
-
-- Offer creation
-- Offer to order/invoice conversion
-- Sales and purchase orders
-- Order to invoice conversion
-- Order status tracking
-- Later: partial delivery and stock reservation
 
 ### Phase 5: Reporting
 
@@ -84,16 +88,6 @@ Last updated: 2026-07-10
 - Aging report
 - Product profitability report
 
-### Phase 6: Settings, Labels, and Operational Polish
-
-- Company settings
-- Default currency and units
-- VAT rates
-- Document numbering templates
-- Default accounts
-- Barcode/QR label templates and printing
-- Light/dark theme persistence
-
 ### Phase 7: Audit, Notifications, and AI
 
 - Business notifications
@@ -105,6 +99,7 @@ Last updated: 2026-07-10
 - Several DTO/page model properties currently produce nullable warnings in some builds.
 - Some Razor Pages are UI skeletons and not connected to full business rules.
 - Dashboard is service-backed, but charts are still placeholder-level and need real time-series/report data.
+- Dashboard's current trend is turnover-only; richer reporting still belongs to Phase 5.
 - Application/Domain test projects currently contain no meaningful tests.
 - Historical migration designer files still contain Book/Author snapshots, which is expected for migration history.
 - Existing Mapperly warnings for audit/base properties are noisy but not blocking.
