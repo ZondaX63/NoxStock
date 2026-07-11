@@ -82,6 +82,8 @@
     "Permission:Sales.Cancel": "Canceling POS sales",
     "Permission:Reports": "Reports",
     "Permission:Reports.Export": "Exporting reports",
+    "Permission:Notifications": "Operational notifications",
+    "Permission:AuditLogs": "Audit logs",
     "Permission:Settings": "Settings",
     "Permission:Settings.Edit": "Editing settings",
     "Permission:Personnel": "Personnel Management",

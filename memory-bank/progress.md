@@ -65,6 +65,12 @@ Last updated: 2026-07-11
   - Offer to sales order or invoice conversion
   - Sales/purchase order to matching invoice conversion
   - Source-document link, totals, and item preservation through conversion
+- **Phase 5: Reporting Completed**:
+  - Date-filtered operational reporting built from commercial source transactions
+  - Sales, purchases, income/expense, collections/payments, net cash flow, receivables, and payables
+  - Cash/bank account summary, stock/critical-stock and movement lists, customer/supplier turnover, VAT, aging, and estimated product profitability
+  - Document currency totals converted through the exchange rate stored on each document
+  - Focused report-query coverage for ledger, VAT, aging, stock, and profitability calculations
 - **Phase 6: Settings and Printing Completed**:
   - Tenant-aware company profile and commercial defaults saved through ABP Setting Management
   - Default currency, unit, VAT rate, cash/bank accounts, document prefixes, POS prefix, and label format
@@ -72,34 +78,40 @@ Last updated: 2026-07-11
   - POS checkout uses compatible default cash/bank accounts
   - Barcode/QR label selection, preview, and printing screen
   - Persistent light/dark preference
+- **Phase 7: Notifications and Audit Views Completed (AI excluded)**:
+  - Live critical/out-of-stock product alerts
+  - Overdue and next-seven-day sale/purchase invoice alerts
+  - Topbar alert count and preview linked to the notification page
+  - Filterable ABP audit-log screen with date, user, HTTP method, and exception filters
+  - Dedicated notification and audit-log permissions and navigation
 
 ## What's Left To Build
 
-### Phase 5: Reporting
+### Product Hardening
 
-- Debt/receivable report
-- Income/expense report
-- Cash flow
-- Cash/bank report
-- Stock and critical stock reports
-- Stock movement report
-- Customer/supplier sales/purchase reports
-- VAT report
-- Aging report
-- Product profitability report
-
-### Phase 7: Audit, Notifications, and AI
-
-- Business notifications
-- Audit log views for commercial actions
-- AI assistant features only after reliable product/account/document data exists
+- Live browser walkthrough with PostgreSQL/Docker
+- Pagination and export polish for high-volume reports and audit logs
+- Frontend/runtime regression pass across all implemented workflows
+- CI build/test/migration/container smoke checks
+- Global error handling, health checks, logging, backup and restore runbook
+- Phase 8 inventory core: warehouse/location, transfers, returns, reservations, batch/serial tracking, and historical costing
+- Phase 9 accounting and Turkish tax/e-document workflows
+- Phase 10 advanced purchasing, sales, delivery, pricing, and approval workflows
+- Phase 11 CRM and customer/supplier success workflows
+- Phase 12 multi-branch, multi-currency, and tenant maturity
+- Phase 13 management intelligence and reconciled reporting
+- Phase 14 UX, accessibility, imports, exports, and mobile/tablet operations
+- Phase 15 integrations and platform APIs
+- Phase 16 security, KVKK, reliability, and disaster recovery
+- AI assistant features are explicitly excluded from the current scope
 
 ## Known Issues
 
 - Several DTO/page model properties currently produce nullable warnings in some builds.
 - Some Razor Pages are UI skeletons and not connected to full business rules.
 - Dashboard is service-backed, but charts are still placeholder-level and need real time-series/report data.
-- Dashboard's current trend is turnover-only; richer reporting still belongs to Phase 5.
+- Product profitability is an operational estimate because it uses the current product-card purchase price, not a historical inventory-costing ledger.
+- Notification read state is currently live/derived from source data; persistent per-user dismissal is a later product-hardening item.
 - Application/Domain test projects currently contain no meaningful tests.
 - Historical migration designer files still contain Book/Author snapshots, which is expected for migration history.
 - Existing Mapperly warnings for audit/base properties are noisy but not blocking.

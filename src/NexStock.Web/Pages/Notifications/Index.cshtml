@@ -1,0 +1,63 @@
+@page
+@model NexStock.Web.Pages.Notifications.IndexModel
+@{
+    ViewData["Title"] = "Bildirimler";
+}
+
+<div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">Operasyon merkezi</p>
+            <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Bildirimler</h1>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Stok ve vade riskleri canlı ticari kayıtlardan hesaplanır.</p>
+        </div>
+        <a href="/Reports" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <span class="material-icons-round text-base">assessment</span> Raporlara git
+        </a>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-3">
+        <div class="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+            <div class="text-sm text-slate-500 dark:text-slate-400">Toplam açık uyarı</div>
+            <div class="mt-2 text-3xl font-bold text-slate-900 dark:text-white">@Model.Summary.TotalCount</div>
+        </div>
+        <div class="rounded-xl border border-red-200 bg-red-50 p-5 dark:border-red-900/50 dark:bg-red-950/20">
+            <div class="text-sm text-red-700 dark:text-red-300">Kritik</div>
+            <div class="mt-2 text-3xl font-bold text-red-700 dark:text-red-300">@Model.Summary.CriticalCount</div>
+        </div>
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/50 dark:bg-amber-950/20">
+            <div class="text-sm text-amber-700 dark:text-amber-300">Dikkat</div>
+            <div class="mt-2 text-3xl font-bold text-amber-700 dark:text-amber-300">@Model.Summary.WarningCount</div>
+        </div>
+    </div>
+
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+        <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+            <h2 class="font-semibold text-slate-900 dark:text-white">Açık operasyon uyarıları</h2>
+        </div>
+        @if (Model.Summary.Alerts.Count == 0)
+        {
+            <div class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">Şu anda açık operasyon uyarısı bulunmuyor.</div>
+        }
+        else
+        {
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                @foreach (var alert in Model.Summary.Alerts)
+                {
+                    var critical = alert.Severity == "Critical";
+                    <a href="@alert.Link" class="flex items-start gap-4 px-5 py-4 transition hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                        <span class="material-icons-round mt-0.5 @(critical ? "text-red-500" : "text-amber-500")">@(alert.Type == "CriticalStock" ? "inventory_2" : "event_busy")</span>
+                        <span class="min-w-0 flex-1">
+                            <span class="flex flex-wrap items-center gap-2">
+                                <span class="font-semibold text-slate-900 dark:text-white">@alert.Title</span>
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold @(critical ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300")">@(critical ? "Kritik" : "Dikkat")</span>
+                            </span>
+                            <span class="mt-1 block text-sm text-slate-600 dark:text-slate-300">@alert.Message</span>
+                        </span>
+                        <span class="material-icons-round text-slate-400">chevron_right</span>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+</div>

@@ -183,6 +183,8 @@ public class NexStockWebModule : AbpModule
             options.Conventions.AuthorizePage("/Orders/Index", NexStockPermissions.Orders.Default);
             options.Conventions.AuthorizePage("/Sales/Index", NexStockPermissions.Sales.Default);
             options.Conventions.AuthorizePage("/Reports/Index", NexStockPermissions.Reports.Default);
+            options.Conventions.AuthorizePage("/Notifications/Index", NexStockPermissions.Notifications.Default);
+            options.Conventions.AuthorizePage("/AuditLogs/Index", NexStockPermissions.AuditLogs.Default);
             options.Conventions.AuthorizePage("/Settings/Index", NexStockPermissions.Settings.Default);
             options.Conventions.AuthorizePage("/Personnel/Index", NexStockPermissions.Personnel.Default);
         });

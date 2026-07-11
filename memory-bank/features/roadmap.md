@@ -106,7 +106,7 @@ Verification completed:
 
 ## Phase 5: Reporting
 
-Status: Next (intentionally deferred while Phase 6 was completed).
+Status: Completed on 2026-07-11.
 
 Goal: give owners operational visibility.
 
@@ -125,6 +125,12 @@ Deliverables:
 Exit criteria:
 
 - Reports use application/query services and match source transactions.
+
+Verification completed:
+
+- The reports page filters a single operational snapshot by date range and reads through `ReportingAppService` rather than static page values.
+- Sales/purchase document values use the exchange rate saved on the document when a non-TRY currency was selected.
+- Focused EF coverage verifies sales/purchase totals, VAT, account cash flow, current-account amounts, aging, critical stock, stock movement, and estimated product profitability.
 
 ## Phase 6: Settings and Printing
 
@@ -154,7 +160,9 @@ Verification completed:
 - Label printing supports product search, quantities, Code 128 barcode, QR, and print media styling.
 - Light/dark preference persists using browser storage.
 
-## Phase 7: Notifications, Audit Views, AI
+## Phase 7: Notifications and Audit Views
+
+Status: Completed on 2026-07-11 (AI excluded).
 
 Goal: add intelligence after data quality exists.
 
@@ -163,8 +171,27 @@ Deliverables:
 - Critical stock notifications.
 - Due-date notifications.
 - Commercial audit views.
-- AI query/explanation assistant for reports and product/customer summaries.
+- AI query/explanation assistant is excluded from the current scope.
 
 Exit criteria:
 
-- AI features cite internal data and never mutate commercial records without explicit user confirmation.
+- Notifications and audit views can be traced back to immutable commercial source records.
+
+Verification completed:
+
+- Topbar notification count and preview are generated from current critical stock and open invoice data.
+- Notifications page lists critical stock, out-of-stock, overdue, and upcoming due-date alerts.
+- Audit-log page filters ABP audit records by date range, user, HTTP method, and exception state.
+- Focused EF test verifies critical stock alert generation.
+
+## Enterprise Roadmap After Phase 7
+
+The remaining product work is tracked in [enterprise-roadmap.md](enterprise-roadmap.md). Its priority order is:
+
+1. Product hardening and live browser verification.
+2. Professional inventory core: warehouses, returns, reservations, batches, serials, and costing.
+3. Complete accounting and Turkish tax/e-document workflows.
+4. Advanced purchasing, sales, deliveries, returns, pricing, and approvals.
+5. CRM/customer success and supplier performance.
+6. Multi-branch, multi-currency, reporting intelligence, UX, integrations, security, and reliability.
+7. AI remains deferred until the accounting and inventory ledgers are mature.

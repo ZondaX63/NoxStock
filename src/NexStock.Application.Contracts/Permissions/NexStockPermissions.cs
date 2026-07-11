@@ -99,6 +99,16 @@ public static class NexStockPermissions
         public const string Export = Default + ".Export";
     }
 
+    public static class Notifications
+    {
+        public const string Default = GroupName + ".Notifications";
+    }
+
+    public static class AuditLogs
+    {
+        public const string Default = GroupName + ".AuditLogs";
+    }
+
     public static class Settings
     {
         public const string Default = GroupName + ".Settings";

@@ -4,7 +4,7 @@ Last updated: 2026-07-11
 
 ## Current Work Focus
 
-Phase 1 (Commercial Foundation), Phase 2 (Invoice and Current Account Workflow), Phase 3 (POS), Phase 4 (Offers and Orders), and Phase 6 (Settings and Printing) are complete. Phase 5 is intentionally deferred and is the next focus: operational reporting built from the now-reliable commercial ledger.
+Phase 1 (Commercial Foundation), Phase 2 (Invoice and Current Account Workflow), Phase 3 (POS), Phase 4 (Offers and Orders), Phase 5 (Reporting), Phase 6 (Settings and Printing), and the non-AI scope of Phase 7 are complete. AI features remain explicitly out of scope.
 
 ## Recent Changes
 
@@ -71,14 +71,22 @@ Phase 1 (Commercial Foundation), Phase 2 (Invoice and Current Account Workflow),
 - Theme persistence now uses the `nexstock.theme` preference while retaining compatibility with `darkMode`.
 - Completed a frontend interaction audit: CRUD, invoice, offer/order, POS, label, and current-account command buttons have matching handlers or real links. Removed misleading stock-entry/exit and personnel placeholder commands, wired current-account printing and notification acknowledgement, and made report cards navigate to their existing operational views.
 - Product-list currency selection now converts displayed purchase/sale amounts after exchange rates load; stock-movement listing now uses its explicit table selector and date sort.
+- Added a read-only `ReportingAppService` and reporting DTOs; it derives operational report data directly from documents, document lines, stock movements, accounts, account transactions, products, and current accounts without adding a reporting table.
+- Replaced the static reports page with a date-filtered operational report covering sales/purchases, collections/payments, cash flow, receivables/payables, stock value/critical stock, stock movements, customer/supplier turnover, VAT, aging, and estimated product profitability.
+- Document-based report figures normalize non-TRY documents using their stored document exchange rate. Product profitability states that its cost is an estimate based on the current product-card purchase price.
+- Added focused reporting coverage for document totals, VAT, cash flow, current-account balances, aging, critical stock, movement history, and profitability.
+- Added live operational alerts for critical/out-of-stock products and overdue or soon-due sale/purchase invoices.
+- Replaced the static topbar notification dropdown with live alert counts and links to the notification page.
+- Added a notification screen and a filtered audit-log screen backed by ABP's existing `IAuditLogRepository` and audit tables; no new notification or audit schema was introduced.
+- Added notification permission, audit-log permission, navigation entries, and a focused critical-stock alert test.
 
 ## Verification Status
 
-- `dotnet build NexStock.slnx -m:1 --no-restore` passes (one pre-existing Web test entry-point warning).
-- `dotnet test NexStock.slnx --no-build -m:1` passes when run outside the sandbox because VSTest needs local socket access.
+- `dotnet build NexStock.slnx -m:1 --no-restore` passes (pre-existing nullable/Mapperly warnings remain).
+- `dotnet test NexStock.slnx -m:1` passes (14 EntityFrameworkCore tests and 1 Web test; one pre-existing Web test entry-point warning).
 - `CompanySettingsAppServiceTests.Should_Save_Operational_Defaults_And_Expose_Default_Pos_Accounts` passes.
 - Test output notes that Application, Domain, and TestBase assemblies contain no tests. This is currently informational.
-- Local PostgreSQL at `localhost:5433` currently returns `no response`, so the web app was not started in this pass.
+- Local PostgreSQL availability is still required for a live browser walkthrough; automated build and integration tests pass.
 
 ## Active Decisions
 
@@ -95,7 +103,7 @@ Phase 1 (Commercial Foundation), Phase 2 (Invoice and Current Account Workflow),
 
 ## Immediate Next Steps
 
-1. Build report query services for stock, cash/bank, receivable/payable, and income/expense visibility.
-2. Implement critical stock, stock movement, debtor/creditor, and cash/bank report screens from application queries.
-3. Add aging and product profitability reports after currency and cost assumptions are explicitly defined.
-4. Add focused report-query tests against ledger and document data.
+1. Complete Product Hardening: run the live browser walkthrough, close frontend/runtime gaps, and add CI/container smoke tests.
+2. Start Phase 8 Inventory Core with warehouse/location foundations, stock transfers, returns, reservations, and inventory-count controls.
+3. Design historical inventory costing before extending profitability reports.
+4. Keep the broader accounting, Turkish tax/e-document, purchasing, CRM, integration, security, and reliability tasks in `memory-bank/features/enterprise-roadmap.md`; AI remains deferred.

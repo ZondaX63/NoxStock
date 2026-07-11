@@ -97,6 +97,11 @@
             Raporlar
         </a>
 
+        <a href="/AuditLogs" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/auditlogs") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
+            <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/auditlogs") ? "text-white" : "text-slate-500 group-hover:text-white")">history</span>
+            Denetim Kayıtları
+        </a>
+
         <!-- Admin -->
         <a href="/Identity/Users" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/identity") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
             <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/identity") ? "text-white" : "text-slate-500 group-hover:text-white")">supervisor_account</span>

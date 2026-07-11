@@ -54,6 +54,9 @@ public class NexStockPermissionDefinitionProvider : PermissionDefinitionProvider
         var reportsPermission = myGroup.AddPermission(NexStockPermissions.Reports.Default, L("Permission:Reports"));
         reportsPermission.AddChild(NexStockPermissions.Reports.Export, L("Permission:Reports.Export"));
 
+        myGroup.AddPermission(NexStockPermissions.Notifications.Default, L("Permission:Notifications"));
+        myGroup.AddPermission(NexStockPermissions.AuditLogs.Default, L("Permission:AuditLogs"));
+
         var settingsPermission = myGroup.AddPermission(NexStockPermissions.Settings.Default, L("Permission:Settings"));
         settingsPermission.AddChild(NexStockPermissions.Settings.Edit, L("Permission:Settings.Edit"));
 

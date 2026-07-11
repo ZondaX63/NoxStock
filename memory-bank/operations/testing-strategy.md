@@ -7,12 +7,12 @@ Last updated: 2026-07-11
 Current command:
 
 ```bash
-dotnet test NexStock.slnx --no-build -m:1
+dotnet test NexStock.slnx -m:1
 ```
 
 Status on 2026-07-11:
 
-- EntityFrameworkCore tests: 12 passed
+- EntityFrameworkCore tests: 14 passed
 - Web tests: 1 passed
 - Application, Domain, and TestBase assemblies report no available tests
 
@@ -44,6 +44,10 @@ Latest focused prototype test:
 - Covers purchase order conversion into a linked purchase invoice.
 - `CompanySettingsAppServiceTests.Should_Save_Operational_Defaults_And_Expose_Default_Pos_Accounts`
 - Covers persisted commercial defaults and POS default cash/bank account exposure.
+- `ReportingAppServiceTests.Should_Build_Operational_Snapshot_From_Commercial_Ledger`
+- Covers date-filtered sales/purchase totals, VAT, account income/expense and cash flow, receivable/payable amounts, aging, critical stock, stock movement, and estimated product profitability.
+- `OperationalAlertsAppServiceTests.Should_List_Critical_Stock_As_Operational_Alert`
+- Covers live critical/out-of-stock alert generation from the product stock state.
 
 ## Testing Priorities
 

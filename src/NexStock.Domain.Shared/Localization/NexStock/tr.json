@@ -77,6 +77,8 @@
     "Permission:Sales.Cancel": "POS satışı iptal etme",
     "Permission:Reports": "Raporlar",
     "Permission:Reports.Export": "Rapor dışa aktarma",
+    "Permission:Notifications": "Operasyonel bildirimler",
+    "Permission:AuditLogs": "Denetim kayıtları",
     "Permission:Settings": "Ayarlar",
     "Permission:Settings.Edit": "Ayar düzenleme",
     "Permission:Personnel": "Personel yönetimi",
