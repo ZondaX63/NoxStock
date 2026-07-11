@@ -1,4 +1,5 @@
 @page
+@using System.Linq
 @model NexStock.Web.Pages.Products.IndexModel
 @{
     Layout = "_AppLayout";
@@ -51,28 +52,58 @@
     </form>
 </section>
 
-<section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-    <div class="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-900/40"><div class="relative w-full sm:max-w-md"><span class="material-icons-round absolute left-3 top-2.5 text-base text-slate-400">search</span><input id="ProductSearch" type="search" placeholder="Ürün adı, stok kodu veya barkod ara" class="input-field pl-9" /></div><span class="text-xs text-slate-500">Fiyatlar kayıtlı para birimiyle birlikte gösterilir.</span></div>
-    <div class="overflow-x-auto"><table id="ProductsTable" class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40"><tr><th class="px-4 py-3">İşlem</th><th class="px-4 py-3">Ürün</th><th class="px-4 py-3">Kodlar</th><th class="px-4 py-3">Marka / kategori</th><th class="px-4 py-3">Stok</th><th class="px-4 py-3">Alış</th><th class="px-4 py-3">Satış</th></tr></thead><tbody>
-        @foreach (var product in Model.Products)
-        {
-            var stockClass = product.Quantity <= product.CriticalStockLevel ? "text-red-600" : "text-slate-700";
-            <tr class="border-b border-slate-100 dark:border-slate-700">
-                <td class="px-4 py-3 text-xs">
-                    <div class="flex items-center gap-2">
-                        <button type="button" class="text-indigo-600 hover:text-indigo-900" title="Düzenle"><span class="material-icons-round text-lg">edit</span></button>
-                        <button type="button" class="text-red-600 hover:text-red-900" title="Sil"><span class="material-icons-round text-lg">delete</span></button>
-                    </div>
-                </td>
-                <td class="px-4 py-3"><div class="font-medium text-slate-800 dark:text-slate-100">@product.Name</div><div class="mt-1 max-w-xs truncate text-xs text-slate-500">@product.Description</div></td>
-                <td class="px-4 py-3"><div>@product.Sku</div><div class="mt-1 text-xs text-slate-500">@(product.Barcode ?? "-")@(string.IsNullOrWhiteSpace(product.OemCodes) ? "" : " · " + product.OemCodes)</div></td>
-                <td class="px-4 py-3">@(product.BrandName ?? "-")<div class="mt-1 text-xs text-slate-500">@(product.CategoryName ?? "-")</div></td>
-                <td class="px-4 py-3"><span class="font-semibold @stockClass">@product.Quantity.ToString("N2") @product.Unit</span></td>
-                <td class="px-4 py-3 font-semibold"><span class="product-purchase-price" data-price="@product.PurchasePrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-currency="@product.PurchaseCurrency">@product.PurchasePrice.ToString("N2") @product.PurchaseCurrency</span></td>
-                <td class="px-4 py-3 font-semibold"><span class="product-sale-price" data-price="@product.SalePrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-currency="@product.SaleCurrency">@product.SalePrice.ToString("N2") @product.SaleCurrency</span></td>
-            </tr>
-        }
-    </tbody></table></div>
+<section class="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+    <div class="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-900/40">
+        <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div class="relative w-full xl:max-w-md">
+                <span class="material-icons-round absolute left-3 top-2.5 text-base text-slate-400">search</span>
+                <input id="ProductSearch" type="search" placeholder="Ürün adı, stok kodu, barkod veya OEM ara" class="input-field pl-9" />
+            </div>
+            <div class="text-xs text-slate-500">Listeleme, arama ve filtreler sunucu tarafında çalışır.</div>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <select id="ProductBrandFilter" class="input-field">
+                <option value="">Tüm markalar</option>
+                @foreach (var brand in Model.Brands.Skip(1))
+                {
+                    <option value="@brand.Value">@brand.Text</option>
+                }
+            </select>
+            <select id="ProductCategoryFilter" class="input-field">
+                <option value="">Tüm kategoriler</option>
+                @foreach (var category in Model.Categories.Skip(1))
+                {
+                    <option value="@category.Value">@category.Text</option>
+                }
+            </select>
+            <select id="ProductStockStatusFilter" class="input-field">
+                <option value="">Tüm stok durumları</option>
+                <option value="critical">Kritik altı</option>
+                <option value="zero">Sıfır stok</option>
+                <option value="normal">Normal</option>
+            </select>
+            <button id="ResetProductFilters" type="button" class="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                <span class="material-icons-round text-base">restart_alt</span>
+                Filtreleri Sıfırla
+            </button>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table id="ProductsTable" class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40">
+                <tr>
+                    <th class="px-4 py-3">İşlem</th>
+                    <th class="px-4 py-3">Ürün</th>
+                    <th class="px-4 py-3">Kodlar</th>
+                    <th class="px-4 py-3">Marka / kategori</th>
+                    <th class="px-4 py-3">Stok</th>
+                    <th class="px-4 py-3">Alış</th>
+                    <th class="px-4 py-3">Satış</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 </section>
 
 @section Scripts { <abp-script src="/Pages/Products/Index.js" /> }

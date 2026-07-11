@@ -1,49 +1,111 @@
 @page
-@using Microsoft.AspNetCore.Mvc.Localization
-@using NexStock.Localization
 @using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
-@inject IHtmlLocalizer<NexStockResource> L
 @model NexStock.Web.Pages.Products.EditModalModel
 @{
     Layout = null;
 }
 
 <form asp-page="/Products/EditModal">
-    <input asp-for="Product.Currency" type="hidden" />
-    <input asp-for="Product.PurchaseCurrency" type="hidden" />
-    <input asp-for="Product.SaleCurrency" type="hidden" />
-    <abp-modal size="Large">
-        <abp-modal-header title="@L["Update"].Value"></abp-modal-header>
+    <abp-modal size="ExtraLarge">
+        <abp-modal-header title="Ürün Düzenle"></abp-modal-header>
         <abp-modal-body>
-            <abp-input asp-for="Id" />
-            <abp-row>
-                <abp-column size-md="_6">
-                    <abp-input asp-for="Product.Name" />
-                </abp-column>
-                <abp-column size-md="_6">
-                    <abp-input asp-for="Product.Sku" />
-                </abp-column>
-            </abp-row>
-            <abp-row>
-                <abp-column size-md="_6">
-                    <abp-select asp-for="Product.BrandId" asp-items="Model.Brands" />
-                </abp-column>
-                <abp-column size-md="_6">
-                    <abp-select asp-for="Product.CategoryId" asp-items="Model.Categories" />
-                </abp-column>
-            </abp-row>
-            <abp-row>
-                <abp-column size-md="_4">
-                    <abp-input asp-for="Product.SalePrice" />
-                </abp-column>
-                <abp-column size-md="_4">
-                    <abp-input asp-for="Product.PurchasePrice" />
-                </abp-column>
-                <abp-column size-md="_4">
-                    <abp-input asp-for="Product.Quantity" />
-                </abp-column>
-            </abp-row>
-            <abp-input asp-for="Product.OemCodes" label="OEM Kodları" />
+            <input asp-for="Id" type="hidden" />
+            <div class="row g-4">
+                @* Kart Bilgileri *@
+                <div class="col-12">
+                    <h6 class="fw-semibold text-muted mb-3 border-bottom pb-2">Kart Bilgileri</h6>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Product.Name" class="form-label">Ürün Adı <span class="text-danger">*</span></label>
+                    <input asp-for="Product.Name" class="form-control" />
+                    <span asp-validation-for="Product.Name" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Product.Sku" class="form-label">Stok Kodu <span class="text-danger">*</span></label>
+                    <input asp-for="Product.Sku" class="form-control" />
+                    <span asp-validation-for="Product.Sku" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Product.Barcode" class="form-label">Barkod</label>
+                    <input asp-for="Product.Barcode" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Product.CategoryId" class="form-label">Kategori</label>
+                    <select asp-for="Product.CategoryId" asp-items="Model.Categories" class="form-select"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Product.BrandId" class="form-label">Marka</label>
+                    <select asp-for="Product.BrandId" asp-items="Model.Brands" class="form-select"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Product.OemCodes" class="form-label">OEM Kodları</label>
+                    <input asp-for="Product.OemCodes" class="form-control" placeholder="Örnek: 1234, 5678" />
+                </div>
+                <div class="col-12">
+                    <label asp-for="Product.Description" class="form-label">Açıklama</label>
+                    <textarea asp-for="Product.Description" class="form-control" rows="2"></textarea>
+                </div>
+
+                @* Fiyatlandırma *@
+                <div class="col-12 mt-2">
+                    <h6 class="fw-semibold text-muted mb-3 border-bottom pb-2">Fiyatlandırma</h6>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Product.PurchasePrice" class="form-label">Alış Fiyatı</label>
+                    <div class="input-group">
+                        <input asp-for="Product.PurchasePrice" type="number" step="0.01" min="0" class="form-control" />
+                        <select asp-for="Product.PurchaseCurrency" class="form-select" style="max-width:90px">
+                            <option>TRY</option>
+                            <option>USD</option>
+                            <option>EUR</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Product.SalePrice" class="form-label">Satış Fiyatı</label>
+                    <div class="input-group">
+                        <input asp-for="Product.SalePrice" type="number" step="0.01" min="0" class="form-control" />
+                        <select asp-for="Product.SaleCurrency" class="form-select" style="max-width:90px">
+                            <option>TRY</option>
+                            <option>USD</option>
+                            <option>EUR</option>
+                        </select>
+                    </div>
+                </div>
+
+                @* Stok ve Konum *@
+                <div class="col-12 mt-2">
+                    <h6 class="fw-semibold text-muted mb-3 border-bottom pb-2">Stok ve Konum</h6>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Product.Quantity" class="form-label">Stok Miktarı</label>
+                    <input asp-for="Product.Quantity" type="number" step="0.01" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Product.Unit" class="form-label">Birim</label>
+                    <select asp-for="Product.Unit" class="form-select">
+                        <option>Adet</option>
+                        <option>Kg</option>
+                        <option>Lt</option>
+                        <option>Mt</option>
+                        <option>Koli</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Product.CriticalStockLevel" class="form-label">Kritik Stok Seviyesi</label>
+                    <input asp-for="Product.CriticalStockLevel" type="number" step="0.01" min="0" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="Product.ShelfLocation" class="form-label">Raf / Konum</label>
+                    <input asp-for="Product.ShelfLocation" class="form-control" />
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input asp-for="Product.TrackStock" class="form-check-input" />
+                        <label asp-for="Product.TrackStock" class="form-check-label">Stok takibi yap</label>
+                    </div>
+                </div>
+            </div>
         </abp-modal-body>
         <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
     </abp-modal>

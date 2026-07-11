@@ -17,22 +17,36 @@
 </div>
 
 <div class="card overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-none">
-    <div class="p-0">
-            <table id="StockMovementsTable" class="table w-full text-left whitespace-nowrap">
-                <thead class="bg-slate-50/50 dark:bg-slate-800/50">
-                    <tr>
-                        <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Tarih</th>
-                        <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Ürün Adı</th>
-                        <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">İşlem Yönü</th>
-                        <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Miktar</th>
-                        <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Kalan Bakiye</th>
-                        <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Açıklama</th>
-                    </tr>
-                </thead>
-                <tbody class="text-sm">
-                </tbody>
-            </table>
+    <div class="border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-900/40">
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <select id="ProductMovementFilter" class="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+                @foreach (var product in Model.Products)
+                {
+                    <option value="@product.Value">@product.Text</option>
+                }
+            </select>
+            <button id="ResetMovementFilter" type="button" class="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                <span class="material-icons-round text-base">restart_alt</span>
+                Filtreyi Sıfırla
+            </button>
         </div>
+    </div>
+    <div class="p-0">
+        <table id="StockMovementsTable" class="table w-full text-left whitespace-nowrap">
+            <thead class="bg-slate-50/50 dark:bg-slate-800/50">
+                <tr>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Tarih</th>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Ürün Adı</th>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">İşlem Yönü</th>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Kaynak</th>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Miktar</th>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Kalan Bakiye</th>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Açıklama</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm">
+            </tbody>
+        </table>
     </div>
 
 @section Scripts {

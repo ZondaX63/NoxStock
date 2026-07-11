@@ -8,7 +8,6 @@ using NexStock.BusinessPartners;
 using NexStock.Documents;
 using NexStock.Products;
 using NexStock.Settings;
-using Volo.Abp.Application.Dtos;
 
 namespace NexStock.Web.Pages.Invoices;
 
@@ -105,7 +104,7 @@ public class CreateModel : NexStockPageModel
         BusinessPartners = bpLookup.Items.Select(x => new SelectListItem(x.Name, x.Id.ToString())).ToList();
         BusinessPartners.Insert(0, new SelectListItem("Seçiniz...", string.Empty));
 
-        var productLookup = await _productAppService.GetListAsync(new PagedAndSortedResultRequestDto
+        var productLookup = await _productAppService.GetListAsync(new ProductGetListInput
         {
             MaxResultCount = 1000
         });

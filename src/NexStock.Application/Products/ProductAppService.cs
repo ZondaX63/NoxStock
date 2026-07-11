@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Linq;
 using NexStock.Brands;
 using NexStock.Categories;
 using NexStock.Permissions;
@@ -16,7 +17,7 @@ public class ProductAppService :
         Product,
         ProductDto,
         Guid,
-        PagedAndSortedResultRequestDto,
+        ProductGetListInput,
         CreateUpdateProductDto>,
     IProductAppService
 {
@@ -85,10 +86,36 @@ public class ProductAppService :
         return productDto;
     }
 
-    public override async Task<PagedResultDto<ProductDto>> GetListAsync(PagedAndSortedResultRequestDto input)
+    protected override async Task<IQueryable<Product>> CreateFilteredQueryAsync(ProductGetListInput input)
     {
         var queryable = await Repository.GetQueryableAsync();
-        
+        var filter = input.Filter?.Trim();
+        var stockStatus = input.StockStatus?.Trim().ToLowerInvariant();
+
+        queryable = queryable
+            .WhereIf(input.BrandId.HasValue, x => x.BrandId == input.BrandId)
+            .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
+            .WhereIf(!string.IsNullOrWhiteSpace(filter), x =>
+                x.Name.Contains(filter!) ||
+                x.Sku.Contains(filter!) ||
+                (x.Barcode != null && x.Barcode.Contains(filter!)) ||
+                x.OemCodes.Any(o => o.OemCode.Contains(filter!)))
+            .WhereIf(stockStatus == "critical", x => x.TrackStock && x.Quantity > 0 && x.Quantity <= x.CriticalStockLevel)
+            .WhereIf(stockStatus == "zero", x => x.Quantity <= 0)
+            .WhereIf(stockStatus == "normal", x => !x.TrackStock || x.Quantity > x.CriticalStockLevel);
+
+        return queryable;
+    }
+
+    public override async Task<PagedResultDto<ProductDto>> GetListAsync(ProductGetListInput input)
+    {
+        var queryable = await CreateFilteredQueryAsync(input);
+
+        var totalCount = await AsyncExecuter.CountAsync(queryable);
+
+        queryable = ApplySorting(queryable, input);
+        queryable = ApplyPaging(queryable, input);
+
         var query = from product in queryable
                     join brand in await _brandRepository.GetQueryableAsync() on product.BrandId equals brand.Id into brands
                     from brand in brands.DefaultIfEmpty()
@@ -96,10 +123,6 @@ public class ProductAppService :
                     from category in categories.DefaultIfEmpty()
                     select new { product, brand, category };
 
-        var totalCount = await AsyncExecuter.CountAsync(query);
-        
-        query = query.Skip(input.SkipCount).Take(input.MaxResultCount);
-        
         var queryResult = await AsyncExecuter.ToListAsync(query);
 
         var productDtos = new List<ProductDto>();

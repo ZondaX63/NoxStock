@@ -2,6 +2,9 @@ $(function () {
     var rates = {};
     var displayCurrency = localStorage.getItem('productDisplayCurrency') || 'TRY';
     var editor = $('#ProductEditor');
+    var editModal = new abp.ModalManager(abp.appPath + 'Products/EditModal');
+    var dataTable;
+    var searchTimer;
 
     $('#DisplayCurrency').val(displayCurrency);
 
@@ -20,6 +23,21 @@ $(function () {
         return toTry(value, fromCurrency) / (targetRate || 1);
     }
 
+    function renderPrice(value, sourceCurrency) {
+        if (sourceCurrency !== displayCurrency &&
+            ((!rates[sourceCurrency] && sourceCurrency !== 'TRY') || (!rates[displayCurrency] && displayCurrency !== 'TRY'))) {
+            return formatMoney(value, sourceCurrency);
+        }
+
+        return formatMoney(convert(value, sourceCurrency, displayCurrency), displayCurrency);
+    }
+
+    function refreshTablePrices() {
+        if (dataTable) {
+            dataTable.ajax.reload(null, false);
+        }
+    }
+
     function updateEquivalent(priceInput, currencyInput, target) {
         var value = Number(priceInput.val());
         var currency = currencyInput.val();
@@ -31,29 +49,16 @@ $(function () {
         updateEquivalent($('#Product_SalePrice'), $('#Product_SaleCurrency'), $('#SaleTryEquivalent'));
     }
 
-    function updateDisplayedPrices() {
-        $('.product-purchase-price, .product-sale-price').each(function () {
-            var $price = $(this);
-            var sourceCurrency = $price.data('currency');
-            var sourcePrice = Number($price.data('price'));
-            if (sourceCurrency !== displayCurrency &&
-                ((!rates[sourceCurrency] && sourceCurrency !== 'TRY') || (!rates[displayCurrency] && displayCurrency !== 'TRY'))) {
-                $price.text(formatMoney(sourcePrice, sourceCurrency));
-                return;
-            }
-            $price.text(formatMoney(convert(sourcePrice, sourceCurrency, displayCurrency), displayCurrency));
-        });
-    }
-
     function openEditor() {
         editor.prop('hidden', false);
         editor[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
         $('#Product_Name').trigger('focus');
     }
 
-    $('#NewProductButton').on('click', openEditor);
-    $('#CloseProductEditor').on('click', function () { editor.prop('hidden', true); });
-    $('#Product_PurchasePrice, #Product_SalePrice, #Product_PurchaseCurrency, #Product_SaleCurrency').on('input change', updatePriceEquivalents);
+    function closeEditor() {
+        editor.prop('hidden', true);
+    }
+
     function calculateSalePrice() {
         var purchasePrice = Number($('#Product_PurchasePrice').val());
         var margin = Number($('#ProfitMargin').val());
@@ -79,6 +84,7 @@ $(function () {
                 var refreshedFinalSalePrice = refreshedSalePriceInTry / refreshedSaleRate;
                 $('#Product_SalePrice').val(refreshedFinalSalePrice.toFixed(2)).trigger('input');
                 $('#SaleCalculationInfo').text(formatMoney(purchasePrice, purchaseCurrency) + ' + %' + margin + ' marj = ' + formatMoney(refreshedFinalSalePrice, saleCurrency) + ' (' + formatMoney(refreshedSalePriceInTry, 'TRY') + ')');
+                refreshTablePrices();
             });
         }
 
@@ -87,10 +93,6 @@ $(function () {
         $('#Product_SalePrice').val(finalSalePrice.toFixed(2)).trigger('input');
         $('#SaleCalculationInfo').text(formatMoney(purchasePrice, purchaseCurrency) + ' + %' + margin + ' marj = ' + formatMoney(finalSalePrice, saleCurrency) + ' (' + formatMoney(salePriceInTry, 'TRY') + ')');
     }
-
-    $('#CalculateSalePrice').on('click', function () {
-        calculateSalePrice();
-    });
 
     function fetchRates() {
         return fetch(abp.appPath + 'api/app/exchange-rate/current', { credentials: 'same-origin' })
@@ -102,25 +104,150 @@ $(function () {
                     EUR: data.eur || data.EUR
                 };
                 updatePriceEquivalents();
-                updateDisplayedPrices();
+                refreshTablePrices();
             })
-            .catch(function () { updatePriceEquivalents(); updateDisplayedPrices(); });
+            .catch(function () {
+                updatePriceEquivalents();
+                refreshTablePrices();
+            });
     }
 
-    // Fetch currency data before initializing the table. A table/proxy error must not prevent price calculation.
-    fetchRates();
+    function getFilterPayload() {
+        return {
+            filter: $('#ProductSearch').val(),
+            brandId: $('#ProductBrandFilter').val() || null,
+            categoryId: $('#ProductCategoryFilter').val() || null,
+            stockStatus: $('#ProductStockStatusFilter').val() || null
+        };
+    }
+
+    dataTable = $('#ProductsTable').DataTable(abp.libs.datatables.normalizeConfiguration({
+        serverSide: true,
+        paging: true,
+        order: [[1, 'asc']],
+        searching: false,
+        scrollX: true,
+        ajax: abp.libs.datatables.createAjax(nexStock.products.product.getList, getFilterPayload),
+        columnDefs: [
+            {
+                title: 'İşlem',
+                orderable: false,
+                render: function (data, type, row) {
+                    return '' +
+                        '<div class="flex items-center gap-2">' +
+                        '<button type="button" class="product-edit-button text-indigo-600 hover:text-indigo-900" data-id="' + row.id + '" title="Düzenle"><span class="material-icons-round text-lg">edit</span></button>' +
+                        '<button type="button" class="product-delete-button text-red-600 hover:text-red-900" data-id="' + row.id + '" data-name="' + (row.name || '') + '" title="Sil"><span class="material-icons-round text-lg">delete</span></button>' +
+                        '</div>';
+                }
+            },
+            {
+                title: 'Ürün',
+                data: 'name',
+                render: function (data, type, row) {
+                    return '<div class="font-medium text-slate-800 dark:text-slate-100">' + (data || '') + '</div>' +
+                        '<div class="mt-1 max-w-xs truncate text-xs text-slate-500">' + (row.description || '') + '</div>';
+                }
+            },
+            {
+                title: 'Kodlar',
+                data: 'sku',
+                render: function (data, type, row) {
+                    var extra = (row.barcode || '-') + (row.oemCodes ? ' · ' + row.oemCodes : '');
+                    return '<div>' + (data || '') + '</div><div class="mt-1 text-xs text-slate-500">' + extra + '</div>';
+                }
+            },
+            {
+                title: 'Marka / kategori',
+                render: function (data, type, row) {
+                    return (row.brandName || '-') + '<div class="mt-1 text-xs text-slate-500">' + (row.categoryName || '-') + '</div>';
+                }
+            },
+            {
+                title: 'Stok',
+                data: 'quantity',
+                render: function (data, type, row) {
+                    var stockClass = Number(row.quantity) <= Number(row.criticalStockLevel) ? 'text-red-600' : 'text-slate-700';
+                    return '<span class="font-semibold ' + stockClass + '">' + Number(data || 0).toFixed(2) + ' ' + (row.unit || '') + '</span>';
+                }
+            },
+            {
+                title: 'Alış',
+                data: 'purchasePrice',
+                render: function (data, type, row) {
+                    return '<span class="product-purchase-price font-semibold" data-price="' + Number(data || 0).toFixed(2) + '" data-currency="' + (row.purchaseCurrency || 'TRY') + '">' +
+                        renderPrice(data, row.purchaseCurrency || 'TRY') +
+                        '</span>';
+                }
+            },
+            {
+                title: 'Satış',
+                data: 'salePrice',
+                render: function (data, type, row) {
+                    return '<span class="product-sale-price font-semibold" data-price="' + Number(data || 0).toFixed(2) + '" data-currency="' + (row.saleCurrency || 'TRY') + '">' +
+                        renderPrice(data, row.saleCurrency || 'TRY') +
+                        '</span>';
+                }
+            }
+        ]
+    }));
+
+    $('#NewProductButton').on('click', openEditor);
+    $('#CloseProductEditor').on('click', closeEditor);
+    $('#Product_PurchasePrice, #Product_SalePrice, #Product_PurchaseCurrency, #Product_SaleCurrency').on('input change', updatePriceEquivalents);
+    $('#CalculateSalePrice').on('click', function () {
+        calculateSalePrice();
+    });
 
     $('#ProductSearch').on('input', function () {
-        var query = this.value.toLocaleLowerCase('tr-TR');
-        $('#ProductsTable tbody tr').each(function () {
-            $(this).toggle($(this).text().toLocaleLowerCase('tr-TR').indexOf(query) !== -1);
-        });
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+            dataTable.ajax.reload();
+        }, 300);
+    });
+
+    $('#ProductBrandFilter, #ProductCategoryFilter, #ProductStockStatusFilter').on('change', function () {
+        dataTable.ajax.reload();
+    });
+
+    $('#ResetProductFilters').on('click', function () {
+        $('#ProductSearch').val('');
+        $('#ProductBrandFilter').val('');
+        $('#ProductCategoryFilter').val('');
+        $('#ProductStockStatusFilter').val('');
+        dataTable.ajax.reload();
     });
 
     $('#DisplayCurrency').on('change', function () {
         displayCurrency = this.value;
         localStorage.setItem('productDisplayCurrency', displayCurrency);
-        updateDisplayedPrices();
+        refreshTablePrices();
     });
 
+    editModal.onResult(function () {
+        dataTable.ajax.reload(null, false);
+    });
+
+    $('#ProductsTable').on('click', '.product-edit-button', function () {
+        closeEditor();
+        editModal.open({ id: $(this).data('id') });
+    });
+
+    $('#ProductsTable').on('click', '.product-delete-button', function () {
+        var productId = $(this).data('id');
+        var productName = $(this).data('name') || 'bu ürünü';
+
+        abp.message.confirm('"' + productName + '" ürününü silmek istediğinize emin misiniz?')
+            .then(function (confirmed) {
+                if (!confirmed) {
+                    return;
+                }
+
+                nexStock.products.product.delete(productId).then(function () {
+                    abp.notify.info('Ürün silindi.');
+                    dataTable.ajax.reload(null, false);
+                });
+            });
+    });
+
+    fetchRates();
 });

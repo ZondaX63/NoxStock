@@ -44,11 +44,11 @@ public class EditModalModel : NexStockPageModel
 
         var brandLookup = await _brandAppService.GetListAsync(new PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
         Brands = brandLookup.Items.Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToList();
-        Brands.Insert(0, new SelectListItem("--- Select Brand ---", ""));
+        Brands.Insert(0, new SelectListItem("Marka seçiniz", ""));
 
         var categoryLookup = await _categoryAppService.GetListAsync(new PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
         Categories = categoryLookup.Items.Select(c => new SelectListItem(c.Name, c.Id.ToString())).ToList();
-        Categories.Insert(0, new SelectListItem("--- Select Category ---", ""));
+        Categories.Insert(0, new SelectListItem("Kategori seçiniz", ""));
     }
 
     public async Task<IActionResult> OnPostAsync()

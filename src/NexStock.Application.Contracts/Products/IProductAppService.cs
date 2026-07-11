@@ -7,7 +7,7 @@ public interface IProductAppService :
     ICrudAppService<
         ProductDto,
         Guid,
-        Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto,
+        ProductGetListInput,
         CreateUpdateProductDto>
 {
 }

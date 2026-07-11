@@ -19,7 +19,6 @@ public class IndexModel : NexStockPageModel
 
     public List<SelectListItem> Brands { get; private set; } = new();
     public List<SelectListItem> Categories { get; private set; } = new();
-    public List<ProductDto> Products { get; private set; } = new();
 
     private readonly IProductAppService _productAppService;
     private readonly IBrandAppService _brandAppService;
@@ -43,7 +42,6 @@ public class IndexModel : NexStockPageModel
         var settings = await _companySettingsAppService.GetAsync();
         Product = CreateDefaultProduct(settings.DefaultUnit, settings.DefaultCurrency);
         await LoadLookupsAsync();
-        await LoadProductsAsync();
     }
 
     public async Task<IActionResult> OnPostCreateAsync()
@@ -51,7 +49,6 @@ public class IndexModel : NexStockPageModel
         if (!ModelState.IsValid)
         {
             await LoadLookupsAsync();
-            await LoadProductsAsync();
             return Page();
         }
 
@@ -70,17 +67,6 @@ public class IndexModel : NexStockPageModel
         Categories = categories.Items.Select(x => new SelectListItem(x.Name, x.Id.ToString())).ToList();
         Brands.Insert(0, new SelectListItem("Marka seçiniz", string.Empty));
         Categories.Insert(0, new SelectListItem("Kategori seçiniz", string.Empty));
-    }
-
-    private async Task LoadProductsAsync()
-    {
-        var result = await _productAppService.GetListAsync(new PagedAndSortedResultRequestDto
-        {
-            MaxResultCount = 1000,
-            Sorting = nameof(ProductDto.Name)
-        });
-
-        Products = result.Items.ToList();
     }
 
     private static CreateUpdateProductDto CreateDefaultProduct(string defaultUnit, string defaultCurrency)
