@@ -3,3 +3,5 @@
 **/node_modules/
 .git/
 Logs/
+!src/NexStock.Web/package.json
+!src/NexStock.Web/yarn.lock
