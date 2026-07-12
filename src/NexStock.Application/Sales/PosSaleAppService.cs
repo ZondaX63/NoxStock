@@ -29,6 +29,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     private readonly IRepository<AccountTransaction, Guid> _accountTransactionRepository;
     private readonly IRepository<StockMovement, Guid> _stockMovementRepository;
     private readonly ISettingProvider _settingProvider;
+    private readonly IProductPriceCalculator _priceCalculator;
 
     public PosSaleAppService(
         IRepository<Document, Guid> documentRepository,
@@ -37,7 +38,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         IRepository<Account, Guid> accountRepository,
         IRepository<AccountTransaction, Guid> accountTransactionRepository,
         IRepository<StockMovement, Guid> stockMovementRepository,
-        ISettingProvider settingProvider)
+        ISettingProvider settingProvider,
+        IProductPriceCalculator priceCalculator)
     {
         _documentRepository = documentRepository;
         _productRepository = productRepository;
@@ -46,6 +48,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         _accountTransactionRepository = accountTransactionRepository;
         _stockMovementRepository = stockMovementRepository;
         _settingProvider = settingProvider;
+        _priceCalculator = priceCalculator;
     }
 
     public async Task<List<PosProductLookupDto>> GetProductsAsync(PosProductLookupInputDto input)
@@ -62,23 +65,33 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         }
 
         var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 50);
-        var products = query
+        var products = await AsyncExecuter.ToListAsync(query
             .OrderBy(x => x.Name)
-            .Take(maxResultCount)
-            .Select(x => new PosProductLookupDto
-            {
-                Id = x.Id,
-                Name = x.Name,
-                Sku = x.Sku,
-                Barcode = x.Barcode,
-                Unit = x.Unit,
-                SalePrice = x.SalePrice,
-                Currency = string.IsNullOrWhiteSpace(x.SaleCurrency) ? "TRY" : x.SaleCurrency,
-                Quantity = x.Quantity,
-                TrackStock = x.TrackStock
-            });
+            .Take(maxResultCount));
 
-        return await AsyncExecuter.ToListAsync(products);
+        var result = new List<PosProductLookupDto>();
+        foreach (var product in products)
+        {
+            var currency = string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency;
+            var calculation = await _priceCalculator.CalculateAsync(product, currency);
+            result.Add(new PosProductLookupDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Sku = product.Sku,
+                Barcode = product.Barcode,
+                Unit = product.Unit,
+                SalePrice = calculation.UnitPrice,
+                Currency = calculation.Currency,
+                UsesCurrentExchangeRate = calculation.UsesCurrentExchangeRate,
+                ProfitMarkupPercent = product.ProfitMarkupPercent,
+                ExchangeRate = calculation.ExchangeRate,
+                Quantity = product.Quantity,
+                TrackStock = product.TrackStock
+            });
+        }
+
+        return result;
     }
 
     public async Task<PosCheckoutOptionsDto> GetCheckoutOptionsAsync()
@@ -158,11 +171,13 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         {
             var product = await _productRepository.GetAsync(cartItem.ProductId);
             var productCurrency = string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency;
+            var calculation = await _priceCalculator.CalculateAsync(product, productCurrency);
             if (document.Items.Count == 0)
             {
-                document.Currency = productCurrency;
+                document.Currency = calculation.Currency;
+                document.ExchangeRate = calculation.ExchangeRate;
             }
-            else if (!string.Equals(document.Currency, productCurrency, StringComparison.OrdinalIgnoreCase))
+            else if (!string.Equals(document.Currency, calculation.Currency, StringComparison.OrdinalIgnoreCase))
             {
                 throw new BusinessException("NexStock:PosSaleRequiresSingleCurrency");
             }
@@ -178,10 +193,10 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             {
                 ProductId = product.Id,
                 Quantity = cartItem.Quantity,
-                UnitPrice = product.SalePrice,
+                UnitPrice = calculation.UnitPrice,
                 VatRate = 0,
                 DiscountRate = 0,
-                Total = product.SalePrice * cartItem.Quantity
+                Total = calculation.UnitPrice * cartItem.Quantity
             });
         }
 

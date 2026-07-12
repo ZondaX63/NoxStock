@@ -723,6 +723,11 @@ namespace NexStock.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<decimal>("ProfitMarkupPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
                     b.Property<string>("PurchaseCurrency")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -769,6 +774,11 @@ namespace NexStock.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasDefaultValue("Adet");
+
+                    b.Property<bool>("UseCurrentExchangeRateForSale")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.HasKey("Id");
 

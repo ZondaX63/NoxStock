@@ -45,14 +45,14 @@ public class NexStockDomainSharedModule : AbpModule
         Configure<AbpLocalizationOptions>(options =>
         {
             options.Resources
-                .Add<NexStockResource>("en")
+                .Add<NexStockResource>("tr")
                 .AddBaseTypes(typeof(AbpValidationResource))
                 .AddVirtualJson("/Localization/NexStock");
 
             options.DefaultResourceType = typeof(NexStockResource);
             
+            options.Languages.Add(new LanguageInfo("tr", "tr", "Türkçe")); 
             options.Languages.Add(new LanguageInfo("en", "en", "English")); 
-            options.Languages.Add(new LanguageInfo("tr", "tr", "Turkish")); 
 
         });
         

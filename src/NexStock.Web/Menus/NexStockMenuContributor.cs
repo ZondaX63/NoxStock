@@ -6,6 +6,8 @@ using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Identity.Web.Navigation;
 using Volo.Abp.UI.Navigation;
 using Volo.Abp.TenantManagement.Web.Navigation;
+using Volo.Abp.MultiTenancy;
+using Microsoft.Extensions.DependencyInjection;
 namespace NexStock.Web.Menus;
 public class NexStockMenuContributor : IMenuContributor
 {
@@ -40,8 +42,12 @@ public class NexStockMenuContributor : IMenuContributor
         administration.SetSubItemOrder(SettingManagementMenuNames.GroupName, 3);
         //Administration->Settings
         administration.SetSubItemOrder(SettingManagementMenuNames.GroupName, 8);
+        administration.SetSubItemOrder(SettingManagementMenuNames.GroupName, 8);
 
-        context.Menu.AddItem(
+        var currentTenant = context.ServiceProvider.GetRequiredService<ICurrentTenant>();
+        if (currentTenant.IsAvailable)
+        {
+            context.Menu.AddItem(
             new ApplicationMenuItem(
                 "Inventory",
                 l["Menu:Inventory"],
@@ -168,6 +174,7 @@ public class NexStockMenuContributor : IMenuContributor
                 ).RequirePermissions(NexStockPermissions.Settings.Default)
             )
         );
+        }
 
         return Task.CompletedTask;
     }

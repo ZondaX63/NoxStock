@@ -2,6 +2,7 @@ $(function () {
     var $tbody = $('#ItemsTbody');
     var $template = $('#ItemRowTemplate').html();
     var currency = $('#InvoiceForm').data('currency') || 'TRY';
+    var useProductPricing = String($('#InvoiceForm').data('use-product-pricing')) === 'true';
 
     function uuidv4() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -15,6 +16,33 @@ $(function () {
         var html = $template.replace(/\{id\}/g, id);
         $tbody.append(html);
         calculateTotals();
+    }
+
+    function quoteProductPrice($row) {
+        if (!useProductPricing) {
+            return;
+        }
+
+        var productId = $row.find('.product-select').val();
+        if (!productId) {
+            return;
+        }
+
+        var url = abp.appPath + 'api/app/product-pricing/quote?productId=' + encodeURIComponent(productId) + '&currency=' + encodeURIComponent(currency);
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (response) { return response.ok ? response.json() : Promise.reject(); })
+            .then(function (quote) {
+                $row.find('.price-input').val(Number(quote.unitPrice || 0).toFixed(4));
+                if (quote.usesCurrentExchangeRate) {
+                    $row.find('.price-source').text('Güncel kur + %' + Number(quote.profitMarkupPercent || 0) + ' marj ile hesaplandı.');
+                } else {
+                    $row.find('.price-source').text('Ürün kartı satış fiyatı kullanıldı.');
+                }
+                calculateTotals();
+            })
+            .catch(function () {
+                $row.find('.price-source').text('Güncel ürün fiyatı alınamadı.');
+            });
     }
 
     function calculateTotals() {
@@ -61,6 +89,10 @@ $(function () {
 
     $tbody.on('input', '.calc-input', function () {
         calculateTotals();
+    });
+
+    $tbody.on('change', '.product-select', function () {
+        quoteProductPrice($(this).closest('.item-row'));
     });
 
     // Add first row by default

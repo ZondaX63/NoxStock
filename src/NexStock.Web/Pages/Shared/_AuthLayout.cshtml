@@ -1,0 +1,155 @@
+@using System.Globalization
+@{
+    var currentCulture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+}
+<!DOCTYPE html>
+<html lang="@currentCulture">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - NexStock</title>
+    <link rel="stylesheet" href="~/tailwind.css" />
+    <link rel="stylesheet" href="~/global-styles.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" />
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+        
+        /* Animated Gradient Background */
+        .bg-animated-gradient {
+            background: linear-gradient(-45deg, #4f46e5, #ec4899, #8b5cf6, #3b82f6);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        
+        @@keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Floating elements */
+        .floating-shape {
+            animation: float 6s ease-in-out infinite;
+        }
+        .floating-shape-delayed {
+            animation: float 8s ease-in-out infinite 2s;
+        }
+        
+        @@keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        /* Input styling overrides for auth pages */
+        .auth-input {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(203, 213, 225, 0.8) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .auth-input:focus {
+            background: #ffffff !important;
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+            transform: translateY(-1px);
+        }
+        
+        /* Button hover effect */
+        .auth-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+            background-size: 200% auto;
+        }
+        .auth-btn:hover {
+            background-position: right center;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-900 bg-animated-gradient overflow-hidden relative">
+    
+    <!-- Abstract decorative background shapes -->
+    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-70 floating-shape"></div>
+    <div class="absolute top-[20%] right-[-10%] w-[30rem] h-[30rem] bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-70 floating-shape-delayed"></div>
+    <div class="absolute bottom-[-20%] left-[20%] w-[40rem] h-[40rem] bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-70 floating-shape"></div>
+
+    <main class="relative z-10 flex min-h-screen items-center justify-center p-5 sm:p-10">
+        <div class="w-full max-w-5xl rounded-3xl glass-card overflow-hidden flex flex-col lg:flex-row shadow-2xl">
+            
+            <!-- Left Branding Side -->
+            <section class="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-white/40 border-r border-white/50 backdrop-blur-md">
+                <div>
+                    <a href="/" class="inline-flex items-center gap-3">
+                        <div class="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 shadow-lg shadow-indigo-500/30 text-2xl font-black text-white transform transition hover:scale-105">
+                            N
+                        </div>
+                        <span class="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-indigo-800">NEXSTOCK</span>
+                    </a>
+                </div>
+                
+                <div class="mt-12">
+                    <div class="inline-block rounded-full bg-indigo-100/80 px-3 py-1 mb-4 border border-indigo-200 text-xs font-bold uppercase tracking-wider text-indigo-700 shadow-sm">
+                        Profesyonel Yönetim
+                    </div>
+                    <h1 class="text-4xl font-extrabold leading-tight text-slate-900 mb-6">
+                        İşinizi <br/> <span class="text-indigo-600">geleceğe</span> taşıyın.
+                    </h1>
+                    <p class="text-lg leading-relaxed text-slate-700 font-medium max-w-sm">
+                        Akıllı stok takibi, çoklu döviz desteği ve anlık finansal analizlerle tüm operasyonunuz tek ekranda.
+                    </p>
+                </div>
+
+                <div class="mt-16 flex items-center gap-4">
+                    <div class="flex -space-x-3">
+                        <img class="w-10 h-10 rounded-full border-2 border-white shadow-sm" src="https://ui-avatars.com/api/?name=Ali+Yılmaz&background=c7d2fe&color=3730a3" alt="User">
+                        <img class="w-10 h-10 rounded-full border-2 border-white shadow-sm" src="https://ui-avatars.com/api/?name=Ayşe+Demir&background=fbcfe8&color=831843" alt="User">
+                        <img class="w-10 h-10 rounded-full border-2 border-white shadow-sm" src="https://ui-avatars.com/api/?name=Can+Öztürk&background=bbf7d0&color=14532d" alt="User">
+                    </div>
+                    <div class="text-sm font-semibold text-slate-700">
+                        Modern ERP platformuna<br/>hoş geldiniz.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Auth Side -->
+            <section class="flex-1 p-8 sm:p-12 flex flex-col justify-center relative bg-white/70 backdrop-blur-sm">
+                
+                <!-- Language Switcher -->
+                <div class="absolute top-6 right-6 flex rounded-lg bg-white/80 p-1 shadow-sm border border-slate-200/60 backdrop-blur-md">
+                    <a href="/Abp/Languages/Switch?culture=tr&returnUrl=@encodedReturnUrl" class="rounded-md px-3 py-1.5 text-xs font-bold transition-all @(currentCulture == "tr" ? "bg-indigo-600 shadow-sm text-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100")">TR</a>
+                    <a href="/Abp/Languages/Switch?culture=en&returnUrl=@encodedReturnUrl" class="rounded-md px-3 py-1.5 text-xs font-bold transition-all @(currentCulture == "en" ? "bg-indigo-600 shadow-sm text-white" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100")">EN</a>
+                </div>
+
+                <!-- Mobile Logo -->
+                <div class="mb-10 flex items-center gap-3 lg:hidden">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 text-xl font-black text-white shadow-lg">N</div>
+                    <span class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-indigo-800">NEXSTOCK</span>
+                </div>
+
+                <div class="w-full max-w-sm mx-auto">
+                    <div class="mb-4">
+                        <abp-page-alerts />
+                    </div>
+                    @RenderBody()
+                </div>
+                
+            </section>
+        </div>
+    </main>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

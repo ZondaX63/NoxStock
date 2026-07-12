@@ -29,6 +29,9 @@ public class CreateUpdateProductDto
     
     public decimal PurchasePrice { get; set; }
     public decimal SalePrice { get; set; }
+    [Range(0, 10000)]
+    public decimal ProfitMarkupPercent { get; set; }
+    public bool UseCurrentExchangeRateForSale { get; set; }
     public decimal Quantity { get; set; }
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; } = true;

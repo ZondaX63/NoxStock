@@ -23,17 +23,20 @@ public class DocumentAppService :
     private readonly IRepository<BusinessPartner, Guid> _businessPartnerRepository;
     private readonly IRepository<Product, Guid> _productRepository;
     private readonly IRepository<DocumentItem, Guid> _documentItemRepository;
+    private readonly IProductPriceCalculator _priceCalculator;
 
     public DocumentAppService(
         IRepository<Document, Guid> repository,
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
         IRepository<Product, Guid> productRepository,
-        IRepository<DocumentItem, Guid> documentItemRepository)
+        IRepository<DocumentItem, Guid> documentItemRepository,
+        IProductPriceCalculator priceCalculator)
         : base(repository)
     {
         _businessPartnerRepository = businessPartnerRepository;
         _productRepository = productRepository;
         _documentItemRepository = documentItemRepository;
+        _priceCalculator = priceCalculator;
 
         GetPolicyName = NexStockPermissions.Documents.Default;
         GetListPolicyName = NexStockPermissions.Documents.Default;
@@ -47,7 +50,7 @@ public class DocumentAppService :
         await CheckCreatePolicyAsync();
 
         var document = new Document(GuidGenerator.Create(), CurrentTenant.Id);
-        ApplyInput(document, input);
+        await ApplyInputAsync(document, input);
 
         await Repository.InsertAsync(document, autoSave: true);
         return await GetAsync(document.Id);
@@ -75,7 +78,7 @@ public class DocumentAppService :
         }
 
         document.Items.Clear();
-        ApplyInput(document, input);
+        await ApplyInputAsync(document, input);
 
         await Repository.UpdateAsync(document, autoSave: true);
         return await GetAsync(document.Id);
@@ -200,14 +203,14 @@ public class DocumentAppService :
         return query;
     }
 
-    private void ApplyInput(Document document, CreateUpdateDocumentDto input)
+    private async Task ApplyInputAsync(Document document, CreateUpdateDocumentDto input)
     {
         document.BusinessPartnerId = input.BusinessPartnerId;
         document.DocNumber = input.DocNumber;
         document.Type = input.Type;
         document.Status = input.Status;
-        document.Currency = input.Currency;
-        document.ExchangeRate = input.ExchangeRate;
+        document.Currency = string.IsNullOrWhiteSpace(input.Currency) ? "TRY" : input.Currency.Trim().ToUpperInvariant();
+        document.ExchangeRate = await _priceCalculator.GetExchangeRateAsync(document.Currency);
         document.Date = input.Date;
         document.DueDate = input.DueDate;
         document.Description = input.Description;
@@ -215,7 +218,17 @@ public class DocumentAppService :
 
         foreach (var inputItem in input.Items)
         {
-            var lineNet = inputItem.Quantity * inputItem.UnitPrice;
+            var unitPrice = inputItem.UnitPrice;
+            if (IsSalesDocument(document.Type))
+            {
+                var product = await _productRepository.GetAsync(inputItem.ProductId);
+                if (product.UseCurrentExchangeRateForSale)
+                {
+                    unitPrice = (await _priceCalculator.CalculateAsync(product, document.Currency)).UnitPrice;
+                }
+            }
+
+            var lineNet = inputItem.Quantity * unitPrice;
             var discount = lineNet * inputItem.DiscountRate / 100;
             var taxable = lineNet - discount;
             var vat = taxable * inputItem.VatRate / 100;
@@ -224,7 +237,7 @@ public class DocumentAppService :
             {
                 ProductId = inputItem.ProductId,
                 Quantity = inputItem.Quantity,
-                UnitPrice = inputItem.UnitPrice,
+                UnitPrice = unitPrice,
                 VatRate = inputItem.VatRate,
                 DiscountRate = inputItem.DiscountRate,
                 Total = taxable + vat
@@ -240,9 +253,9 @@ public class DocumentAppService :
         }
         else
         {
-            document.Subtotal = input.Items.Sum(x => x.Quantity * x.UnitPrice);
-            document.DiscountTotal = input.Items.Sum(x => x.Quantity * x.UnitPrice * x.DiscountRate / 100);
-            document.VatTotal = input.Items.Sum(x =>
+            document.Subtotal = document.Items.Sum(x => x.Quantity * x.UnitPrice);
+            document.DiscountTotal = document.Items.Sum(x => x.Quantity * x.UnitPrice * x.DiscountRate / 100);
+            document.VatTotal = document.Items.Sum(x =>
             {
                 var lineNet = x.Quantity * x.UnitPrice;
                 var discount = lineNet * x.DiscountRate / 100;
@@ -250,5 +263,10 @@ public class DocumentAppService :
             });
             document.GrandTotal = document.Subtotal - document.DiscountTotal + document.VatTotal;
         }
+    }
+
+    private static bool IsSalesDocument(DocumentType type)
+    {
+        return type is DocumentType.SaleInvoice or DocumentType.Offer or DocumentType.SaleOrder;
     }
 }

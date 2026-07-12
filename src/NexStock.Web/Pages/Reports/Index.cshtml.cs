@@ -8,7 +8,6 @@ namespace NexStock.Web.Pages.Reports;
 
 public class IndexModel : NexStockPageModel
 {
-    private static readonly CultureInfo TurkishCulture = CultureInfo.GetCultureInfo("tr-TR");
     private readonly IReportingAppService _reportingAppService;
 
     [BindProperty(SupportsGet = true)]
@@ -35,6 +34,6 @@ public class IndexModel : NexStockPageModel
         });
     }
 
-    public string Money(decimal value) => value.ToString("N2", TurkishCulture) + " TL";
-    public string Quantity(decimal value) => value.ToString("N2", TurkishCulture);
+    public string Money(decimal value) => value.ToString("N2", CultureInfo.CurrentCulture) + " TL";
+    public string Quantity(decimal value) => value.ToString("N2", CultureInfo.CurrentCulture);
 }

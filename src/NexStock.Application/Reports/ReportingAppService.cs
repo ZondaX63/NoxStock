@@ -24,6 +24,7 @@ public class ReportingAppService : ApplicationService, IReportingAppService
     private readonly IRepository<Account, Guid> _accountRepository;
     private readonly IRepository<AccountTransaction, Guid> _accountTransactionRepository;
     private readonly IRepository<StockMovement, Guid> _stockMovementRepository;
+    private readonly IProductPriceCalculator _priceCalculator;
 
     public ReportingAppService(
         IRepository<Document, Guid> documentRepository,
@@ -32,7 +33,8 @@ public class ReportingAppService : ApplicationService, IReportingAppService
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
         IRepository<Account, Guid> accountRepository,
         IRepository<AccountTransaction, Guid> accountTransactionRepository,
-        IRepository<StockMovement, Guid> stockMovementRepository)
+        IRepository<StockMovement, Guid> stockMovementRepository,
+        IProductPriceCalculator priceCalculator)
     {
         _documentRepository = documentRepository;
         _documentItemRepository = documentItemRepository;
@@ -41,6 +43,7 @@ public class ReportingAppService : ApplicationService, IReportingAppService
         _accountRepository = accountRepository;
         _accountTransactionRepository = accountTransactionRepository;
         _stockMovementRepository = stockMovementRepository;
+        _priceCalculator = priceCalculator;
     }
 
     public async Task<ReportSnapshotDto> GetSnapshotAsync(ReportRequestDto input)
@@ -75,6 +78,12 @@ public class ReportingAppService : ApplicationService, IReportingAppService
         var purchaseDocumentIds = purchaseDocuments.Select(x => x.Id).ToHashSet();
         var documentsById = completedDocuments.ToDictionary(x => x.Id);
         var productsById = products.ToDictionary(x => x.Id);
+        var costInTryByProductId = new Dictionary<Guid, decimal>();
+        foreach (var product in products)
+        {
+            var purchaseCurrency = string.IsNullOrWhiteSpace(product.PurchaseCurrency) ? "TRY" : product.PurchaseCurrency;
+            costInTryByProductId[product.Id] = product.PurchasePrice * await _priceCalculator.GetExchangeRateAsync(purchaseCurrency);
+        }
 
         var stockRows = products
             .OrderBy(x => x.Name)
@@ -86,8 +95,8 @@ public class ReportingAppService : ApplicationService, IReportingAppService
                 Unit = x.Unit,
                 Quantity = x.Quantity,
                 CriticalStockLevel = x.CriticalStockLevel,
-                PurchasePrice = x.PurchasePrice,
-                CostValue = x.Quantity * x.PurchasePrice,
+                PurchasePrice = costInTryByProductId[x.Id],
+                CostValue = x.Quantity * costInTryByProductId[x.Id],
                 IsCritical = x.TrackStock && x.Quantity <= x.CriticalStockLevel
             })
             .ToList();
@@ -165,7 +174,7 @@ public class ReportingAppService : ApplicationService, IReportingAppService
             {
                 productsById.TryGetValue(group.Key, out var product);
                 var salesAmount = group.Sum(x => x.Total * GetDocumentRate(documentsById[x.DocumentId]));
-                var estimatedCost = group.Sum(x => x.Quantity * (product?.PurchasePrice ?? 0));
+                var estimatedCost = group.Sum(x => x.Quantity * (costInTryByProductId.TryGetValue(x.ProductId, out var cost) ? cost : 0));
                 return new ProductProfitabilityReportItemDto
                 {
                     ProductId = group.Key,

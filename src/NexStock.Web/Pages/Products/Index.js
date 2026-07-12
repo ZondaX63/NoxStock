@@ -9,7 +9,8 @@ $(function () {
     $('#DisplayCurrency').val(displayCurrency);
 
     function formatMoney(value, currency) {
-        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency, minimumFractionDigits: 2 }).format(Number(value || 0));
+        var locale = document.documentElement.lang === 'en' ? 'en-US' : 'tr-TR';
+        return new Intl.NumberFormat(locale, { style: 'currency', currency: currency, minimumFractionDigits: 2 }).format(Number(value || 0));
     }
 
     function toTry(value, currency) {
@@ -30,6 +31,23 @@ $(function () {
         }
 
         return formatMoney(convert(value, sourceCurrency, displayCurrency), displayCurrency);
+    }
+
+    function renderProductSalePrice(row) {
+        if (!row.useCurrentExchangeRateForSale) {
+            return renderPrice(row.salePrice, row.saleCurrency || 'TRY');
+        }
+
+        var purchaseCurrency = row.purchaseCurrency || 'TRY';
+        var saleCurrency = row.saleCurrency || 'TRY';
+        var purchaseRate = purchaseCurrency === 'TRY' ? 1 : Number(rates[purchaseCurrency] && rates[purchaseCurrency].rate);
+        var saleRate = saleCurrency === 'TRY' ? 1 : Number(rates[saleCurrency] && rates[saleCurrency].rate);
+        if (!purchaseRate || !saleRate) {
+            return formatMoney(row.salePrice, saleCurrency);
+        }
+
+        var currentPrice = Number(row.purchasePrice || 0) * purchaseRate * (1 + Number(row.profitMarkupPercent || 0) / 100) / saleRate;
+        return renderPrice(currentPrice, saleCurrency);
     }
 
     function refreshTablePrices() {
@@ -61,7 +79,7 @@ $(function () {
 
     function calculateSalePrice() {
         var purchasePrice = Number($('#Product_PurchasePrice').val());
-        var margin = Number($('#ProfitMargin').val());
+        var margin = Number($('#Product_ProfitMarkupPercent').val());
         var purchaseCurrency = $('#Product_PurchaseCurrency').val();
         var saleCurrency = $('#Product_SaleCurrency').val();
         var purchaseRate = purchaseCurrency === 'TRY' ? 1 : Number(rates[purchaseCurrency] && rates[purchaseCurrency].rate);
@@ -82,6 +100,7 @@ $(function () {
                 }
                 var refreshedSalePriceInTry = purchasePrice * refreshedPurchaseRate * (1 + margin / 100);
                 var refreshedFinalSalePrice = refreshedSalePriceInTry / refreshedSaleRate;
+                $('#Product_UseCurrentExchangeRateForSale').prop('checked', true);
                 $('#Product_SalePrice').val(refreshedFinalSalePrice.toFixed(2)).trigger('input');
                 $('#SaleCalculationInfo').text(formatMoney(purchasePrice, purchaseCurrency) + ' + %' + margin + ' marj = ' + formatMoney(refreshedFinalSalePrice, saleCurrency) + ' (' + formatMoney(refreshedSalePriceInTry, 'TRY') + ')');
                 refreshTablePrices();
@@ -90,6 +109,7 @@ $(function () {
 
         var salePriceInTry = purchasePrice * purchaseRate * (1 + margin / 100);
         var finalSalePrice = salePriceInTry / saleRate;
+        $('#Product_UseCurrentExchangeRateForSale').prop('checked', true);
         $('#Product_SalePrice').val(finalSalePrice.toFixed(2)).trigger('input');
         $('#SaleCalculationInfo').text(formatMoney(purchasePrice, purchaseCurrency) + ' + %' + margin + ' marj = ' + formatMoney(finalSalePrice, saleCurrency) + ' (' + formatMoney(salePriceInTry, 'TRY') + ')');
     }
@@ -184,7 +204,7 @@ $(function () {
                 data: 'salePrice',
                 render: function (data, type, row) {
                     return '<span class="product-sale-price font-semibold" data-price="' + Number(data || 0).toFixed(2) + '" data-currency="' + (row.saleCurrency || 'TRY') + '">' +
-                        renderPrice(data, row.saleCurrency || 'TRY') +
+                        renderProductSalePrice(row) +
                         '</span>';
                 }
             }
@@ -193,7 +213,7 @@ $(function () {
 
     $('#NewProductButton').on('click', openEditor);
     $('#CloseProductEditor').on('click', closeEditor);
-    $('#Product_PurchasePrice, #Product_SalePrice, #Product_PurchaseCurrency, #Product_SaleCurrency').on('input change', updatePriceEquivalents);
+    $('#Product_PurchasePrice, #Product_SalePrice, #Product_PurchaseCurrency, #Product_SaleCurrency, #Product_ProfitMarkupPercent').on('input change', updatePriceEquivalents);
     $('#CalculateSalePrice').on('click', function () {
         calculateSalePrice();
     });

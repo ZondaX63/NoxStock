@@ -1,9 +1,10 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using Volo.Abp.Users
+@using System.Globalization
 @inject ICurrentUser CurrentUser
 
 <!DOCTYPE html>
-<html lang="tr" class="light">
+<html lang="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" class="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -62,6 +63,7 @@
             <!-- Main Content -->
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-slate-900 p-6 lg:p-8 transition-colors duration-200 relative">
                 <div class="max-w-8xl w-full mx-auto dark:text-slate-200 px-2 lg:px-6">
+                    @await RenderSectionAsync("content_toolbar", required: false)
                     @RenderBody()
                 </div>
             </main>

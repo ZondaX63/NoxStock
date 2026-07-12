@@ -50,6 +50,7 @@ using Volo.Abp.OpenIddict;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.SettingManagement.Web;
 using Volo.Abp.Studio.Client.AspNetCore;
+using Volo.Abp.Threading;
 using NexStock.Web.ExchangeRates;
 
 namespace NexStock.Web;
@@ -166,9 +167,14 @@ public class NexStockWebModule : AbpModule
             options.TokenCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
         });
         
+        Configure<Volo.Abp.MultiTenancy.AbpTenantResolveOptions>(options =>
+        {
+            options.TenantResolvers.Insert(0, new NexStock.Web.MultiTenancy.EmailTenantResolveContributor());
+        });
+        
         Configure<RazorPagesOptions>(options =>
         {
-            options.Conventions.AuthorizePage("/Dashboard/Index", NexStockPermissions.Dashboard.Default);
+            options.Conventions.AuthorizePage("/Dashboard/Index");
             options.Conventions.AuthorizeFolder("/Products", NexStockPermissions.Products.Default);
             options.Conventions.AuthorizeFolder("/Brands", NexStockPermissions.Brands.Default);
             options.Conventions.AuthorizeFolder("/Categories", NexStockPermissions.Categories.Default);
@@ -332,6 +338,8 @@ public class NexStockWebModule : AbpModule
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
 
+        EnsureDefaultUserRolePermissions(context);
+
         app.UseForwardedHeaders();
 
         if (env.IsDevelopment())
@@ -372,5 +380,16 @@ public class NexStockWebModule : AbpModule
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+    }
+
+    private static void EnsureDefaultUserRolePermissions(ApplicationInitializationContext context)
+    {
+        using var scope = context.ServiceProvider.CreateScope();
+        var permissionDataSeeder = scope.ServiceProvider.GetRequiredService<Volo.Abp.PermissionManagement.IPermissionDataSeeder>();
+        AsyncHelper.RunSync(() => permissionDataSeeder.SeedAsync(
+            Volo.Abp.Authorization.Permissions.RolePermissionValueProvider.ProviderName,
+            "user",
+            NexStockDefaultUserPermissions.Basic
+        ));
     }
 }

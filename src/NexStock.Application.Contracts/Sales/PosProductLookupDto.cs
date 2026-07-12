@@ -17,6 +17,9 @@ public class PosProductLookupDto
     public string Unit { get; set; } = string.Empty;
     public decimal SalePrice { get; set; }
     public string Currency { get; set; } = "TRY";
+    public bool UsesCurrentExchangeRate { get; set; }
+    public decimal ProfitMarkupPercent { get; set; }
+    public decimal ExchangeRate { get; set; } = 1;
     public decimal Quantity { get; set; }
     public bool TrackStock { get; set; }
 }

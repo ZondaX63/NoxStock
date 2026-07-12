@@ -21,6 +21,8 @@ public class Product : FullAuditedAggregateRoot<Guid>, IMultiTenant
     
     public decimal PurchasePrice { get; set; }
     public decimal SalePrice { get; set; }
+    public decimal ProfitMarkupPercent { get; set; }
+    public bool UseCurrentExchangeRateForSale { get; set; }
     public decimal Quantity { get; set; }
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; }

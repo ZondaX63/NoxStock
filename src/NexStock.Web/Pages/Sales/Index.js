@@ -11,7 +11,8 @@ $(function () {
     }
 
     function formatMoney(value, currency) {
-        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(value || 0);
+        var locale = document.documentElement.lang === 'en' ? 'en-US' : 'tr-TR';
+        return new Intl.NumberFormat(locale, { style: 'currency', currency: currency || 'TRY' }).format(value || 0);
     }
 
     function cartCurrency() {
@@ -34,10 +35,12 @@ $(function () {
             var stockText = product.trackStock ? product.quantity + ' ' + escapeHtml(product.unit) : 'Stok takibi yok';
             var stockClass = product.trackStock && product.quantity <= 0 ? 'text-rose-600' : 'text-slate-500';
             var disabled = product.trackStock && product.quantity <= 0 ? 'disabled opacity-50 cursor-not-allowed' : '';
+            var pricingText = product.usesCurrentExchangeRate ? 'Güncel kur + %' + Number(product.profitMarkupPercent || 0) + ' marj' : 'Sabit ürün fiyatı';
             $grid.append('<button type="button" data-product-id="' + product.id + '" class="pos-product-card text-left border border-slate-200 dark:border-slate-700 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 rounded-lg p-4 transition-colors ' + disabled + '" ' + (disabled ? 'disabled' : '') + '>' +
                 '<p class="font-semibold text-slate-800 dark:text-white truncate">' + escapeHtml(product.name) + '</p>' +
                 '<p class="mt-1 text-xs text-slate-500 truncate">' + escapeHtml(product.sku) + (product.barcode ? ' · ' + escapeHtml(product.barcode) : '') + '</p>' +
-                '<div class="mt-4 flex items-end justify-between gap-2"><span class="font-bold text-indigo-600 dark:text-indigo-400">' + formatMoney(product.salePrice, product.currency) + '</span><span class="text-xs ' + stockClass + '">' + stockText + '</span></div></button>');
+                '<p class="mt-2 text-xs text-slate-500">' + pricingText + '</p>' +
+                '<div class="mt-3 flex items-end justify-between gap-2"><span class="font-bold text-indigo-600 dark:text-indigo-400">' + formatMoney(product.salePrice, product.currency) + '</span><span class="text-xs ' + stockClass + '">' + stockText + '</span></div></button>');
         });
     }
 

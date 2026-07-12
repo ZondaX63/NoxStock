@@ -25,6 +25,12 @@ public class IndexModel : NexStockPageModel
     [BindProperty(SupportsGet = true)]
     public bool? HasException { get; set; }
 
+    public bool ShowExceptions
+    {
+        get => HasException == true;
+        set => HasException = value ? true : null;
+    }
+
     public AuditLogSnapshotDto Snapshot { get; private set; } = new();
 
     public IndexModel(IAuditLogAppService auditLogAppService)

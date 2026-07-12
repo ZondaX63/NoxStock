@@ -1,0 +1,106 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using NexStock.Localization
+@using NexStock.Web.Pages.Account
+@model RegisterModel
+@inject IHtmlLocalizer<NexStockResource> L
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = L["Auth:Register"].Value;
+}
+
+<div class="text-center sm:text-left mb-8">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-50 border border-pink-100 text-pink-600 text-xs font-bold uppercase tracking-widest mb-3">
+        <span class="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></span>
+        @L["Auth:RegisterEyebrow"]
+    </div>
+    <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">@L["Auth:RegisterTitle"]</h1>
+    <p class="mt-2 text-sm text-slate-500 font-medium">@L["Auth:RegisterDescription"]</p>
+</div>
+
+<form method="post" class="space-y-4">
+    <input asp-for="ReturnUrl" type="hidden" />
+    <input asp-for="ReturnUrlHash" type="hidden" />
+    
+    <div asp-validation-summary="ModelOnly" class="rounded-xl border border-red-200 bg-red-50/80 backdrop-blur px-4 py-3 text-sm text-red-700 shadow-sm"></div>
+    
+    <div class="space-y-1">
+        <label asp-for="Input.TenantName" class="block text-sm font-bold text-slate-700 ml-1">Şirket Adı</label>
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <span class="material-icons-round text-xl">business</span>
+            </div>
+            <input asp-for="Input.TenantName" class="auth-input block w-full rounded-xl pl-10 pr-3 py-3 text-sm outline-none" placeholder="Şirketinizin adı" />
+        </div>
+        <span asp-validation-for="Input.TenantName" class="mt-1 block text-xs font-medium text-red-500 ml-1"></span>
+    </div>
+    
+    <div class="space-y-1">
+        <label asp-for="Input.EmailAddress" class="block text-sm font-bold text-slate-700 ml-1">@L["Auth:Email"]</label>
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <span class="material-icons-round text-xl">alternate_email</span>
+            </div>
+            <input asp-for="Input.EmailAddress" type="email" autocomplete="email" class="auth-input block w-full rounded-xl pl-10 pr-3 py-3 text-sm outline-none" placeholder="E-posta adresiniz" />
+        </div>
+        <span asp-validation-for="Input.EmailAddress" class="mt-1 block text-xs font-medium text-red-500 ml-1"></span>
+    </div>
+    
+    <div class="space-y-1">
+        <label asp-for="Input.Password" class="block text-sm font-bold text-slate-700 ml-1">@L["Auth:Password"]</label>
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <span class="material-icons-round text-xl">lock_outline</span>
+            </div>
+            <input asp-for="Input.Password" type="password" autocomplete="new-password" class="auth-input block w-full rounded-xl pl-10 pr-3 py-3 text-sm outline-none" placeholder="Güçlü bir şifre" />
+        </div>
+        <span asp-validation-for="Input.Password" class="mt-1 block text-xs font-medium text-red-500 ml-1"></span>
+    </div>
+    
+    <div class="space-y-1">
+        <label for="PasswordConfirmation" class="block text-sm font-bold text-slate-700 ml-1">@L["Auth:PasswordConfirmation"]</label>
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <span class="material-icons-round text-xl">lock</span>
+            </div>
+            <input id="PasswordConfirmation" type="password" autocomplete="new-password" class="auth-input block w-full rounded-xl pl-10 pr-3 py-3 text-sm outline-none" placeholder="Şifrenizi tekrar girin" />
+        </div>
+        <span id="PasswordConfirmationError" class="mt-1 hidden text-xs font-medium text-red-500 ml-1">@L["Auth:PasswordMismatch"]</span>
+    </div>
+    
+    <button type="submit" class="auth-btn mt-6 w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold text-white shadow-lg">
+        @L["Auth:Register"]
+        <span class="material-icons-round text-lg">person_add</span>
+    </button>
+</form>
+
+<div class="mt-8 pt-6 border-t border-slate-200/60 text-center">
+    <p class="text-sm font-medium text-slate-500">
+        @L["Auth:HasAccount"] 
+        <a href="/Account/Login?returnUrl=@Uri.EscapeDataString(Model.ReturnUrl ?? "/")" class="font-bold text-indigo-600 hover:text-indigo-800 transition-colors ml-1 inline-flex items-center gap-1">
+            @L["Auth:Login"]
+            <span class="material-icons-round text-xs">arrow_forward</span>
+        </a>
+    </p>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelector('form').addEventListener('submit', function (event) {
+            var password = document.getElementById('Input_Password');
+            var confirmation = document.getElementById('PasswordConfirmation');
+            var error = document.getElementById('PasswordConfirmationError');
+            var matches = password && confirmation && password.value === confirmation.value;
+            error.classList.toggle('hidden', matches);
+            if (!matches) {
+                event.preventDefault();
+                confirmation.classList.add('border-red-400', 'focus:border-red-500', 'focus:ring-red-100');
+            }
+        });
+        
+        document.getElementById('PasswordConfirmation').addEventListener('input', function() {
+            this.classList.remove('border-red-400', 'focus:border-red-500', 'focus:ring-red-100');
+            document.getElementById('PasswordConfirmationError').classList.add('hidden');
+        });
+    </script>
+}

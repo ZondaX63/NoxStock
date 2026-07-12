@@ -12,7 +12,7 @@ using Volo.Abp.SettingManagement;
 
 namespace NexStock.Settings;
 
-[Authorize(NexStockPermissions.Settings.Default)]
+[Authorize]
 public class CompanySettingsAppService : ApplicationService, ICompanySettingsAppService
 {
     private readonly ISettingProvider _settingProvider;

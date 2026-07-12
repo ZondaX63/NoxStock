@@ -127,6 +127,8 @@ public class NexStockDbContext :
             b.Property(x => x.ShelfLocation).HasMaxLength(100);
             b.Property(x => x.PurchasePrice).HasColumnType("decimal(15,4)");
             b.Property(x => x.SalePrice).HasColumnType("decimal(15,4)");
+            b.Property(x => x.ProfitMarkupPercent).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.UseCurrentExchangeRateForSale).HasDefaultValue(false);
             b.Property(x => x.Quantity).HasColumnType("decimal(15,4)");
             b.Property(x => x.CriticalStockLevel).HasColumnType("decimal(15,4)");
             b.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("TRY");

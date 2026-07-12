@@ -1,0 +1,76 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using NexStock.Localization
+@using Volo.Abp.Account.Web.Pages.Account
+@model LoginModel
+@inject IHtmlLocalizer<NexStockResource> L
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = L["Auth:Login"].Value;
+}
+
+<div class="text-center sm:text-left mb-8">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-widest mb-3">
+        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+        @L["Auth:Welcome"]
+    </div>
+    <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">@L["Auth:LoginTitle"]</h1>
+    <p class="mt-2 text-sm text-slate-500 font-medium">@L["Auth:LoginDescription"]</p>
+</div>
+
+<form method="post" class="space-y-5">
+    <input asp-for="ReturnUrl" type="hidden" />
+    <input asp-for="ReturnUrlHash" type="hidden" />
+    
+    <div asp-validation-summary="ModelOnly" class="rounded-xl border border-red-200 bg-red-50/80 backdrop-blur px-4 py-3 text-sm text-red-700 shadow-sm"></div>
+    
+    <div class="space-y-1">
+        <label asp-for="LoginInput.UserNameOrEmailAddress" class="block text-sm font-bold text-slate-700 ml-1">@L["Auth:UserNameOrEmail"]</label>
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <span class="material-icons-round text-xl">person</span>
+            </div>
+            <input asp-for="LoginInput.UserNameOrEmailAddress" autocomplete="username" class="auth-input block w-full rounded-xl pl-10 pr-3 py-3 text-sm outline-none" placeholder="Email veya kullanıcı adınız" />
+        </div>
+        <span asp-validation-for="LoginInput.UserNameOrEmailAddress" class="mt-1 block text-xs font-medium text-red-500 ml-1"></span>
+    </div>
+    
+    <div class="space-y-1">
+        <div class="flex items-center justify-between ml-1 mr-1">
+            <label asp-for="LoginInput.Password" class="block text-sm font-bold text-slate-700">@L["Auth:Password"]</label>
+            <a href="/Account/ForgotPassword" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">@L["Auth:ForgotPassword"]</a>
+        </div>
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <span class="material-icons-round text-xl">lock</span>
+            </div>
+            <input asp-for="LoginInput.Password" type="password" autocomplete="current-password" class="auth-input block w-full rounded-xl pl-10 pr-3 py-3 text-sm outline-none" placeholder="••••••••" />
+        </div>
+        <span asp-validation-for="LoginInput.Password" class="mt-1 block text-xs font-medium text-red-500 ml-1"></span>
+    </div>
+    
+    <div class="flex items-center justify-between mt-6">
+        <label class="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer group">
+            <div class="relative flex items-center justify-center">
+                <input asp-for="LoginInput.RememberMe" class="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded-md bg-white/50 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer" />
+                <span class="material-icons-round text-white text-sm absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity">check</span>
+            </div>
+            <span class="group-hover:text-slate-900 transition-colors">@L["Auth:RememberMe"]</span>
+        </label>
+    </div>
+    
+    <button type="submit" class="auth-btn mt-6 w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold text-white shadow-lg">
+        @L["Auth:Login"]
+        <span class="material-icons-round text-lg">arrow_forward</span>
+    </button>
+</form>
+
+<div class="mt-8 pt-6 border-t border-slate-200/60 text-center">
+    <p class="text-sm font-medium text-slate-500">
+        @L["Auth:NoAccount"] 
+        <a href="/Account/Register?returnUrl=@Uri.EscapeDataString(Model.ReturnUrl ?? "/")" class="font-bold text-indigo-600 hover:text-indigo-800 transition-colors ml-1 inline-flex items-center gap-1">
+            @L["Auth:Register"]
+            <span class="material-icons-round text-xs">open_in_new</span>
+        </a>
+    </p>
+</div>

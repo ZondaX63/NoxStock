@@ -2,14 +2,14 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using NexStock.Dashboard;
 
 namespace NexStock.Web.Pages.Dashboard;
 
-public class IndexModel : PageModel
+public class IndexModel : NexStockPageModel
 {
-    private static readonly CultureInfo TurkishCulture = CultureInfo.GetCultureInfo("tr-TR");
     private readonly IDashboardAppService _dashboardAppService;
 
     public DashboardSummaryDto Summary { get; private set; } = new();
@@ -19,26 +19,32 @@ public class IndexModel : PageModel
         _dashboardAppService = dashboardAppService;
     }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        if (CurrentUser.TenantId == null)
+        {
+            return Redirect("/TenantManagement/Tenants");
+        }
+
         Summary = await _dashboardAppService.GetSummaryAsync();
+        return Page();
     }
 
     public string FormatMoney(decimal value)
     {
-        return value.ToString("C2", TurkishCulture);
+        return value.ToString("C2", CultureInfo.CurrentCulture);
     }
 
     public string FormatCompactMoney(decimal value)
     {
         return value >= 1000m
-            ? value.ToString("0.#,K", TurkishCulture) + " TL"
-            : value.ToString("0", TurkishCulture) + " TL";
+            ? value.ToString("0.#,K", CultureInfo.CurrentCulture) + " TL"
+            : value.ToString("0", CultureInfo.CurrentCulture) + " TL";
     }
 
     public string FormatQuantity(decimal value)
     {
-        return value.ToString("0.##", TurkishCulture);
+        return value.ToString("0.##", CultureInfo.CurrentCulture);
     }
 
     public string GetSalesTrendHeight(decimal value)

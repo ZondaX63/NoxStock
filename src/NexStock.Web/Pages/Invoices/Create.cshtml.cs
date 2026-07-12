@@ -22,6 +22,7 @@ public class CreateModel : NexStockPageModel
     public List<SelectListItem> BusinessPartners { get; set; } = new();
     public List<SelectListItem> Products { get; set; } = new();
     public decimal DefaultVatRate { get; private set; } = 20;
+    public bool UsesSalesPricing => Type is DocumentType.SaleInvoice or DocumentType.Offer or DocumentType.SaleOrder;
 
     private readonly IBusinessPartnerAppService _businessPartnerAppService;
     private readonly IDocumentAppService _documentAppService;
