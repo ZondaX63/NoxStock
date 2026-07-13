@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using NexStock.Permissions;
+using NexStock.MultiTenancy;
 using NexStock.Products;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -33,6 +34,7 @@ public class StockMovementAppService : ReadOnlyAppService<StockMovement, StockMo
 
     public override async Task<PagedResultDto<StockMovementDto>> GetListAsync(StockMovementGetListInput input)
     {
+        CurrentTenant.RequireTenantId();
         var query = await CreateFilteredQueryAsync(input);
 
         var totalCount = await AsyncExecuter.CountAsync(query);
@@ -58,5 +60,11 @@ public class StockMovementAppService : ReadOnlyAppService<StockMovement, StockMo
         }
 
         return new PagedResultDto<StockMovementDto>(totalCount, dtos);
+    }
+
+    public override Task<StockMovementDto> GetAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.GetAsync(id);
     }
 }

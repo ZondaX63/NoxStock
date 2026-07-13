@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
+using NexStock.MultiTenancy;
 
 namespace NexStock.Products;
 
@@ -22,6 +23,7 @@ public class ProductPricingAppService : ApplicationService, IProductPricingAppSe
 
     public async Task<ProductPriceQuoteDto> GetQuoteAsync(ProductPriceQuoteInputDto input)
     {
+        CurrentTenant.RequireTenantId();
         var product = await _productRepository.GetAsync(input.ProductId);
         var calculation = await _priceCalculator.CalculateAsync(product, input.Currency);
 

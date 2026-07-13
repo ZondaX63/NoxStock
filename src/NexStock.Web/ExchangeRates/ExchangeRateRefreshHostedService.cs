@@ -28,8 +28,8 @@ public class ExchangeRateRefreshHostedService : BackgroundService
             try
             {
                 using var scope = _scopeFactory.CreateScope();
-                var exchangeRateService = scope.ServiceProvider.GetRequiredService<IExchangeRateAppService>();
-                await exchangeRateService.RefreshAsync();
+                var exchangeRateUpdater = scope.ServiceProvider.GetRequiredService<IExchangeRateUpdater>();
+                await exchangeRateUpdater.RefreshAsync();
             }
             catch (Exception exception)
             {

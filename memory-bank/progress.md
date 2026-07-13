@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-07-11
+Last updated: 2026-07-13
 
 ## What Works
 
@@ -87,6 +87,33 @@ Last updated: 2026-07-11
 
 ## What's Left To Build
 
+### SaaS Multi-Tenancy Hardening
+
+- Completed two-tenant isolation test infrastructure.
+- Completed trusted development route resolution; production subdomain resolution remains deployment work.
+- Completed tenant-required commercial service guards.
+- Completed host/tenant permission separation.
+- Completed application-layer cross-tenant foreign-key validation.
+- Completed tenant activation/deactivation enforcement.
+- Completed host-only global exchange-rate refresh and worker separation.
+- Closed public registration by default; abuse-resistant public provisioning remains deferred until explicitly enabled.
+- Completed null-tenant dry-run reporting; manual ownership mapping remains an operational decision.
+- Completed DbMigrator order review and tenant-seed idempotency verification.
+- Completed final verification: 31 EntityFrameworkCore tests, 13 Web tests, no pending EF model changes, and all nine migrations applied in local Docker PostgreSQL.
+- Docker stack is running: `nexstock-postgres` healthy on host port `5439`, `nexstock-dbmigrator` completed successfully, and `nexstock-web` is available at `http://localhost:5002`.
+- Host admin UX now restricts the sidebar to tenant management. The ABP Tenant Management new-tenant modal script bundle and its required `#AbpContentToolbar` selector are rendered by the custom application layout; the authorized modal endpoint returns HTTP 200.
+- Login and logout hardening completed: failed sign-ins show a form-level error, tenant sign-ins remain under `/t/{tenant-name}`, and logout clears the identity cookie before returning to login. Verified against the live Docker stack.
+- Tenant login now supports the documented username-or-email field correctly: it resolves e-mail addresses through `UserManager.FindByEmailAsync` before password sign-in. This fixes valid provisioned administrator e-mail credentials being rejected by the username-only sign-in overload; failure outcomes are logged for diagnosis.
+- Tenant login now writes the authenticated user's ABP tenant claim to the identity ticket. This prevents tenant dashboard requests from being treated as host sessions and redirecting to `/TenantManagement/Tenants`; live Docker verification renders `/t/asd/Dashboard` successfully.
+- Docker now retains ASP.NET Data Protection keys in the `nexstock-data-protection` volume, preventing stale login-form antiforgery tokens from returning HTTP 400 after a Web container recreate. This was validated with a token captured before and posted after a forced recreate.
+- Finalized tenant onboarding UI: host administrators now create a company together with a chosen administrator username, email and password instead of relying on the hidden ABP default `admin` username. The form shows the tenant login route convention before creation.
+- Tenant list reliability fix: the host company page no longer relies on the ABP list endpoint that returned an empty payload for persisted rows. It reads `ITenantRepository` directly, so successful provisioning reloads into a visible row.
+- Tenant provisioning reliability fix: the onboarding page sets the required tenant `IsActive` extension property before persistence, seeds the tenant administrator, handles duplicate codes, logs unexpected exceptions, and shows validation errors in the modal. A live Docker POST returned HTTP 204 and was visible in the table immediately.
+- Final host/tenant login split is live-verified: `/Account/Login` with the host admin opens only company management, while `/t/asd/Account/Login` with the provisioned tenant administrator opens `/t/asd/Dashboard` and permits tenant commercial pages. Tenant users are redirected away from `/TenantManagement/Tenants`.
+- Tenant navigation is path-base aware: sidebar and logo links resolve under `/t/{tenantName}` instead of dropping the tenant context. The rebuilt Docker UI was verified to emit `/t/asd/Dashboard`, `/t/asd/Products`, `/t/asd/Accounts`, `/t/asd/Reports`, and `/t/asd/Settings` links.
+- Host-to-tenant session switching is fixed. Identity cookies are always written at `/`, old `/t/{tenantName}` cookies are removed on login entry, authenticated login entry performs a clean redirect before antiforgery rendering, and a regression test locks the root-cookie contract. A live same-cookie-jar host→`asd` flow reaches the tenant dashboard with exactly one identity cookie.
+- The topbar distinguishes identity context: tenant sessions display administrator e-mail plus tenant name (`asd@asd.asd` / `asd` in the live check); host sessions display the host username plus the localized platform-management label.
+
 ### Product Hardening
 
 - Live browser walkthrough with PostgreSQL/Docker
@@ -115,6 +142,7 @@ Last updated: 2026-07-11
 - Application/Domain test projects currently contain no meaningful tests.
 - Historical migration designer files still contain Book/Author snapshots, which is expected for migration history.
 - Existing Mapperly warnings for audit/base properties are noisy but not blocking.
+- A forced clean rebuild currently reports 153 nullable/Mapperly diagnostics even though the normal incremental build is clean; warning reduction remains explicit technical debt.
 
 ## Decision History
 
@@ -126,3 +154,5 @@ Last updated: 2026-07-11
 - 2026-07-10: Phase 1 backend prototype slice added for accounts, stock movements, dashboard summary, and document approval/cancellation.
 - 2026-07-10: Cancellation policy confirmed as reversal-based commercial history preservation.
 - 2026-07-10: Phase 1 completed successfully with UI wiring and Purchase Invoice tests. Focus shifted to Phase 2.
+- 2026-07-13: Shared database/shared schema confirmed as the initial SaaS model; multi-tenancy security hardening started before Branch/Warehouse expansion.
+- 2026-07-13: `/t/{tenantName}` selected for development resolution and `{tenant}.nexstock.com` selected for production.

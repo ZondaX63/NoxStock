@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using NexStock.BusinessPartners;
 using NexStock.Permissions;
 using NexStock.Settings;
+using NexStock.MultiTenancy;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -31,30 +32,35 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
     [Authorize(NexStockPermissions.Offers.Edit)]
     public Task<DocumentDto> SendOfferAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         return SendAsync(id, DocumentType.Offer);
     }
 
     [Authorize(NexStockPermissions.Offers.Convert)]
     public Task<DocumentDto> ConvertOfferToOrderAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         return ConvertAsync(id, DocumentType.Offer, DocumentType.SaleOrder);
     }
 
     [Authorize(NexStockPermissions.Offers.Convert)]
     public Task<DocumentDto> ConvertOfferToInvoiceAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         return ConvertAsync(id, DocumentType.Offer, DocumentType.SaleInvoice);
     }
 
     [Authorize(NexStockPermissions.Orders.Edit)]
     public Task<DocumentDto> SendOrderAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         return SendAsync(id, null);
     }
 
     [Authorize(NexStockPermissions.Orders.Convert)]
     public async Task<DocumentDto> ConvertOrderToInvoiceAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         var source = await GetDocumentWithItemsAsync(id);
         var targetType = source.Type switch
         {

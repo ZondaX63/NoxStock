@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using NexStock.Permissions;
+using NexStock.MultiTenancy;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -29,11 +30,12 @@ public class AccountAppService :
 
     public override async Task<AccountDto> CreateAsync(CreateUpdateAccountDto input)
     {
+        var tenantId = CurrentTenant.RequireTenantId();
         await CheckCreatePolicyAsync();
 
         var account = new Account(
             GuidGenerator.Create(),
-            CurrentTenant.Id,
+            tenantId,
             input.Name,
             input.Type,
             input.Currency
@@ -49,6 +51,7 @@ public class AccountAppService :
 
     public override async Task<AccountDto> UpdateAsync(Guid id, CreateUpdateAccountDto input)
     {
+        CurrentTenant.RequireTenantId();
         await CheckUpdatePolicyAsync();
 
         var account = await Repository.GetAsync(id);
@@ -63,6 +66,7 @@ public class AccountAppService :
 
     public async Task TransferAsync(TransferDto input)
     {
+        var tenantId = CurrentTenant.RequireTenantId();
         await CheckUpdatePolicyAsync();
 
         if (input.FromAccountId == input.ToAccountId)
@@ -85,7 +89,7 @@ public class AccountAppService :
 
         await transactionRepository.InsertAsync(new AccountTransaction(
             GuidGenerator.Create(),
-            CurrentTenant.Id,
+            tenantId,
             fromAccount.Id,
             AccountTransactionType.TransferOut,
             input.Amount,
@@ -97,7 +101,7 @@ public class AccountAppService :
 
         await transactionRepository.InsertAsync(new AccountTransaction(
             GuidGenerator.Create(),
-            CurrentTenant.Id,
+            tenantId,
             toAccount.Id,
             AccountTransactionType.TransferIn,
             input.Amount,
@@ -113,6 +117,7 @@ public class AccountAppService :
 
     public async Task AddTransactionAsync(AddTransactionDto input)
     {
+        var tenantId = CurrentTenant.RequireTenantId();
         await CheckUpdatePolicyAsync();
 
         var account = await Repository.GetAsync(input.AccountId);
@@ -130,7 +135,7 @@ public class AccountAppService :
 
         await transactionRepository.InsertAsync(new AccountTransaction(
             GuidGenerator.Create(),
-            CurrentTenant.Id,
+            tenantId,
             account.Id,
             input.Type,
             input.Amount,
@@ -145,6 +150,7 @@ public class AccountAppService :
 
     public async Task<PagedResultDto<AccountTransactionDto>> GetTransactionsAsync(Guid accountId, PagedAndSortedResultRequestDto input)
     {
+        CurrentTenant.RequireTenantId();
         await CheckGetPolicyAsync();
         var transactionRepository = LazyServiceProvider.LazyGetRequiredService<IRepository<AccountTransaction, Guid>>();
         
@@ -163,5 +169,23 @@ public class AccountAppService :
             totalCount,
             ObjectMapper.Map<System.Collections.Generic.List<AccountTransaction>, System.Collections.Generic.List<AccountTransactionDto>>(transactions)
         );
+    }
+
+    public override Task<AccountDto> GetAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.GetAsync(id);
+    }
+
+    public override Task<PagedResultDto<AccountDto>> GetListAsync(PagedAndSortedResultRequestDto input)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.GetListAsync(input);
+    }
+
+    public override Task DeleteAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.DeleteAsync(id);
     }
 }

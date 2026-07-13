@@ -5,6 +5,7 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using NexStock.Permissions;
+using NexStock.MultiTenancy;
 
 namespace NexStock.BusinessPartners;
 
@@ -25,6 +26,36 @@ public class BusinessPartnerAppService :
         CreatePolicyName = NexStockPermissions.BusinessPartners.Create;
         UpdatePolicyName = NexStockPermissions.BusinessPartners.Edit;
         DeletePolicyName = NexStockPermissions.BusinessPartners.Delete;
+    }
+
+    public override Task<BusinessPartnerDto> GetAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.GetAsync(id);
+    }
+
+    public override Task<PagedResultDto<BusinessPartnerDto>> GetListAsync(BusinessPartnerGetListInput input)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.GetListAsync(input);
+    }
+
+    public override Task<BusinessPartnerDto> CreateAsync(CreateUpdateBusinessPartnerDto input)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.CreateAsync(input);
+    }
+
+    public override Task<BusinessPartnerDto> UpdateAsync(Guid id, CreateUpdateBusinessPartnerDto input)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.UpdateAsync(id, input);
+    }
+
+    public override Task DeleteAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.DeleteAsync(id);
     }
 
     protected override async Task<IQueryable<BusinessPartner>> CreateFilteredQueryAsync(BusinessPartnerGetListInput input)
@@ -48,6 +79,7 @@ public class BusinessPartnerAppService :
 
     public async Task ProcessPaymentAsync(ProcessPaymentDto input)
     {
+        CurrentTenant.RequireTenantId();
         await CheckUpdatePolicyAsync();
 
         var partner = await Repository.GetAsync(input.BusinessPartnerId);

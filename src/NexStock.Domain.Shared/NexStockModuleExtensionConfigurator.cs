@@ -2,6 +2,8 @@
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectExtending;
 using Volo.Abp.Threading;
+using Volo.Abp.TenantManagement;
+using NexStock.MultiTenancy;
 
 namespace NexStock;
 
@@ -37,6 +39,18 @@ public static class NexStockModuleExtensionConfigurator
 
     private static void ConfigureExtraProperties()
     {
+        ObjectExtensionManager.Instance.Modules()
+            .ConfigureTenantManagement(tenantManagement =>
+            {
+                tenantManagement.ConfigureTenant(tenant =>
+                {
+                    tenant.AddOrUpdateProperty<bool>(NexStockTenantProperties.IsActive, property =>
+                    {
+                        property.DefaultValue = true;
+                    });
+                });
+            });
+
         /* You can configure extra properties for the
          * entities defined in the modules used by your application.
          *

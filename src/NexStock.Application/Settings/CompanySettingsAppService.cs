@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using NexStock.Accounts;
 using NexStock.Permissions;
+using NexStock.MultiTenancy;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -31,6 +32,7 @@ public class CompanySettingsAppService : ApplicationService, ICompanySettingsApp
 
     public async Task<CompanySettingsDto> GetAsync()
     {
+        CurrentTenant.RequireTenantId();
         return new CompanySettingsDto
         {
             CompanyName = await GetValueAsync(NexStockSettings.CompanyName),
@@ -57,6 +59,7 @@ public class CompanySettingsAppService : ApplicationService, ICompanySettingsApp
     [Authorize(NexStockPermissions.Settings.Edit)]
     public async Task<CompanySettingsDto> UpdateAsync(CompanySettingsDto input)
     {
+        CurrentTenant.RequireTenantId();
         input.DefaultCurrency = NormalizeCurrency(input.DefaultCurrency);
         input.DefaultUnit = input.DefaultUnit.Trim();
         input.DefaultLabelFormat = input.DefaultLabelFormat.Trim().ToLowerInvariant();

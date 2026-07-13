@@ -7,6 +7,7 @@ using NexStock.BusinessPartners;
 using NexStock.Permissions;
 using NexStock.Products;
 using NexStock.StockMovements;
+using NexStock.MultiTenancy;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -41,6 +42,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
     [Authorize(NexStockPermissions.Documents.Approve)]
     public async Task<DocumentDto> ApproveAsync(Guid id, ApproveDocumentInputDto input)
     {
+        CurrentTenant.RequireTenantId();
         var document = await GetDocumentWithItemsAsync(id);
 
         if (document.Status is not (DocumentStatus.Draft or DocumentStatus.Sent))
@@ -102,6 +104,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
     [Authorize(NexStockPermissions.Documents.Approve)]
     public async Task<DocumentDto> RecordPaymentAsync(Guid id, RecordDocumentPaymentInputDto input)
     {
+        CurrentTenant.RequireTenantId();
         var document = await GetDocumentWithItemsAsync(id);
 
         if (document.Type is not (DocumentType.SaleInvoice or DocumentType.PurchaseInvoice))
@@ -152,6 +155,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
     [Authorize(NexStockPermissions.Documents.Cancel)]
     public async Task<DocumentDto> CancelAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         var document = await GetDocumentWithItemsAsync(id);
 
         if (document.Status is not (DocumentStatus.Approved or DocumentStatus.Paid or DocumentStatus.Completed or DocumentStatus.PartiallyPaid))

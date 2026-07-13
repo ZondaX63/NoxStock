@@ -1,12 +1,39 @@
 # Active Context
 
-Last updated: 2026-07-11
+Last updated: 2026-07-13
 
 ## Current Work Focus
 
-Phase 1 (Commercial Foundation), Phase 2 (Invoice and Current Account Workflow), Phase 3 (POS), Phase 4 (Offers and Orders), Phase 5 (Reporting), Phase 6 (Settings and Printing), and the non-AI scope of Phase 7 are complete. AI features remain explicitly out of scope.
+The commercial product phases and SaaS multi-tenancy hardening Phases 0-11 are complete. The next focus is a live browser/container regression pass, followed by inventory warehouse/location foundations. AI features remain explicitly out of scope.
 
 ## Recent Changes
+
+- Replaced email tenant discovery with trusted `/t/{tenantName}` resolution and explicit resolver order.
+- Added fail-closed tenant guards across all commercial application-service surfaces.
+- Split commercial tenant-only permissions from host-only global exchange refresh.
+- Added cross-tenant Brand/Category/BusinessPartner/Product relation validation.
+- Added ABP Tenant `IsActive` lifecycle enforcement and migration `20260713123858_Add_Tenant_Activation`.
+- Kept exchange rates global while proving company settings remain tenant-scoped.
+- Closed public tenant registration by default until abuse protections are implemented.
+- Added non-mutating null-TenantId DbMigrator audit output.
+- Verified host-first/tenant-second migration flow and idempotent tenant defaults.
+- Completed the final tenant hardening verification with 31 EntityFrameworkCore and 13 Web tests.
+- Applied all nine migrations through tenant activation to the local Docker PostgreSQL database and verified an idempotent DbMigrator rerun.
+- Added explicit cross-tenant POS payment-account and document-conversion regression tests.
+- Rebuilt and started the Docker stack; PostgreSQL is healthy, DbMigrator exits successfully, Web is available on port 5002, and `/health-status` returns HTTP 200. Host ports 5000, 5001, 5435 and 5438 were occupied locally, so Compose maps Web to 5002 and PostgreSQL to 5439.
+- Added the Compose-only `App__HealthUiCheckUrl` override so HealthChecks UI calls `localhost:80` inside the Web container instead of an unspecified bind address.
+- Host admin sidebar now shows only the tenant-management entry and logout; tenant-owned commercial navigation remains unavailable until a tenant context is selected.
+- The custom application layout renders the shared Razor `scripts` section exactly once; Razor matches existing `Scripts` declarations case-insensitively, restoring the Tenant Management create-modal JavaScript bundle without a duplicate-section exception.
+- The Tenant Management create button requires the ABP-standard `#AbpContentToolbar` parent selector. The custom layout now supplies that wrapper; the rendered host-admin HTML and authorized `TenantManagement/Tenants/CreateModal` endpoint were verified after a Docker rebuild.
+- The physical NexStock login page now owns password sign-in and renders model validation errors directly. Tenant login requires `/t/{tenant-name}/Account/Login`; the existing `asd` tenant has `admin` / `asd@asd.asd` as its provisioned administrator identity and retains the password supplied during provisioning. Logout now posts to a physical page and redirects to the matching login route.
+- The physical login page now resolves either a username or an e-mail address before calling the user overload of `PasswordSignInAsync`. The old string overload only searched usernames, so valid tenant administrator e-mail logins were incorrectly rejected. Failed lookup/sign-in outcomes are logged with tenant-safe diagnostic fields. Live verification of the `asd` administrator now redirects to `/t/asd/Dashboard` after a successful sign-in.
+- Tenant sign-in now issues the authenticated user's ABP `tenantid` claim explicitly. Previously a valid `/t/{tenant}/Account/Login` sign-in could redirect to the tenant dashboard, but the dashboard saw a host user and redirected to tenant administration. Live verification confirms `asd` now receives `302 /t/asd/Dashboard`, then `200` with the NexStock dashboard.
+- Docker Compose persists ASP.NET Core Data Protection keys in the `nexstock-data-protection` volume at `/root/.aspnet/DataProtection-Keys`. This fixes login-form antiforgery HTTP 400 failures after a Web container recreate. A token issued before a forced recreate was verified to sign in successfully afterwards.
+- Fixed host/tenant identity-cookie collision: ASP.NET had emitted the host cookie at `/` and the tenant cookie at `/t/{tenantName}`, causing both cookies to be sent and the host `admin` identity to win. The application identity cookie is now always rooted at `/`; login entry clears authenticated and legacy path-scoped cookies through a redirect before rendering a fresh antiforgery form.
+- Tenant topbar identity now shows the tenant administrator e-mail and tenant name, while host sessions show the host username and localized platform-management context. This removes the ambiguity caused by both host and old tenant seed users having the username `admin`.
+- Tenant Management now uses physical NexStock pages rather than the ABP tenant-list API, which returned an empty list despite persisted tenant rows. The host page reads `ITenantRepository` directly and refreshes after a successful modal result.
+- The NexStock onboarding modal collects a company login code, administrator username, email and password. It provisions through `ITenantManager` + `ITenantRepository` + `IDataSeeder`, explicitly sets the required `IsActive` extension value before insert, and then renames the seeded `admin` account. This fixes the former silent `The IsActive field is required` failure.
+- Unexpected onboarding exceptions are logged and are returned into the modal validation summary; duplicate company codes return a user-facing error. Live Docker verification posted a company, received HTTP 204, and confirmed that it appeared in the company table. The isolated verification tenant was removed afterwards; the existing `asd` tenant was restored from its pre-existing soft-deleted state and is visible again.
 
 - Removed Book/Author source modules:
   - Domain entities and shared constants/enums
@@ -82,9 +109,16 @@ Phase 1 (Commercial Foundation), Phase 2 (Invoice and Current Account Workflow),
 
 ## Verification Status
 
-- `dotnet build NexStock.slnx -m:1 --no-restore` passes (pre-existing nullable/Mapperly warnings remain).
-- `dotnet test NexStock.slnx -m:1` passes (14 EntityFrameworkCore tests and 1 Web test; one pre-existing Web test entry-point warning).
+- `dotnet build NexStock.slnx -m:1 --no-restore -v:minimal` passes with 0 warnings and 0 errors in the final normal build.
+- A forced clean rebuild passes with 153 pre-existing nullable and Mapperly diagnostics; this debt is recorded and has not been hidden with warning suppression.
+- EntityFrameworkCore integration tests pass 31/31; Web tests pass 13/13.
+- Application and Domain test projects currently contain no discoverable tests.
+- EF reports no pending model changes.
+- Local Docker PostgreSQL contains all nine migrations and DbMigrator completes idempotently.
 - `CompanySettingsAppServiceTests.Should_Save_Operational_Defaults_And_Expose_Default_Pos_Accounts` passes.
+- Live tenant onboarding check: a host-admin POST to `/TenantManagement/Tenants/CreateModal` returns HTTP 204 and the newly created tenant is rendered by `/TenantManagement/Tenants` immediately after refresh.
+- Final live Docker authentication matrix verified on port `5002`: host `admin` login redirects to `/TenantManagement/Tenants`; the same browser session can then enter tenant `asd` as `asd@asd.asd` and reaches `/t/asd/Dashboard`; the identity jar contains one root-scoped cookie; Dashboard returns HTTP 200; tenant access to host tenant management is denied.
+- Tenant sidebar links now use Razor application-relative URLs so the `/t/{tenantName}` path base is preserved for the logo, Dashboard, Products, Accounts, Reports, and Settings. The host sidebar renders only the Companies entry.
 - Test output notes that Application, Domain, and TestBase assemblies contain no tests. This is currently informational.
 - Local PostgreSQL availability is still required for a live browser walkthrough; automated build and integration tests pass.
 
@@ -100,10 +134,14 @@ Phase 1 (Commercial Foundation), Phase 2 (Invoice and Current Account Workflow),
 - Commercial history must be reversed, not deleted: cancellations create reversal stock/account rows and mark the source document cancelled.
 - Account opening balance is captured on account creation. Later balance edits should be implemented as explicit ledger operations, not silent CRUD changes.
 - `DocumentType.SaleInvoice` is the canonical enum name; stock movement uses `StockMovementType.SalesInvoice`.
+- Shared database/shared schema is the initial SaaS model; hybrid tenant databases remain a future option.
+- Development tenant resolution will use `/t/{tenantName}` and production will use `{tenant}.nexstock.com`.
+- Commercial permissions and services are tenant-only; platform and tenant administration are host-only.
+- `TenantId`, `BranchId`, and `WarehouseId` represent different ownership scopes and must not be reused for one another.
 
 ## Immediate Next Steps
 
-1. Complete Product Hardening: run the live browser walkthrough, close frontend/runtime gaps, and add CI/container smoke tests.
-2. Start Phase 8 Inventory Core with warehouse/location foundations, stock transfers, returns, reservations, and inventory-count controls.
-3. Design historical inventory costing before extending profitability reports.
-4. Keep the broader accounting, Turkish tax/e-document, purchasing, CRM, integration, security, and reliability tasks in `memory-bank/features/enterprise-roadmap.md`; AI remains deferred.
+1. Run the live browser/container walkthrough across implemented commercial workflows.
+2. Start inventory warehouse/location foundations now that tenant ownership rules are proven.
+3. Add CI build/test/migration/container smoke checks and reduce the clean-rebuild warning backlog.
+4. Keep broader accounting, Turkish tax/e-document, purchasing, CRM, integration, security, and reliability work in `memory-bank/features/enterprise-roadmap.md`; AI remains deferred.

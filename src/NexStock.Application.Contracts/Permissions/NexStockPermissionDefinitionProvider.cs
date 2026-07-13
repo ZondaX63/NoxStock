@@ -11,11 +11,11 @@ public class NexStockPermissionDefinitionProvider : PermissionDefinitionProvider
     {
         var myGroup = context.AddGroup(NexStockPermissions.GroupName);
 
-        myGroup.AddPermission(NexStockPermissions.Dashboard.Default, L("Permission:Dashboard"));
+        AddTenantPermission(myGroup, NexStockPermissions.Dashboard.Default, L("Permission:Dashboard"));
 
         var productsPermission = AddCrudPermissions(myGroup, NexStockPermissions.Products.Default, L("Permission:Products"),
             NexStockPermissions.Products.Create, NexStockPermissions.Products.Edit, NexStockPermissions.Products.Delete);
-        productsPermission.AddChild(NexStockPermissions.Products.Export, L("Permission:Products.Export"));
+        AddTenantChild(productsPermission, NexStockPermissions.Products.Export, L("Permission:Products.Export"));
 
         AddCrudPermissions(myGroup, NexStockPermissions.Brands.Default, L("Permission:Brands"),
             NexStockPermissions.Brands.Create, NexStockPermissions.Brands.Edit, NexStockPermissions.Brands.Delete);
@@ -23,47 +23,51 @@ public class NexStockPermissionDefinitionProvider : PermissionDefinitionProvider
         AddCrudPermissions(myGroup, NexStockPermissions.Categories.Default, L("Permission:Categories"),
             NexStockPermissions.Categories.Create, NexStockPermissions.Categories.Edit, NexStockPermissions.Categories.Delete);
 
-        var stockMovementsPermission = myGroup.AddPermission(NexStockPermissions.StockMovements.Default, L("Permission:StockMovements"));
-        stockMovementsPermission.AddChild(NexStockPermissions.StockMovements.Create, L("Permission:StockMovements.Create"));
-        stockMovementsPermission.AddChild(NexStockPermissions.StockMovements.Adjust, L("Permission:StockMovements.Adjust"));
+        var stockMovementsPermission = AddTenantPermission(myGroup, NexStockPermissions.StockMovements.Default, L("Permission:StockMovements"));
+        AddTenantChild(stockMovementsPermission, NexStockPermissions.StockMovements.Create, L("Permission:StockMovements.Create"));
+        AddTenantChild(stockMovementsPermission, NexStockPermissions.StockMovements.Adjust, L("Permission:StockMovements.Adjust"));
 
         AddCrudPermissions(myGroup, NexStockPermissions.BusinessPartners.Default, L("Permission:BusinessPartners"),
             NexStockPermissions.BusinessPartners.Create, NexStockPermissions.BusinessPartners.Edit, NexStockPermissions.BusinessPartners.Delete);
 
         var accountsPermission = AddCrudPermissions(myGroup, NexStockPermissions.Accounts.Default, L("Permission:Accounts"),
             NexStockPermissions.Accounts.Create, NexStockPermissions.Accounts.Edit, NexStockPermissions.Accounts.Delete);
-        accountsPermission.AddChild(NexStockPermissions.Accounts.Transfer, L("Permission:Accounts.Transfer"));
+        AddTenantChild(accountsPermission, NexStockPermissions.Accounts.Transfer, L("Permission:Accounts.Transfer"));
 
         var documentsPermission = AddCrudPermissions(myGroup, NexStockPermissions.Documents.Default, L("Permission:Documents"),
             NexStockPermissions.Documents.Create, NexStockPermissions.Documents.Edit, NexStockPermissions.Documents.Delete);
-        documentsPermission.AddChild(NexStockPermissions.Documents.Approve, L("Permission:Documents.Approve"));
-        documentsPermission.AddChild(NexStockPermissions.Documents.Cancel, L("Permission:Documents.Cancel"));
+        AddTenantChild(documentsPermission, NexStockPermissions.Documents.Approve, L("Permission:Documents.Approve"));
+        AddTenantChild(documentsPermission, NexStockPermissions.Documents.Cancel, L("Permission:Documents.Cancel"));
 
         var offersPermission = AddCrudPermissions(myGroup, NexStockPermissions.Offers.Default, L("Permission:Offers"),
             NexStockPermissions.Offers.Create, NexStockPermissions.Offers.Edit, NexStockPermissions.Offers.Delete);
-        offersPermission.AddChild(NexStockPermissions.Offers.Convert, L("Permission:Offers.Convert"));
+        AddTenantChild(offersPermission, NexStockPermissions.Offers.Convert, L("Permission:Offers.Convert"));
 
         var ordersPermission = AddCrudPermissions(myGroup, NexStockPermissions.Orders.Default, L("Permission:Orders"),
             NexStockPermissions.Orders.Create, NexStockPermissions.Orders.Edit, NexStockPermissions.Orders.Delete);
-        ordersPermission.AddChild(NexStockPermissions.Orders.Convert, L("Permission:Orders.Convert"));
+        AddTenantChild(ordersPermission, NexStockPermissions.Orders.Convert, L("Permission:Orders.Convert"));
 
-        var salesPermission = myGroup.AddPermission(NexStockPermissions.Sales.Default, L("Permission:Sales"));
-        salesPermission.AddChild(NexStockPermissions.Sales.Create, L("Permission:Sales.Create"));
-        salesPermission.AddChild(NexStockPermissions.Sales.Cancel, L("Permission:Sales.Cancel"));
+        var salesPermission = AddTenantPermission(myGroup, NexStockPermissions.Sales.Default, L("Permission:Sales"));
+        AddTenantChild(salesPermission, NexStockPermissions.Sales.Create, L("Permission:Sales.Create"));
+        AddTenantChild(salesPermission, NexStockPermissions.Sales.Cancel, L("Permission:Sales.Cancel"));
 
-        var reportsPermission = myGroup.AddPermission(NexStockPermissions.Reports.Default, L("Permission:Reports"));
-        reportsPermission.AddChild(NexStockPermissions.Reports.Export, L("Permission:Reports.Export"));
+        var reportsPermission = AddTenantPermission(myGroup, NexStockPermissions.Reports.Default, L("Permission:Reports"));
+        AddTenantChild(reportsPermission, NexStockPermissions.Reports.Export, L("Permission:Reports.Export"));
 
-        myGroup.AddPermission(NexStockPermissions.Notifications.Default, L("Permission:Notifications"));
-        myGroup.AddPermission(NexStockPermissions.AuditLogs.Default, L("Permission:AuditLogs"));
+        AddTenantPermission(myGroup, NexStockPermissions.Notifications.Default, L("Permission:Notifications"));
+        AddTenantPermission(myGroup, NexStockPermissions.AuditLogs.Default, L("Permission:AuditLogs"));
 
-        var settingsPermission = myGroup.AddPermission(NexStockPermissions.Settings.Default, L("Permission:Settings"));
-        settingsPermission.AddChild(NexStockPermissions.Settings.Edit, L("Permission:Settings.Edit"));
+        var settingsPermission = AddTenantPermission(myGroup, NexStockPermissions.Settings.Default, L("Permission:Settings"));
+        AddTenantChild(settingsPermission, NexStockPermissions.Settings.Edit, L("Permission:Settings.Edit"));
 
-        var personnelPermission = myGroup.AddPermission(NexStockPermissions.Personnel.Default, L("Permission:Personnel"));
-        personnelPermission.AddChild(NexStockPermissions.Personnel.ManagePermissions, L("Permission:Personnel.ManagePermissions"));
+        var personnelPermission = AddTenantPermission(myGroup, NexStockPermissions.Personnel.Default, L("Permission:Personnel"));
+        AddTenantChild(personnelPermission, NexStockPermissions.Personnel.ManagePermissions, L("Permission:Personnel.ManagePermissions"));
 
-        myGroup.AddPermission(NexStockPermissions.PrintLabels.Default, L("Permission:PrintLabels"));
+        AddTenantPermission(myGroup, NexStockPermissions.PrintLabels.Default, L("Permission:PrintLabels"));
+        myGroup.AddPermission(
+            NexStockPermissions.ExchangeRates.Refresh,
+            L("Permission:ExchangeRates.Refresh"),
+            multiTenancySide: MultiTenancySides.Host);
     }
 
     private static PermissionDefinition AddCrudPermissions(
@@ -74,12 +78,28 @@ public class NexStockPermissionDefinitionProvider : PermissionDefinitionProvider
         string editPermissionName,
         string deletePermissionName)
     {
-        var permission = group.AddPermission(defaultPermissionName, displayName);
+        var permission = AddTenantPermission(group, defaultPermissionName, displayName);
         var localizationPrefix = "Permission:" + defaultPermissionName[(NexStockPermissions.GroupName.Length + 1)..];
-        permission.AddChild(createPermissionName, L(localizationPrefix + ".Create"));
-        permission.AddChild(editPermissionName, L(localizationPrefix + ".Edit"));
-        permission.AddChild(deletePermissionName, L(localizationPrefix + ".Delete"));
+        AddTenantChild(permission, createPermissionName, L(localizationPrefix + ".Create"));
+        AddTenantChild(permission, editPermissionName, L(localizationPrefix + ".Edit"));
+        AddTenantChild(permission, deletePermissionName, L(localizationPrefix + ".Delete"));
         return permission;
+    }
+
+    private static PermissionDefinition AddTenantPermission(
+        PermissionGroupDefinition group,
+        string name,
+        LocalizableString displayName)
+    {
+        return group.AddPermission(name, displayName, multiTenancySide: MultiTenancySides.Tenant);
+    }
+
+    private static PermissionDefinition AddTenantChild(
+        PermissionDefinition parent,
+        string name,
+        LocalizableString displayName)
+    {
+        return parent.AddChild(name, displayName, multiTenancySide: MultiTenancySides.Tenant);
     }
 
     private static LocalizableString L(string name)

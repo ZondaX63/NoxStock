@@ -16,4 +16,13 @@ public class Index_Tests : NexStockWebTestBase
         response.Headers.Location.ShouldNotBeNull();
         response.Headers.Location!.OriginalString.ShouldBe("/Dashboard");
     }
+
+    [Fact]
+    public async Task Public_Registration_Page_Should_Be_Closed_By_Default()
+    {
+        var response = await Client.GetAsync("/Account/Register");
+        response.StatusCode.ShouldBe(HttpStatusCode.Found);
+        response.Headers.Location.ShouldNotBeNull();
+        response.Headers.Location!.OriginalString.ShouldBe("/Error?httpStatusCode=404");
+    }
 }

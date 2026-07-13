@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using NexStock.Accounts;
 using NexStock.Documents;
 using NexStock.Permissions;
+using NexStock.MultiTenancy;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
@@ -30,6 +31,7 @@ public class BusinessPartnerStatementAppService : ApplicationService, IBusinessP
 
     public async Task<List<BusinessPartnerPaymentHistoryDto>> GetPaymentHistoryAsync(Guid businessPartnerId)
     {
+        CurrentTenant.RequireTenantId();
         var documents = await _documentRepository.GetQueryableAsync();
         var transactions = await _accountTransactionRepository.GetQueryableAsync();
         var accounts = await _accountRepository.GetQueryableAsync();

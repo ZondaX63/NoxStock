@@ -6,6 +6,7 @@ using NexStock.BusinessPartners;
 using NexStock.Documents;
 using NexStock.Permissions;
 using NexStock.Products;
+using NexStock.MultiTenancy;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
@@ -30,6 +31,7 @@ public class OperationalAlertsAppService : ApplicationService, IOperationalAlert
 
     public async Task<OperationalAlertsSummaryDto> GetSummaryAsync()
     {
+        CurrentTenant.RequireTenantId();
         var today = Clock.Now.Date;
         var alerts = new System.Collections.Generic.List<OperationalAlertDto>();
         var products = await _productRepository.GetQueryableAsync();

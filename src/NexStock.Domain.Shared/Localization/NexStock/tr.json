@@ -102,6 +102,7 @@
     "Permission:Personnel": "Personel yönetimi",
     "Permission:Personnel.ManagePermissions": "Personel yetkilerini yönetme",
     "Permission:PrintLabels": "Barkod/QR etiket yazdırma",
+    "Permission:ExchangeRates.Refresh": "Global döviz kurlarını yenileme",
     "Menu:Dashboard": "Genel görünüm",
     "Menu:HomePage": "ana sayfa",
     "Dashboard": "Genel görünüm",
@@ -145,6 +146,9 @@
     "PagerFirst": "İlk",
     "PagerPrevious": "Önceki",
     "PagerNext": "Sonraki",
-    "PagerLast": "Son"
+    "PagerLast": "Son",
+    "Topbar:User": "Kullanıcı",
+    "Topbar:CompanyAccount": "Şirket hesabı",
+    "Topbar:PlatformManagement": "Platform yönetimi"
   }
 }

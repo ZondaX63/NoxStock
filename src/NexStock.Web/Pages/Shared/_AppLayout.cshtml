@@ -63,7 +63,12 @@
             <!-- Main Content -->
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-slate-900 p-6 lg:p-8 transition-colors duration-200 relative">
                 <div class="max-w-8xl w-full mx-auto dark:text-slate-200 px-2 lg:px-6">
-                    @await RenderSectionAsync("content_toolbar", required: false)
+                    <div class="mb-4">
+                        <abp-page-alerts />
+                    </div>
+                    <div id="AbpContentToolbar">
+                        @await RenderSectionAsync("content_toolbar", required: false)
+                    </div>
                     @RenderBody()
                 </div>
             </main>
@@ -89,6 +94,6 @@
     <script src="~/Abp/ApplicationConfigurationScript"></script>
     <script src="~/Abp/ServiceProxyScript"></script>
 
-    @await RenderSectionAsync("Scripts", required: false)
+    @await RenderSectionAsync("scripts", required: false)
 </body>
 </html>

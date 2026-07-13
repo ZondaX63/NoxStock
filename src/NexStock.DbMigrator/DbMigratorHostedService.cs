@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NexStock.Data;
+using NexStock.EntityFrameworkCore.MultiTenancy;
 using Serilog;
 using Volo.Abp;
 using Volo.Abp.Data;
@@ -37,6 +38,11 @@ public class DbMigratorHostedService : IHostedService
                 .ServiceProvider
                 .GetRequiredService<NexStockDbMigrationService>()
                 .MigrateAsync();
+
+            await application
+                .ServiceProvider
+                .GetRequiredService<NullTenantDataAuditService>()
+                .ScanAsync();
 
             await application.ShutdownAsync();
 

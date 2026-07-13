@@ -10,6 +10,7 @@ using NexStock.Permissions;
 using NexStock.Products;
 using NexStock.Settings;
 using NexStock.StockMovements;
+using NexStock.MultiTenancy;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -53,6 +54,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
     public async Task<List<PosProductLookupDto>> GetProductsAsync(PosProductLookupInputDto input)
     {
+        CurrentTenant.RequireTenantId();
         var query = await _productRepository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
         if (!string.IsNullOrWhiteSpace(filter))
@@ -96,6 +98,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
     public async Task<PosCheckoutOptionsDto> GetCheckoutOptionsAsync()
     {
+        CurrentTenant.RequireTenantId();
         var accounts = await _accountRepository.GetQueryableAsync();
         var businessPartners = await _businessPartnerRepository.GetQueryableAsync();
 
@@ -131,6 +134,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     [Authorize(NexStockPermissions.Sales.Create)]
     public async Task<PosSaleDto> CreateAsync(CreatePosSaleDto input)
     {
+        CurrentTenant.RequireTenantId();
         if (input.Items.Count == 0)
         {
             throw new BusinessException("NexStock:PosSaleRequiresItems");
@@ -271,6 +275,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
     public async Task<List<PosSaleDto>> GetRecentAsync()
     {
+        CurrentTenant.RequireTenantId();
         var documents = await _documentRepository.GetQueryableAsync();
         var businessPartners = await _businessPartnerRepository.GetQueryableAsync();
         var transactions = await _accountTransactionRepository.GetQueryableAsync();
@@ -326,6 +331,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     [Authorize(NexStockPermissions.Sales.Cancel)]
     public async Task<PosSaleDto> CancelAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         var queryable = await _documentRepository.WithDetailsAsync(x => x.Items);
         var document = await AsyncExecuter.FirstOrDefaultAsync(queryable.Where(x => x.Id == id));
         if (document is null || document.Type != DocumentType.PosSale)

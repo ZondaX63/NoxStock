@@ -8,7 +8,9 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Linq;
 using NexStock.Brands;
 using NexStock.Categories;
+using NexStock.MultiTenancy;
 using NexStock.Permissions;
+using Volo.Abp;
 
 namespace NexStock.Products;
 
@@ -45,6 +47,8 @@ public class ProductAppService :
 
     public override async Task<ProductDto> CreateAsync(CreateUpdateProductDto input)
     {
+        CurrentTenant.RequireTenantId();
+        await ValidateRelationsAsync(input);
         var result = await base.CreateAsync(input);
         await ReplaceOemCodesAsync(result.Id, input.OemCodes);
         result.OemCodes = NormalizeOemCodes(input.OemCodes);
@@ -53,6 +57,8 @@ public class ProductAppService :
 
     public override async Task<ProductDto> UpdateAsync(Guid id, CreateUpdateProductDto input)
     {
+        CurrentTenant.RequireTenantId();
+        await ValidateRelationsAsync(input);
         var result = await base.UpdateAsync(id, input);
         await ReplaceOemCodesAsync(id, input.OemCodes);
         result.OemCodes = NormalizeOemCodes(input.OemCodes);
@@ -61,6 +67,7 @@ public class ProductAppService :
 
     public override async Task<ProductDto> GetAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         var queryable = await Repository.GetQueryableAsync();
         
         var query = from product in queryable
@@ -109,6 +116,7 @@ public class ProductAppService :
 
     public override async Task<PagedResultDto<ProductDto>> GetListAsync(ProductGetListInput input)
     {
+        CurrentTenant.RequireTenantId();
         var queryable = await CreateFilteredQueryAsync(input);
 
         var totalCount = await AsyncExecuter.CountAsync(queryable);
@@ -138,6 +146,12 @@ public class ProductAppService :
         return new PagedResultDto<ProductDto>(totalCount, productDtos);
     }
 
+    public override Task DeleteAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.DeleteAsync(id);
+    }
+
     private async Task ReplaceOemCodesAsync(Guid productId, string? oemCodes)
     {
         var queryable = await _productOemCodeRepository.GetQueryableAsync();
@@ -152,6 +166,19 @@ public class ProductAppService :
         {
             await _productOemCodeRepository.InsertAsync(
                 new ProductOEMCode(GuidGenerator.Create(), CurrentTenant.Id, productId, oemCode));
+        }
+    }
+
+    private async Task ValidateRelationsAsync(CreateUpdateProductDto input)
+    {
+        if (input.BrandId.HasValue && await _brandRepository.FindAsync(input.BrandId.Value) is null)
+        {
+            throw new BusinessException("NexStock:InvalidBrandReference");
+        }
+
+        if (input.CategoryId.HasValue && await _categoryRepository.FindAsync(input.CategoryId.Value) is null)
+        {
+            throw new BusinessException("NexStock:InvalidCategoryReference");
         }
     }
 

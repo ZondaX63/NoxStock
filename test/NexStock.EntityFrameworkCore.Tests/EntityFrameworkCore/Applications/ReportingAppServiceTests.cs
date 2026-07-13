@@ -89,11 +89,11 @@ public class ReportingAppServiceTests : NexStockEntityFrameworkCoreTestBase
             IsActive = true
         });
         await _accountTransactionRepository.InsertAsync(new AccountTransaction(
-            Guid.NewGuid(), null, account.Id, AccountTransactionType.Income, 30, "TRY", today));
+            Guid.NewGuid(), NexStockTestConsts.TenantId, account.Id, AccountTransactionType.Income, 30, "TRY", today));
         await _accountTransactionRepository.InsertAsync(new AccountTransaction(
-            Guid.NewGuid(), null, account.Id, AccountTransactionType.Expense, 10, "TRY", today));
+            Guid.NewGuid(), NexStockTestConsts.TenantId, account.Id, AccountTransactionType.Expense, 10, "TRY", today));
         await _stockMovementRepository.InsertAsync(new StockMovement(
-            Guid.NewGuid(), null, product.Id, StockMovementType.ManualOut, -1, 5, today, description: "Reporting movement"));
+            Guid.NewGuid(), NexStockTestConsts.TenantId, product.Id, StockMovementType.ManualOut, -1, 5, today, description: "Reporting movement"));
 
         var report = await _reportingAppService.GetSnapshotAsync(new ReportRequestDto
         {

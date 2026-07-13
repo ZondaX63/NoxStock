@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using NexStock.AuditLogs;
 using NexStock.Permissions;
+using NexStock.MultiTenancy;
 using Volo.Abp.Application.Services;
 using Volo.Abp.AuditLogging;
 
@@ -21,6 +22,7 @@ public class AuditLogAppService : ApplicationService, IAuditLogAppService
 
     public async Task<AuditLogSnapshotDto> GetListAsync(AuditLogRequestDto input)
     {
+        CurrentTenant.RequireTenantId();
         var dateFrom = input.DateFrom?.Date;
         var dateTo = input.DateTo?.Date.AddDays(1);
         var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 100);

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using NexStock.Permissions;
 using NexStock.Products;
+using NexStock.MultiTenancy;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
@@ -22,6 +23,7 @@ public class LabelProductLookupAppService : ApplicationService, ILabelProductLoo
 
     public async Task<List<LabelProductDto>> GetListAsync()
     {
+        CurrentTenant.RequireTenantId();
         var products = await _productRepository.GetQueryableAsync();
         var query = products
             .OrderBy(x => x.Name)

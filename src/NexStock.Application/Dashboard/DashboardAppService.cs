@@ -5,6 +5,7 @@ using NexStock.Accounts;
 using NexStock.BusinessPartners;
 using NexStock.Documents;
 using NexStock.Products;
+using NexStock.MultiTenancy;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
@@ -34,6 +35,7 @@ public class DashboardAppService : ApplicationService, IDashboardAppService
 
     public async Task<DashboardSummaryDto> GetSummaryAsync()
     {
+        CurrentTenant.RequireTenantId();
         var today = Clock.Now.Date;
         var monthStart = new DateTime(today.Year, today.Month, 1);
         var trendStart = monthStart.AddMonths(-5);

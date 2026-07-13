@@ -147,7 +147,7 @@
                 <h3 class="text-lg font-bold text-slate-800 dark:text-white">Kritik Stoklar</h3>
                 <p class="text-xs text-slate-500 mt-1">Stok seviyesi kritik sınırda veya altında olan ürünler</p>
             </div>
-            <a href="/Products" class="text-indigo-600 text-sm font-medium hover:underline">Ürünler</a>
+            <a href="~/Products" class="text-indigo-600 text-sm font-medium hover:underline">Ürünler</a>
         </div>
         @if (Model.Summary.CriticalStocks.Count == 0)
         {
@@ -182,7 +182,7 @@
                 <h3 class="text-lg font-bold text-slate-800 dark:text-white">En Çok Satan Ürünler</h3>
                 <p class="text-xs text-slate-500 mt-1">Onaylanmış satış faturalarına göre</p>
             </div>
-            <a href="/Reports" class="text-indigo-600 text-sm font-medium hover:underline">Raporlar</a>
+            <a href="~/Reports" class="text-indigo-600 text-sm font-medium hover:underline">Raporlar</a>
         </div>
         @if (Model.Summary.TopProducts.Count == 0)
         {
@@ -215,7 +215,7 @@
             <h3 class="text-lg font-bold text-slate-800 dark:text-white">Vadesi Yaklaşan Faturalar</h3>
             <p class="text-xs text-slate-500 mt-1">Gecikmiş ve önümüzdeki 7 gün içinde vadesi dolacak açık faturalar</p>
         </div>
-        <a href="/Invoices" class="text-indigo-600 text-sm font-medium hover:underline">Faturalar</a>
+        <a href="~/Invoices" class="text-indigo-600 text-sm font-medium hover:underline">Faturalar</a>
     </div>
     @if (Model.Summary.DueDocuments.Count == 0)
     {

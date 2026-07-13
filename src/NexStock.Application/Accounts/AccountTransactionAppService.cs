@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using NexStock.Permissions;
+using NexStock.MultiTenancy;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
@@ -21,5 +23,17 @@ public class AccountTransactionAppService : ReadOnlyAppService<AccountTransactio
         return (await base.CreateFilteredQueryAsync(input))
             .WhereIf(input.AccountId.HasValue, x => x.AccountId == input.AccountId)
             .WhereIf(input.DocumentId.HasValue, x => x.DocumentId == input.DocumentId);
+    }
+
+    public override Task<AccountTransactionDto> GetAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.GetAsync(id);
+    }
+
+    public override Task<PagedResultDto<AccountTransactionDto>> GetListAsync(AccountTransactionGetListInput input)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.GetListAsync(input);
     }
 }

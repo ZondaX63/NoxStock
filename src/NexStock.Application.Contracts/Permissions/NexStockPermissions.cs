@@ -125,4 +125,9 @@ public static class NexStockPermissions
     {
         public const string Default = GroupName + ".PrintLabels";
     }
+
+    public static class ExchangeRates
+    {
+        public const string Refresh = GroupName + ".ExchangeRates.Refresh";
+    }
 }

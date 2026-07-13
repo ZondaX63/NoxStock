@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Shouldly;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
 using Xunit;
 
 namespace NexStock.EntityFrameworkCore.Samples;
@@ -15,10 +16,12 @@ namespace NexStock.EntityFrameworkCore.Samples;
 public class SampleRepositoryTests : NexStockEntityFrameworkCoreTestBase
 {
     private readonly IRepository<IdentityUser, Guid> _appUserRepository;
+    private readonly ICurrentTenant _currentTenant;
 
     public SampleRepositoryTests()
     {
         _appUserRepository = GetRequiredService<IRepository<IdentityUser, Guid>>();
+        _currentTenant = GetRequiredService<ICurrentTenant>();
     }
 
     [Fact]
@@ -29,12 +32,15 @@ public class SampleRepositoryTests : NexStockEntityFrameworkCoreTestBase
          */
         await WithUnitOfWorkAsync(async () =>
         {
+            using (_currentTenant.Change(null))
+            {
                 //Act
                 var adminUser = await _appUserRepository
-                .FirstOrDefaultAsync(u => u.UserName == "admin");
+                    .FirstOrDefaultAsync(u => u.UserName == "admin");
 
                 //Assert
                 adminUser.ShouldNotBeNull();
+            }
         });
     }
 }

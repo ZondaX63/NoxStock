@@ -1,0 +1,27 @@
+@page
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NexStock.Web.Pages.TenantManagement.Tenants.CreateModalModel
+@{
+    Layout = null;
+}
+
+<form asp-page="/TenantManagement/Tenants/CreateModal" id="TenantProvisionForm">
+    <abp-modal>
+        <abp-modal-header title="Yeni Şirket Oluştur"></abp-modal-header>
+        <abp-modal-body>
+            <div class="mb-4 rounded border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-900">
+                Şirket oluşturulduğunda yönetici hesabı, aşağıdaki bilgilerle hazırlanır. Giriş adresi:
+                <strong>/t/{şirket-adi}/Account/Login</strong>
+            </div>
+
+            <abp-input asp-for="Input.CompanyName" label="Şirket Giriş Kodu" />
+            <p class="-mt-2 mb-3 text-xs text-slate-500">Boşluk ve Türkçe karakter kullanmayın. Örnek: <strong>acme-mobilya</strong></p>
+            <abp-input asp-for="Input.AdminUserName" label="Yönetici Kullanıcı Adı" />
+            <abp-input asp-for="Input.AdminEmailAddress" label="Yönetici E-posta Adresi" />
+            <abp-input asp-for="Input.AdminPassword" type="password" label="Yönetici Şifresi" />
+
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

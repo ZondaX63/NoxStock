@@ -2,6 +2,8 @@
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectExtending;
 using Volo.Abp.Threading;
+using Volo.Abp.TenantManagement;
+using NexStock.MultiTenancy;
 
 namespace NexStock.EntityFrameworkCore;
 
@@ -16,6 +18,13 @@ public static class NexStockEfCoreEntityExtensionMappings
 
         OneTimeRunner.Run(() =>
         {
+                ObjectExtensionManager.Instance
+                    .MapEfCoreProperty<Tenant, bool>(
+                        NexStockTenantProperties.IsActive,
+                        (_, propertyBuilder) => propertyBuilder
+                            .HasDefaultValue(true)
+                            .HasSentinel(true));
+
                 /* You can configure extra properties for the
                  * entities defined in the modules used by your application.
                  *

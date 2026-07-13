@@ -8,6 +8,8 @@ using Volo.Abp.Domain.Repositories;
 using NexStock.BusinessPartners;
 using NexStock.Permissions;
 using NexStock.Products;
+using NexStock.MultiTenancy;
+using Volo.Abp;
 
 namespace NexStock.Documents;
 
@@ -47,9 +49,10 @@ public class DocumentAppService :
 
     public override async Task<DocumentDto> CreateAsync(CreateUpdateDocumentDto input)
     {
+        var tenantId = CurrentTenant.RequireTenantId();
         await CheckCreatePolicyAsync();
 
-        var document = new Document(GuidGenerator.Create(), CurrentTenant.Id);
+        var document = new Document(GuidGenerator.Create(), tenantId);
         await ApplyInputAsync(document, input);
 
         await Repository.InsertAsync(document, autoSave: true);
@@ -58,6 +61,7 @@ public class DocumentAppService :
 
     public override async Task<DocumentDto> UpdateAsync(Guid id, CreateUpdateDocumentDto input)
     {
+        CurrentTenant.RequireTenantId();
         await CheckUpdatePolicyAsync();
 
         var queryable = await Repository.WithDetailsAsync(x => x.Items);
@@ -86,6 +90,7 @@ public class DocumentAppService :
 
     public override async Task<DocumentDto> GetAsync(Guid id)
     {
+        CurrentTenant.RequireTenantId();
         // Must override to include Items and Map BusinessPartner/Product Names
         var queryable = await Repository.WithDetailsAsync(x => x.Items);
         var document = await AsyncExecuter.FirstOrDefaultAsync(queryable.Where(x => x.Id == id));
@@ -122,6 +127,7 @@ public class DocumentAppService :
 
     public override async Task<PagedResultDto<DocumentDto>> GetListAsync(DocumentGetListInput input)
     {
+        CurrentTenant.RequireTenantId();
         var query = await CreateFilteredQueryAsync(input);
         var totalCount = await AsyncExecuter.CountAsync(query);
 
@@ -146,6 +152,12 @@ public class DocumentAppService :
         }
 
         return new PagedResultDto<DocumentDto>(totalCount, documentDtos);
+    }
+
+    public override Task DeleteAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        return base.DeleteAsync(id);
     }
 
     protected override async Task<IQueryable<Document>> CreateFilteredQueryAsync(DocumentGetListInput input)
@@ -205,6 +217,11 @@ public class DocumentAppService :
 
     private async Task ApplyInputAsync(Document document, CreateUpdateDocumentDto input)
     {
+        if (await _businessPartnerRepository.FindAsync(input.BusinessPartnerId) is null)
+        {
+            throw new BusinessException("NexStock:InvalidBusinessPartnerReference");
+        }
+
         document.BusinessPartnerId = input.BusinessPartnerId;
         document.DocNumber = input.DocNumber;
         document.Type = input.Type;
@@ -218,10 +235,15 @@ public class DocumentAppService :
 
         foreach (var inputItem in input.Items)
         {
+            var product = await _productRepository.FindAsync(inputItem.ProductId);
+            if (product is null)
+            {
+                throw new BusinessException("NexStock:InvalidProductReference");
+            }
+
             var unitPrice = inputItem.UnitPrice;
             if (IsSalesDocument(document.Type))
             {
-                var product = await _productRepository.GetAsync(inputItem.ProductId);
                 if (product.UseCurrentExchangeRateForSale)
                 {
                     unitPrice = (await _priceCalculator.CalculateAsync(product, document.Currency)).UnitPrice;

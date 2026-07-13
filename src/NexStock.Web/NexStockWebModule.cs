@@ -39,7 +39,9 @@ using Volo.Abp.TenantManagement.Web;
 using System;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared.Toolbars;
@@ -52,6 +54,7 @@ using Volo.Abp.SettingManagement.Web;
 using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Threading;
 using NexStock.Web.ExchangeRates;
+using NexStock.Web.MultiTenancy;
 
 namespace NexStock.Web;
 
@@ -169,7 +172,9 @@ public class NexStockWebModule : AbpModule
         
         Configure<Volo.Abp.MultiTenancy.AbpTenantResolveOptions>(options =>
         {
-            options.TenantResolvers.Insert(0, new NexStock.Web.MultiTenancy.EmailTenantResolveContributor());
+            options.TenantResolvers.Clear();
+            options.TenantResolvers.Add(new Volo.Abp.MultiTenancy.CurrentUserTenantResolveContributor());
+            options.TenantResolvers.Add(new TenantPathResolveContributor());
         });
         
         Configure<RazorPagesOptions>(options =>
@@ -251,6 +256,9 @@ public class NexStockWebModule : AbpModule
     private void ConfigureAuthentication(ServiceConfigurationContext context)
     {
         context.Services.ForwardIdentityAuthenticationForBearer(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
+        context.Services.PostConfigure<CookieAuthenticationOptions>(
+            IdentityConstants.ApplicationScheme,
+            options => options.Cookie.Path = "/");
         context.Services.Configure<AbpClaimsPrincipalFactoryOptions>(options =>
         {
             options.IsDynamicClaimsEnabled = true;
@@ -356,6 +364,7 @@ public class NexStockWebModule : AbpModule
         }
 
         app.UseCorrelationId();
+        app.UseMiddleware<TenantPathMiddleware>();
         app.UseRouting();
         app.MapAbpStaticAssets();
         app.UseAbpStudioLink();
@@ -369,6 +378,7 @@ public class NexStockWebModule : AbpModule
         }
 
         app.UseUnitOfWork();
+        app.UseMiddleware<TenantActivationMiddleware>();
         app.UseDynamicClaims();
         app.UseAuthorization();
 

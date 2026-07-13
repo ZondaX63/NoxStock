@@ -9,6 +9,7 @@ using NexStock.Documents;
 using NexStock.Permissions;
 using NexStock.Products;
 using NexStock.StockMovements;
+using NexStock.MultiTenancy;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
@@ -48,6 +49,7 @@ public class ReportingAppService : ApplicationService, IReportingAppService
 
     public async Task<ReportSnapshotDto> GetSnapshotAsync(ReportRequestDto input)
     {
+        CurrentTenant.RequireTenantId();
         var dateTo = (input.DateTo?.Date ?? Clock.Now.Date).AddDays(1);
         var dateFrom = input.DateFrom?.Date ?? dateTo.AddMonths(-1);
         if (dateFrom >= dateTo)

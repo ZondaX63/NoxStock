@@ -107,6 +107,10 @@
     "Permission:Personnel": "Personnel Management",
     "Permission:Personnel.ManagePermissions": "Managing personnel permissions",
     "Permission:PrintLabels": "Printing barcode/QR labels",
+    "Permission:ExchangeRates.Refresh": "Refreshing global exchange rates",
+    "Topbar:User": "User",
+    "Topbar:CompanyAccount": "Company account",
+    "Topbar:PlatformManagement": "Platform management",
     "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information visit",
     "Welcome": "Welcome"
   }
