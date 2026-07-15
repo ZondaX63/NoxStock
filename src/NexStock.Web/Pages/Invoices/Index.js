@@ -3,6 +3,10 @@ $(function () {
     var documentWorkflowService = nexStock.documents.documentWorkflow;
     var recordPaymentModal = new abp.ModalManager(abp.appPath + 'Invoices/RecordPaymentModal');
 
+    function recordOf(data) {
+        return data && (data.record || data);
+    }
+
     recordPaymentModal.onResult(function () {
         dataTable.ajax.reload();
     });
@@ -23,13 +27,21 @@ $(function () {
                     items:
                         [
                             {
+                                text: 'Yazdır',
+                                action: function (data) {
+                                    window.open(abp.appPath + 'Invoices/Print?id=' + encodeURIComponent(recordOf(data).id), '_blank', 'noopener');
+                                }
+                            },
+                            {
                                 text: 'Onayla',
                                 visible: function (data) {
-                                    return data.record.status === 1 || data.record.status === 2;
+                                    var record = recordOf(data);
+                                    return record && (record.status === 1 || record.status === 2);
                                 },
                                 action: function (data) {
+                                    var record = recordOf(data);
                                     documentWorkflowService
-                                        .approve(data.record.id, { accountId: null, paymentAmount: 0 })
+                                        .approve(record.id, { accountId: null, paymentAmount: 0 })
                                         .then(function () {
                                             abp.notify.success('Fatura onaylandı.');
                                             dataTable.ajax.reload();
@@ -38,27 +50,30 @@ $(function () {
                             },
                             {
                                 text: function (data) {
-                                    return data.record.type === 1 ? 'Tahsilat Kaydet' : 'Ödeme Kaydet';
+                                    return recordOf(data).type === 1 ? 'Tahsilat Kaydet' : 'Ödeme Kaydet';
                                 },
                                 visible: function (data) {
-                                    return (data.record.type === 1 || data.record.type === 2) &&
-                                        (data.record.status === 3 || data.record.status === 8);
+                                    var record = recordOf(data);
+                                    return record && (record.type === 1 || record.type === 2) &&
+                                        (record.status === 3 || record.status === 8);
                                 },
                                 action: function (data) {
-                                    recordPaymentModal.open({ documentId: data.record.id });
+                                    recordPaymentModal.open({ documentId: recordOf(data).id });
                                 }
                             },
                             {
                                 text: 'İptal Et',
                                 visible: function (data) {
-                                    return data.record.status === 3 || data.record.status === 6 || data.record.status === 7 || data.record.status === 8;
+                                    var record = recordOf(data);
+                                    return record && (record.status === 3 || record.status === 6 || record.status === 7 || record.status === 8);
                                 },
                                 confirmMessage: function (data) {
-                                    return data.record.docNumber + ' numaralı faturayı iptal etmek istediğinize emin misiniz?';
+                                    return recordOf(data).docNumber + ' numaralı faturayı iptal etmek istediğinize emin misiniz?';
                                 },
                                 action: function (data) {
+                                    var record = recordOf(data);
                                     documentWorkflowService
-                                        .cancel(data.record.id)
+                                        .cancel(record.id)
                                         .then(function () {
                                             abp.notify.info('Fatura iptal edildi.');
                                             dataTable.ajax.reload();
@@ -68,13 +83,14 @@ $(function () {
                             {
                                 text: 'Sil',
                                 visible: function (data) {
-                                    return data.record.status === 1;
+                                    var record = recordOf(data);
+                                    return record && record.status === 1;
                                 },
                                 confirmMessage: function (data) {
-                                    return data.record.docNumber + ' numaralı taslak faturayı silmek istediğinize emin misiniz?';
+                                    return recordOf(data).docNumber + ' numaralı taslak faturayı silmek istediğinize emin misiniz?';
                                 },
                                 action: function (data) {
-                                    documentService.delete(data.record.id).then(function () {
+                                    documentService.delete(recordOf(data).id).then(function () {
                                         abp.notify.info('Taslak fatura silindi.');
                                         dataTable.ajax.reload();
                                     });
@@ -129,7 +145,7 @@ $(function () {
                 title: 'Genel Toplam',
                 data: "grandTotal",
                 render: function(data, type, row) {
-                    return `<span class="font-semibold text-slate-800">${data} ${row.currency}</span>`;
+                    return `<span class="font-semibold text-slate-800">${Number(data).toFixed(2)} ${row.currency}</span>`;
                 }
             },
             {
@@ -137,7 +153,7 @@ $(function () {
                 data: null,
                 render: function(data, type, row) {
                     var outstandingAmount = row.grandTotal - row.paidAmount;
-                    return `<span class="font-semibold text-slate-800">${outstandingAmount} ${row.currency}</span>`;
+                    return `<span class="font-semibold text-slate-800">${Number(outstandingAmount).toFixed(2)} ${row.currency}</span>`;
                 }
             },
             {

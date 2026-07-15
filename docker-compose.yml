@@ -35,13 +35,13 @@ services:
       dockerfile: src/NexStock.Web/Dockerfile
     container_name: nexstock-web
     ports:
-      - "5002:80"
+      - "8080:80"
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:80"
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NexStock;User ID=postgres;Password=1121;"
-      App__SelfUrl: "http://localhost:5002"
-      AuthServer__Authority: "http://localhost:5002"
+      App__SelfUrl: "http://138.3.254.5:8080"
+      AuthServer__Authority: "http://138.3.254.5:8080"
       AuthServer__RequireHttpsMetadata: "false"
       App__HealthUiCheckUrl: "http://localhost:80/health-status"
     volumes:

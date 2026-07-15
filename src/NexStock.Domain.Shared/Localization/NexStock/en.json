@@ -112,6 +112,17 @@
     "Topbar:CompanyAccount": "Company account",
     "Topbar:PlatformManagement": "Platform management",
     "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information visit",
-    "Welcome": "Welcome"
+    "Welcome": "Welcome",
+    "Error:Title": "An unexpected error occurred",
+    "Error:Description": "The operation could not be completed. If the problem continues, share the tracking code below with support.",
+    "Error:TraceId": "Tracking code",
+    "Error:Home": "Return to home",
+    "DocumentNumberAlreadyExists": "This document number is already in use for the same document type.",
+    "BusinessPartnerTypeDoesNotMatchDocument": "The selected business partner is not compatible with this document type.",
+    "DueDateCannotBeEarlierThanDocumentDate": "The due date cannot be earlier than the document date.",
+    "InvalidDocumentItem": "The document item quantity, price, discount, or VAT rate is invalid.",
+    "DocumentTotalMustBePositive": "The document total must be greater than zero.",
+    "OnlyDraftDocumentsCanBeDeleted": "Only draft documents can be deleted.",
+    "PaymentAccountCurrencyDoesNotMatchDocument": "The payment account currency must match the document currency."
   }
 }

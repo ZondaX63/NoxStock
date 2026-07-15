@@ -1,6 +1,6 @@
 # NexStock Enterprise Product Roadmap
 
-Last updated: 2026-07-11
+Last updated: 2026-07-15
 
 This roadmap defines the work remaining after the initial commercial prototype phases. The goal is to make NexStock a serious Turkish-first inventory, accounting, customer management, purchasing, sales, and retail platform rather than a collection of CRUD pages.
 
@@ -19,7 +19,7 @@ Every module must meet these rules before it is considered complete:
 
 ## Priority 0: Product Hardening
 
-Status: Next
+Status: Active release gate
 
 - Run a complete browser walkthrough with PostgreSQL and Docker.
 - Audit every page for unhandled buttons, broken modals, missing loading states, duplicate submissions, and server-side validation gaps.
@@ -29,6 +29,10 @@ Status: Next
 - Clean remaining nullable and Mapperly warnings where they can hide real defects.
 - Add CI build, test, migration validation, and container smoke-test workflows.
 - Add backup/restore documentation and a safe development seed dataset.
+- Verify the live deployment with tenant login, authorization boundaries, currency refresh, critical commercial workflows, and rollback readiness.
+- Centralized server and browser error capture is implemented; the remaining work is external alert routing, dashboarding, and production log retention/aggregation.
+- Invoice integrity baseline is implemented: sequential tenant/type numbers, duplicate protection, server-side line/tax totals, lifecycle tamper prevention, payment-currency validation, and browser printing. Remaining invoice scope is reconciliation, tax variants, PDF/email/archive delivery, and end-to-end browser coverage.
+- Product price transparency is implemented for invoice entry and POS: original purchase/sale currency values remain visible beside the effective sale price calculated with the current TCMB rate and product margin.
 
 ## Phase 8: Professional Inventory Core
 

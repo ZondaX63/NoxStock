@@ -26,19 +26,22 @@ public class DocumentAppService :
     private readonly IRepository<Product, Guid> _productRepository;
     private readonly IRepository<DocumentItem, Guid> _documentItemRepository;
     private readonly IProductPriceCalculator _priceCalculator;
+    private readonly IDocumentNumberGenerator _documentNumberGenerator;
 
     public DocumentAppService(
         IRepository<Document, Guid> repository,
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
         IRepository<Product, Guid> productRepository,
         IRepository<DocumentItem, Guid> documentItemRepository,
-        IProductPriceCalculator priceCalculator)
+        IProductPriceCalculator priceCalculator,
+        IDocumentNumberGenerator documentNumberGenerator)
         : base(repository)
     {
         _businessPartnerRepository = businessPartnerRepository;
         _productRepository = productRepository;
         _documentItemRepository = documentItemRepository;
         _priceCalculator = priceCalculator;
+        _documentNumberGenerator = documentNumberGenerator;
 
         GetPolicyName = NexStockPermissions.Documents.Default;
         GetListPolicyName = NexStockPermissions.Documents.Default;
@@ -53,7 +56,7 @@ public class DocumentAppService :
         await CheckCreatePolicyAsync();
 
         var document = new Document(GuidGenerator.Create(), tenantId);
-        await ApplyInputAsync(document, input);
+        await ApplyInputAsync(document, input, isNewDocument: true);
 
         await Repository.InsertAsync(document, autoSave: true);
         return await GetAsync(document.Id);
@@ -82,7 +85,7 @@ public class DocumentAppService :
         }
 
         document.Items.Clear();
-        await ApplyInputAsync(document, input);
+        await ApplyInputAsync(document, input, isNewDocument: false);
 
         await Repository.UpdateAsync(document, autoSave: true);
         return await GetAsync(document.Id);
@@ -154,10 +157,24 @@ public class DocumentAppService :
         return new PagedResultDto<DocumentDto>(totalCount, documentDtos);
     }
 
-    public override Task DeleteAsync(Guid id)
+    public async Task<string> GetSuggestedNumberAsync(DocumentType type)
     {
         CurrentTenant.RequireTenantId();
-        return base.DeleteAsync(id);
+        await CheckCreatePolicyAsync();
+        return await _documentNumberGenerator.GetNextAsync(type);
+    }
+
+    public override async Task DeleteAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        await CheckDeletePolicyAsync();
+        var document = await Repository.GetAsync(id);
+        if (document.Status != DocumentStatus.Draft)
+        {
+            throw new BusinessException("NexStock:OnlyDraftDocumentsCanBeDeleted");
+        }
+
+        await Repository.DeleteAsync(document, autoSave: true);
     }
 
     protected override async Task<IQueryable<Document>> CreateFilteredQueryAsync(DocumentGetListInput input)
@@ -215,23 +232,33 @@ public class DocumentAppService :
         return query;
     }
 
-    private async Task ApplyInputAsync(Document document, CreateUpdateDocumentDto input)
+    private async Task ApplyInputAsync(Document document, CreateUpdateDocumentDto input, bool isNewDocument)
     {
-        if (await _businessPartnerRepository.FindAsync(input.BusinessPartnerId) is null)
+        var businessPartner = await _businessPartnerRepository.FindAsync(input.BusinessPartnerId);
+        if (businessPartner is null)
         {
             throw new BusinessException("NexStock:InvalidBusinessPartnerReference");
         }
 
+        var type = isNewDocument ? input.Type : document.Type;
+        EnsureBusinessPartnerMatchesDocumentType(businessPartner, type);
+        EnsureDatesAreValid(input.Date, input.DueDate);
+
+        if (type is not (DocumentType.Collection or DocumentType.Payment) && input.Items.Count == 0)
+        {
+            throw new BusinessException("NexStock:DocumentRequiresItems");
+        }
+
         document.BusinessPartnerId = input.BusinessPartnerId;
-        document.DocNumber = input.DocNumber;
-        document.Type = input.Type;
-        document.Status = input.Status;
+        document.Type = type;
+        document.DocNumber = await GetDocumentNumberAsync(document, input.DocNumber);
+        document.Status = isNewDocument ? DocumentStatus.Draft : document.Status;
         document.Currency = string.IsNullOrWhiteSpace(input.Currency) ? "TRY" : input.Currency.Trim().ToUpperInvariant();
         document.ExchangeRate = await _priceCalculator.GetExchangeRateAsync(document.Currency);
         document.Date = input.Date;
         document.DueDate = input.DueDate;
-        document.Description = input.Description;
-        document.PaidAmount = input.PaidAmount;
+        document.Description = input.Description?.Trim();
+        document.PaidAmount = isNewDocument ? 0 : document.PaidAmount;
 
         foreach (var inputItem in input.Items)
         {
@@ -250,6 +277,8 @@ public class DocumentAppService :
                 }
             }
 
+            EnsureItemIsValid(inputItem);
+
             var lineNet = inputItem.Quantity * unitPrice;
             var discount = lineNet * inputItem.DiscountRate / 100;
             var taxable = lineNet - discount;
@@ -262,30 +291,82 @@ public class DocumentAppService :
                 UnitPrice = unitPrice,
                 VatRate = inputItem.VatRate,
                 DiscountRate = inputItem.DiscountRate,
-                Total = taxable + vat
+                Total = RoundMoney(taxable + vat)
             });
         }
 
         if (document.Type is DocumentType.Collection or DocumentType.Payment)
         {
-            document.GrandTotal = input.GrandTotal;
-            document.Subtotal = input.GrandTotal;
+            if (input.GrandTotal <= 0)
+            {
+                throw new BusinessException("NexStock:DocumentTotalMustBePositive");
+            }
+
+            document.GrandTotal = RoundMoney(input.GrandTotal);
+            document.Subtotal = document.GrandTotal;
             document.DiscountTotal = 0;
             document.VatTotal = 0;
         }
         else
         {
-            document.Subtotal = document.Items.Sum(x => x.Quantity * x.UnitPrice);
-            document.DiscountTotal = document.Items.Sum(x => x.Quantity * x.UnitPrice * x.DiscountRate / 100);
-            document.VatTotal = document.Items.Sum(x =>
+            document.Subtotal = RoundMoney(document.Items.Sum(x => x.Quantity * x.UnitPrice));
+            document.DiscountTotal = RoundMoney(document.Items.Sum(x => x.Quantity * x.UnitPrice * x.DiscountRate / 100));
+            document.VatTotal = RoundMoney(document.Items.Sum(x =>
             {
                 var lineNet = x.Quantity * x.UnitPrice;
                 var discount = lineNet * x.DiscountRate / 100;
                 return (lineNet - discount) * x.VatRate / 100;
-            });
-            document.GrandTotal = document.Subtotal - document.DiscountTotal + document.VatTotal;
+            }));
+            document.GrandTotal = RoundMoney(document.Subtotal - document.DiscountTotal + document.VatTotal);
         }
     }
+
+    private async Task<string> GetDocumentNumberAsync(Document document, string? requestedNumber)
+    {
+        var number = string.IsNullOrWhiteSpace(requestedNumber)
+            ? await _documentNumberGenerator.GetNextAsync(document.Type)
+            : requestedNumber.Trim().ToUpperInvariant();
+        var existing = await Repository.FindAsync(x =>
+            x.Id != document.Id && x.Type == document.Type && x.DocNumber == number);
+
+        if (existing is not null)
+        {
+            throw new BusinessException("NexStock:DocumentNumberAlreadyExists")
+                .WithData("DocNumber", number);
+        }
+
+        return number;
+    }
+
+    private static void EnsureBusinessPartnerMatchesDocumentType(BusinessPartner businessPartner, DocumentType type)
+    {
+        var requiresCustomer = type is DocumentType.SaleInvoice or DocumentType.Offer or DocumentType.SaleOrder or DocumentType.Collection;
+        var requiresSupplier = type is DocumentType.PurchaseInvoice or DocumentType.PurchaseOrder or DocumentType.Payment;
+
+        if ((requiresCustomer && businessPartner.Type is not (BusinessPartnerType.Customer or BusinessPartnerType.Both)) ||
+            (requiresSupplier && businessPartner.Type is not (BusinessPartnerType.Supplier or BusinessPartnerType.Both)))
+        {
+            throw new BusinessException("NexStock:BusinessPartnerTypeDoesNotMatchDocument");
+        }
+    }
+
+    private static void EnsureDatesAreValid(DateTime date, DateTime? dueDate)
+    {
+        if (dueDate.HasValue && dueDate.Value.Date < date.Date)
+        {
+            throw new BusinessException("NexStock:DueDateCannotBeEarlierThanDocumentDate");
+        }
+    }
+
+    private static void EnsureItemIsValid(CreateUpdateDocumentItemDto item)
+    {
+        if (item.Quantity <= 0 || item.UnitPrice < 0 || item.VatRate is < 0 or > 100 || item.DiscountRate is < 0 or > 100)
+        {
+            throw new BusinessException("NexStock:InvalidDocumentItem");
+        }
+    }
+
+    private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
 
     private static bool IsSalesDocument(DocumentType type)
     {

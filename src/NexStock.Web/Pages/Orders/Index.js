@@ -1,6 +1,7 @@
 $(function () {
     var documentService = nexStock.documents.document;
     var workflowService = nexStock.documents.commercialDocumentWorkflow;
+    var recordOf = function (data) { return data && (data.record || data); };
 
     function statusText(status) {
         if (status === 1) return '<span class="bg-slate-100 text-slate-800 text-xs font-medium px-2 py-0.5 rounded">Taslak</span>';
@@ -22,17 +23,17 @@ $(function () {
                 rowAction: { items: [
                     {
                         text: 'Gönder',
-                        visible: function (data) { return data.record.status === 1; },
+                        visible: function (data) { var record = recordOf(data); return record && record.status === 1; },
                         action: function (data) { workflowService.sendOrder(data.record.id).then(function () { abp.notify.success('Sipariş gönderildi.'); table.ajax.reload(); }); }
                     },
                     {
                         text: 'Faturaya Dönüştür',
-                        visible: function (data) { return data.record.status === 2; },
+                        visible: function (data) { var record = recordOf(data); return record && record.status === 2; },
                         action: function (data) { workflowService.convertOrderToInvoice(data.record.id).then(function () { abp.notify.success('Sipariş faturaya dönüştürüldü.'); table.ajax.reload(); }); }
                     },
                     {
                         text: 'Sil',
-                        visible: function (data) { return data.record.status === 1; },
+                        visible: function (data) { var record = recordOf(data); return record && record.status === 1; },
                         confirmMessage: function (data) { return data.record.docNumber + ' numaralı taslak siparişi silmek istiyor musunuz?'; },
                         action: function (data) { documentService.delete(data.record.id).then(function () { table.ajax.reload(); }); }
                     }

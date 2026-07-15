@@ -17,6 +17,10 @@ public class PosProductLookupDto
     public string Unit { get; set; } = string.Empty;
     public decimal SalePrice { get; set; }
     public string Currency { get; set; } = "TRY";
+    public decimal OriginalSalePrice { get; set; }
+    public string SaleCurrency { get; set; } = "TRY";
+    public decimal PurchasePrice { get; set; }
+    public string PurchaseCurrency { get; set; } = "TRY";
     public bool UsesCurrentExchangeRate { get; set; }
     public decimal ProfitMarkupPercent { get; set; }
     public decimal ExchangeRate { get; set; } = 1;

@@ -9,9 +9,8 @@ public class CreateUpdateDocumentDto
     [Required]
     public Guid BusinessPartnerId { get; set; }
     
-    [Required]
     [StringLength(100)]
-    public string DocNumber { get; set; }
+    public string? DocNumber { get; set; }
     
     [Required]
     public DocumentType Type { get; set; }

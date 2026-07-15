@@ -149,6 +149,17 @@
     "PagerLast": "Son",
     "Topbar:User": "Kullanıcı",
     "Topbar:CompanyAccount": "Şirket hesabı",
-    "Topbar:PlatformManagement": "Platform yönetimi"
+    "Topbar:PlatformManagement": "Platform yönetimi",
+    "Error:Title": "Beklenmeyen bir hata oluştu",
+    "Error:Description": "İşlem tamamlanamadı. Sorun devam ederse aşağıdaki izleme kodunu destek ekibiyle paylaşın.",
+    "Error:TraceId": "İzleme kodu",
+    "Error:Home": "Ana sayfaya dön",
+    "DocumentNumberAlreadyExists": "Bu belge numarası aynı belge türü için zaten kullanılıyor.",
+    "BusinessPartnerTypeDoesNotMatchDocument": "Seçilen cari hesap belge türüyle uyumlu değil.",
+    "DueDateCannotBeEarlierThanDocumentDate": "Vade tarihi belge tarihinden önce olamaz.",
+    "InvalidDocumentItem": "Belge kalemindeki miktar, fiyat, iskonto veya KDV oranı geçersiz.",
+    "DocumentTotalMustBePositive": "Belge toplamı sıfırdan büyük olmalıdır.",
+    "OnlyDraftDocumentsCanBeDeleted": "Yalnızca taslak belgeler silinebilir.",
+    "PaymentAccountCurrencyDoesNotMatchDocument": "Ödeme hesabının para birimi belge para birimiyle aynı olmalıdır."
   }
 }

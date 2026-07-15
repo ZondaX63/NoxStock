@@ -70,8 +70,7 @@ namespace NexStock.Migrations
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasSentinel(true);
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -508,6 +507,9 @@ namespace NexStock.Migrations
                     b.HasIndex("BusinessPartnerId");
 
                     b.HasIndex("SourceDocumentId");
+
+                    b.HasIndex("TenantId", "Type", "DocNumber")
+                        .IsUnique();
 
                     b.ToTable("AppDocuments", (string)null);
                 });

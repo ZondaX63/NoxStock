@@ -15,6 +15,7 @@ Known migration order:
 7. `20260711090224_Add_Document_Source_Link`
 8. `20260711150556_Add_Dynamic_Exchange_Pricing`
 9. `20260713123858_Add_Tenant_Activation`
+10. `20260715174844_Add_Document_Number_Uniqueness`
 
 ## Important Notes
 
@@ -26,6 +27,8 @@ Known migration order:
 - `20260711090224_Add_Document_Source_Link` adds optional `SourceDocumentId` plus an index and self-reference on `AppDocuments` for offer/order conversion lineage.
 - Historical designer files may still contain Book/Author model snapshots. This is expected and should not be treated as live source.
 - `20260713123858_Add_Tenant_Activation` adds `AbpTenants.IsActive` with a safe default of `true`; it does not modify commercial ownership.
+- `20260715174844_Add_Document_Number_Uniqueness` adds a unique composite index over `AppDocuments.TenantId`, `Type`, and `DocNumber`.
+- The migration was applied idempotently through Docker DbMigrator on 2026-07-15.
 - DbMigrator runs the read-only null-tenant ownership audit after migrations and logs counts/sample IDs without assigning data.
 - On 2026-07-13 the local Docker PostgreSQL migration history was queried directly and all nine migrations were present.
 - `dotnet ef migrations has-pending-model-changes` reported no model/snapshot drift.

@@ -54,6 +54,7 @@ using Volo.Abp.SettingManagement.Web;
 using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Threading;
 using NexStock.Web.ExchangeRates;
+using NexStock.Web.Diagnostics;
 using NexStock.Web.MultiTenancy;
 
 namespace NexStock.Web;
@@ -365,6 +366,7 @@ public class NexStockWebModule : AbpModule
 
         app.UseCorrelationId();
         app.UseMiddleware<TenantPathMiddleware>();
+        app.UseMiddleware<NexStockExceptionHandlingMiddleware>();
         app.UseRouting();
         app.MapAbpStaticAssets();
         app.UseAbpStudioLink();

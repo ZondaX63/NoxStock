@@ -25,10 +25,11 @@ public class NexStockApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        context.Services.AddHttpClient("ExchangeRateApi", client =>
+        context.Services.AddHttpClient("TcmbExchangeRates", client =>
         {
-            client.BaseAddress = new Uri("https://api.exchangerate-api.com/");
+            client.BaseAddress = new Uri("https://www.tcmb.gov.tr/");
             client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("NexStock/1.0");
         });
     }
 }

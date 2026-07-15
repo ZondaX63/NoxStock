@@ -19,10 +19,6 @@ $(function () {
     }
 
     function quoteProductPrice($row) {
-        if (!useProductPricing) {
-            return;
-        }
-
         var productId = $row.find('.product-select').val();
         if (!productId) {
             return;
@@ -32,12 +28,20 @@ $(function () {
         fetch(url, { credentials: 'same-origin' })
             .then(function (response) { return response.ok ? response.json() : Promise.reject(); })
             .then(function (quote) {
-                $row.find('.price-input').val(Number(quote.unitPrice || 0).toFixed(4));
-                if (quote.usesCurrentExchangeRate) {
-                    $row.find('.price-source').text('Güncel kur + %' + Number(quote.profitMarkupPercent || 0) + ' marj ile hesaplandı.');
+                if (useProductPricing) {
+                    $row.find('.price-input').val(Number(quote.unitPrice || 0).toFixed(4));
                 } else {
-                    $row.find('.price-source').text('Ürün kartı satış fiyatı kullanıldı.');
+                    $row.find('.price-input').val(Number(quote.purchasePrice || 0).toFixed(4));
                 }
+
+                var priceDetails = 'Alış: ' + Number(quote.purchasePrice || 0).toFixed(4) + ' ' + (quote.purchaseCurrency || 'TRY') +
+                    ' | Kart satış: ' + Number(quote.salePrice || 0).toFixed(4) + ' ' + (quote.saleCurrency || 'TRY');
+                if (quote.usesCurrentExchangeRate) {
+                    priceDetails += ' | İşlem fiyatı güncel kur + %' + Number(quote.profitMarkupPercent || 0) + ' marj ile hesaplandı.';
+                } else {
+                    priceDetails += ' | İşlem fiyatı ürün kartından alındı.';
+                }
+                $row.find('.price-source').text(priceDetails);
                 calculateTotals();
             })
             .catch(function () {

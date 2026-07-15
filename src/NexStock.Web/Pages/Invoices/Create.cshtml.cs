@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,8 @@ namespace NexStock.Web.Pages.Invoices;
 
 public class CreateModel : NexStockPageModel
 {
+    private static readonly string[] AcceptedDateFormats = ["yyyy-MM-dd", "dd.MM.yyyy", "d.M.yyyy"];
+
     [BindProperty(SupportsGet = true)]
     public DocumentType Type { get; set; } = DocumentType.SaleInvoice;
 
@@ -47,7 +50,7 @@ public class CreateModel : NexStockPageModel
         DefaultVatRate = settings.DefaultVatRate;
         Invoice = new CreateUpdateDocumentDto
         {
-            DocNumber = $"{GetDocumentPrefix(settings)}-{DateTime.Now:yyyyMMdd-HHmm}",
+            DocNumber = await _documentAppService.GetSuggestedNumberAsync(Type),
             Date = DateTime.Now,
             DueDate = DateTime.Now.AddDays(30),
             Type = Type,
@@ -60,6 +63,7 @@ public class CreateModel : NexStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        NormalizeInvoiceDates();
         Type = Invoice.Type;
         DefaultVatRate = (await _companySettingsAppService.GetAsync()).DefaultVatRate;
         if (!ModelState.IsValid)
@@ -90,6 +94,46 @@ public class CreateModel : NexStockPageModel
         var document = await _documentAppService.CreateAsync(Invoice);
 
         return RedirectToPage(GetRedirectPage(Invoice.Type));
+    }
+
+    private void NormalizeInvoiceDates()
+    {
+        NormalizeDateInput("Invoice.Date", required: true, value => Invoice.Date = value);
+        NormalizeDateInput("Invoice.DueDate", required: false, value => Invoice.DueDate = value);
+    }
+
+    private void NormalizeDateInput(string key, bool required, Action<DateTime> assign)
+    {
+        if (!Request.HasFormContentType)
+        {
+            return;
+        }
+
+        var rawValue = Request.Form[key].ToString();
+        ModelState.Remove(key);
+
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            if (required)
+            {
+                ModelState.AddModelError(key, "Tarih zorunludur.");
+            }
+
+            return;
+        }
+
+        if (DateTime.TryParseExact(
+                rawValue,
+                AcceptedDateFormats,
+                CultureInfo.GetCultureInfo("tr-TR"),
+                DateTimeStyles.AllowWhiteSpaces,
+                out var parsedDate))
+        {
+            assign(parsedDate);
+            return;
+        }
+
+        ModelState.AddModelError(key, "Lütfen geçerli bir tarih girin.");
     }
 
     private async Task LoadLookupsAsync(DocumentType type)
@@ -143,16 +187,4 @@ public class CreateModel : NexStockPageModel
             "/Invoices/Index";
     }
 
-    private string GetDocumentPrefix(CompanySettingsDto settings)
-    {
-        return Type switch
-        {
-            DocumentType.SaleInvoice => settings.SaleInvoiceNumberPrefix,
-            DocumentType.PurchaseInvoice => settings.PurchaseInvoiceNumberPrefix,
-            DocumentType.Offer => settings.OfferNumberPrefix,
-            DocumentType.SaleOrder => settings.SaleOrderNumberPrefix,
-            DocumentType.PurchaseOrder => settings.PurchaseOrderNumberPrefix,
-            _ => "BEL"
-        };
-    }
 }

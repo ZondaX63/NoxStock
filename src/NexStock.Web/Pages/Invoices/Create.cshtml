@@ -7,7 +7,8 @@
     ViewData["Title"] = title;
 }
 
-<div class="flex justify-between items-center mb-8">
+<div class="invoice-page-shell">
+<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
     <div>
         <h2 class="text-3xl font-bold text-slate-800 dark:text-white">@title</h2>
         <p class="text-sm text-slate-500 mt-1">Belge kalemlerini ve cari hesap bilgilerini eksiksiz doldurun.</p>
@@ -26,12 +27,13 @@
     <div asp-validation-summary="All" class="text-red-600 mb-4 bg-red-50 p-4 rounded-lg"></div>
 
     <!-- Başlık Bilgileri -->
-    <div class="card p-6 mb-6">
+    <div class="card p-5 sm:p-6 mb-6">
         <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Genel Bilgiler</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
             <div>
                 <label asp-for="Invoice.DocNumber" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Belge No</label>
-                <input asp-for="Invoice.DocNumber" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required />
+                <input asp-for="Invoice.DocNumber" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" />
+                <p class="mt-1 text-xs text-slate-500">Boş bırakılırsa numara otomatik oluşturulur.</p>
             </div>
             <div>
                 <label asp-for="Invoice.BusinessPartnerId" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -41,35 +43,44 @@
             </div>
             <div>
                 <label asp-for="Invoice.Date" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tarih</label>
-                <input asp-for="Invoice.Date" type="date" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required />
+                <input asp-for="Invoice.Date" type="date" value='@Model.Invoice.Date.ToString("yyyy-MM-dd")' class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required />
             </div>
             <div>
                 <label asp-for="Invoice.DueDate" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vade / Geçerlilik Tarihi</label>
-                <input asp-for="Invoice.DueDate" type="date" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" />
+                <input asp-for="Invoice.DueDate" type="date" value='@Model.Invoice.DueDate?.ToString("yyyy-MM-dd")' class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" />
             </div>
         </div>
     </div>
 
     <!-- Kalemler -->
     <div class="card p-0 mb-6 overflow-hidden">
-        <div class="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+        <div class="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
             <h3 class="text-lg font-bold text-slate-800 dark:text-white">Fatura Kalemleri</h3>
             <button type="button" id="AddRowBtn" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center">
                 <span class="material-icons-round text-sm mr-1">add</span>
                 Yeni Satır Ekle
             </button>
         </div>
-        <div class="overflow-x-auto">
-            <table class="table w-full text-left whitespace-nowrap" id="ItemsTable">
+        <div class="invoice-lines-scroll overflow-x-auto">
+            <table class="invoice-lines-table text-left" id="ItemsTable">
+                <colgroup>
+                    <col class="invoice-col-product" />
+                    <col class="invoice-col-quantity" />
+                    <col class="invoice-col-price" />
+                    <col class="invoice-col-discount" />
+                    <col class="invoice-col-vat" />
+                    <col class="invoice-col-total" />
+                    <col class="invoice-col-actions" />
+                </colgroup>
                 <thead class="bg-slate-50 dark:bg-slate-800/50">
                     <tr>
-                        <th class="py-3 px-4 text-slate-500 font-semibold uppercase text-xs">Ürün</th>
-                        <th class="py-3 px-4 text-slate-500 font-semibold uppercase text-xs w-32">Miktar</th>
-                        <th class="py-3 px-4 text-slate-500 font-semibold uppercase text-xs w-32">B. Fiyat</th>
-                        <th class="py-3 px-4 text-slate-500 font-semibold uppercase text-xs w-24">İskonto %</th>
-                        <th class="py-3 px-4 text-slate-500 font-semibold uppercase text-xs w-24">KDV %</th>
-                        <th class="py-3 px-4 text-slate-500 font-semibold uppercase text-xs w-32 text-right">Toplam</th>
-                        <th class="py-3 px-4 w-12"></th>
+                        <th>Ürün</th>
+                        <th>Miktar</th>
+                        <th>Birim fiyat</th>
+                        <th>İskonto %</th>
+                        <th>KDV %</th>
+                        <th class="text-right">Satır toplamı</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="ItemsTbody">
@@ -81,7 +92,7 @@
 
     <!-- Alt Toplamlar ve Kaydet -->
     <div class="flex justify-end mb-12">
-        <div class="w-full md:w-1/3 card p-6">
+        <div class="invoice-summary w-full card p-5 sm:p-6">
             <div class="space-y-3 text-sm">
                 <div class="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Ara Toplam:</span>
@@ -110,41 +121,60 @@
         </div>
     </div>
 </form>
+</div>
 
 <template id="ItemRowTemplate">
     <tr class="item-row border-b border-slate-100 dark:border-slate-700">
-        <td class="py-2 px-4">
+        <td>
             <input type="hidden" name="Invoice.Items.Index" value="{id}" />
-            <select name="Invoice.Items[{id}].ProductId" class="product-select w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required>
+            <select name="Invoice.Items[{id}].ProductId" class="product-select invoice-product-select w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required>
                 @foreach (var opt in Model.Products)
                 {
                     <option value="@opt.Value">@opt.Text</option>
                 }
             </select>
         </td>
-        <td class="py-2 px-4">
-            <input type="number" name="Invoice.Items[{id}].Quantity" class="calc-input quantity-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="1" min="0.01" step="any" required />
+        <td>
+            <input type="number" name="Invoice.Items[{id}].Quantity" class="calc-input quantity-input invoice-number-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="1" min="0.01" step="any" required />
         </td>
-        <td class="py-2 px-4">
-            <input type="number" name="Invoice.Items[{id}].UnitPrice" class="calc-input price-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="0" min="0" step="any" required />
+        <td>
+            <input type="number" name="Invoice.Items[{id}].UnitPrice" class="calc-input price-input invoice-price-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="0" min="0" step="any" required />
             <p class="price-source mt-1 text-xs text-slate-500"></p>
         </td>
-        <td class="py-2 px-4">
-            <input type="number" name="Invoice.Items[{id}].DiscountRate" class="calc-input discount-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="0" min="0" max="100" step="any" />
+        <td>
+            <input type="number" name="Invoice.Items[{id}].DiscountRate" class="calc-input discount-input invoice-rate-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="0" min="0" max="100" step="any" />
         </td>
-        <td class="py-2 px-4">
-            <input type="number" name="Invoice.Items[{id}].VatRate" class="calc-input vat-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@Model.DefaultVatRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" />
+        <td>
+            <input type="number" name="Invoice.Items[{id}].VatRate" class="calc-input vat-input invoice-rate-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@Model.DefaultVatRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" />
         </td>
-        <td class="py-2 px-4 text-right font-semibold text-slate-800 dark:text-white row-total">
+        <td class="text-right font-semibold text-slate-800 dark:text-white row-total">
             0.00
         </td>
-        <td class="py-2 px-4 text-center">
+        <td class="text-center">
             <button type="button" class="remove-row-btn text-slate-400 hover:text-red-500 transition-colors">
                 <span class="material-icons-round text-lg">delete</span>
             </button>
         </td>
     </tr>
 </template>
+
+<style>
+    .invoice-page-shell { max-width: 1560px; margin: 0 auto; }
+    .invoice-lines-table { min-width: 1060px; width: 100%; table-layout: fixed; border-collapse: collapse; }
+    .invoice-lines-table .invoice-col-product { width: 33%; }
+    .invoice-lines-table .invoice-col-quantity { width: 10%; }
+    .invoice-lines-table .invoice-col-price { width: 18%; }
+    .invoice-lines-table .invoice-col-discount { width: 10%; }
+    .invoice-lines-table .invoice-col-vat { width: 9%; }
+    .invoice-lines-table .invoice-col-total { width: 15%; }
+    .invoice-lines-table .invoice-col-actions { width: 5%; }
+    .invoice-lines-table th { padding: 0.875rem 1rem; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .invoice-lines-table td { padding: 1rem; vertical-align: top; border-bottom: 1px solid #f1f5f9; }
+    .invoice-lines-table .row-total, .invoice-lines-table td:last-child { padding-top: 1.75rem; }
+    .invoice-lines-table .price-source { min-height: 2.5rem; margin-top: 0.5rem; line-height: 1.35; white-space: normal; }
+    .invoice-summary { max-width: 380px; }
+    @@media (max-width: 640px) { .invoice-summary { max-width: none; } .invoice-lines-scroll { margin: 0 -1px; } }
+</style>
 
 @section Scripts {
     <script src="/Pages/Invoices/Create.js"></script>

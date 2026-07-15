@@ -4,12 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using NexStock.BusinessPartners;
 using NexStock.Permissions;
-using NexStock.Settings;
 using NexStock.MultiTenancy;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.Settings;
 
 namespace NexStock.Documents;
 
@@ -17,16 +15,16 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
 {
     private readonly IRepository<Document, Guid> _documentRepository;
     private readonly IRepository<BusinessPartner, Guid> _businessPartnerRepository;
-    private readonly ISettingProvider _settingProvider;
+    private readonly IDocumentNumberGenerator _documentNumberGenerator;
 
     public CommercialDocumentWorkflowAppService(
         IRepository<Document, Guid> documentRepository,
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
-        ISettingProvider settingProvider)
+        IDocumentNumberGenerator documentNumberGenerator)
     {
         _documentRepository = documentRepository;
         _businessPartnerRepository = businessPartnerRepository;
-        _settingProvider = settingProvider;
+        _documentNumberGenerator = documentNumberGenerator;
     }
 
     [Authorize(NexStockPermissions.Offers.Edit)]
@@ -131,7 +129,7 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
         {
             SourceDocumentId = source.Id,
             BusinessPartnerId = source.BusinessPartnerId,
-            DocNumber = await CreateDocumentNumberAsync(targetType),
+            DocNumber = await _documentNumberGenerator.GetNextAsync(targetType),
             Type = targetType,
             Status = DocumentStatus.Draft,
             Subtotal = source.Subtotal,
@@ -174,24 +172,6 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
         }
 
         return document;
-    }
-
-    private async Task<string> CreateDocumentNumberAsync(DocumentType type)
-    {
-        var settingName = type switch
-        {
-            DocumentType.SaleOrder => NexStockSettings.SaleOrderNumberPrefix,
-            DocumentType.PurchaseOrder => NexStockSettings.PurchaseOrderNumberPrefix,
-            DocumentType.SaleInvoice => NexStockSettings.SaleInvoiceNumberPrefix,
-            DocumentType.PurchaseInvoice => NexStockSettings.PurchaseInvoiceNumberPrefix,
-            _ => string.Empty
-        };
-
-        var prefix = string.IsNullOrEmpty(settingName)
-            ? "BEL"
-            : await _settingProvider.GetOrNullAsync(settingName) ?? "BEL";
-
-        return $"{prefix}-{Clock.Now:yyyyMMdd-HHmmss}-{GuidGenerator.Create().ToString("N")[..6].ToUpperInvariant()}";
     }
 
     private async Task<DocumentDto> MapDocumentAsync(Document document)

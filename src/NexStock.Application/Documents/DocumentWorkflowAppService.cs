@@ -317,6 +317,12 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         }
 
         var account = await _accountRepository.GetAsync(accountId.Value);
+        if (!string.Equals(account.Currency, document.Currency, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessException("NexStock:PaymentAccountCurrencyDoesNotMatchDocument")
+                .WithData("AccountCurrency", account.Currency)
+                .WithData("DocumentCurrency", document.Currency);
+        }
         
         decimal amountDelta;
         AccountTransactionType transactionType;

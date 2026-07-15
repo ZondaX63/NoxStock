@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-07-13
+Last updated: 2026-07-15
 
 ## What Works
 
@@ -87,6 +87,15 @@ Last updated: 2026-07-13
 
 ## What's Left To Build
 
+### Live Deployment Baseline
+
+- The stabilized host/tenant login split and tenant commercial experience have been deployed live.
+- Host administrators remain limited to tenant/company provisioning; tenant users enter their own `/t/{tenantName}` commercial workspace.
+- The immediate release gate is now operational reliability: production regression checks, backups, monitoring, error reporting, TLS/secrets review, and repeatable deployment/rollback procedures.
+- Centralized error observability is now implemented: unhandled server errors are logged with trace ID, tenant/user context, request method, and path; programmatic requests receive JSON problem responses and page requests receive a NexStock error page with a support tracking code.
+- Browser and jQuery AJAX failures are surfaced to users as non-blocking error notices and reported through an authenticated diagnostics endpoint. The endpoint was live-tested as tenant `asd`, returned HTTP 202, and wrote the tenant/user-scoped event to Docker Serilog output.
+- Serilog file retention is bounded by daily rolling files, a 30-file retention limit, and a 10 MB per-file cap.
+
 ### SaaS Multi-Tenancy Hardening
 
 - Completed two-tenant isolation test infrastructure.
@@ -116,11 +125,20 @@ Last updated: 2026-07-13
 
 ### Product Hardening
 
-- Live browser walkthrough with PostgreSQL/Docker
+- Invoice excellence phase is active. Completed the first integrity slice: server-authoritative Draft creation, payment/status tamper prevention, partner/date/line validation, deterministic four-decimal totals, unique tenant/type document numbers, compatible payment-account currencies, and a browser-printable invoice page.
+- Added and applied migration `20260715174844_Add_Document_Number_Uniqueness` through the current Docker DbMigrator.
+- Remaining invoice work: detail/edit view, payment allocation/reconciliation history, tax-inclusive and withholding rules, PDF/email/archive delivery, and an end-to-end tenant browser flow.
+- Product pricing transparency: invoice item lookup and POS now expose the product-card purchase price, original sale price, their currencies, and the current effective sale price together. This preserves foreign-currency product-card values while making the actual sale calculation visible.
+- Exchange-rate reliability: the hourly hosted refresh uses TCMB official XML and logs successful source/date/rate values. A Docker startup refresh completed successfully after the DbContext/Unit of Work lifecycle fix.
+- Fixed the Turkish-culture invoice submit failure reported with trace `0HNN2JM3FHH6C:000000B8`. Decimal range metadata that parsed the dot-decimal lower bound during Razor validation has been removed in favor of the existing application-service validation. The invoice entry grid was also redesigned with stable column widths and mobile-safe scrolling so VAT and discount fields remain usable.
+- Corrected the next Turkish-culture invoice binding issue: date inputs now render ISO values for the browser (`yyyy-MM-dd`) rather than posting localized `dd.MM.yyyy` values. The dedicated invoice table layout replaces the generic table spacing that caused header and input columns to appear offset.
+- Added a server-side date-post fallback on invoice creation. Both localized Turkish dates and ISO dates are parsed before model-state validation, which closes the remaining browser-culture dependency. Docker Desktop's `desktop-linux` context is the canonical local environment: the application is `http://localhost:8080` and PostgreSQL external access is `localhost:5439`.
+- Cleared the ABP client warning caused by an unloaded NexStock localization resource by adding the culture-aware application-localization script to the shared layout. Hardened DataTable row-action visibility callbacks in invoices, offers, and orders so the ABP callback can pass either its wrapper or a raw record without a JavaScript exception.
+- Production regression walkthrough across tenant onboarding, authentication, products, invoices, POS, offers/orders, reports, notifications, and audit logs
 - Pagination and export polish for high-volume reports and audit logs
 - Frontend/runtime regression pass across all implemented workflows
-- CI build/test/migration/container smoke checks
-- Global error handling, health checks, logging, backup and restore runbook
+- CI build/test/migration/container smoke checks and deployment rollback verification
+- Global error handling, health checks, structured logging, alerting, backup and restore runbook
 - Phase 8 inventory core: warehouse/location, transfers, returns, reservations, batch/serial tracking, and historical costing
 - Phase 9 accounting and Turkish tax/e-document workflows
 - Phase 10 advanced purchasing, sales, delivery, pricing, and approval workflows
@@ -143,6 +161,7 @@ Last updated: 2026-07-13
 - Historical migration designer files still contain Book/Author snapshots, which is expected for migration history.
 - Existing Mapperly warnings for audit/base properties are noisy but not blocking.
 - A forced clean rebuild currently reports 153 nullable/Mapperly diagnostics even though the normal incremental build is clean; warning reduction remains explicit technical debt.
+- A fresh Docker restore reports known dependency advisories for transitive `MessagePack`, `Microsoft.OpenApi`, and `Scriban` packages. Dependency update and compatibility verification is a production-priority maintenance task before expanding the live invoice surface.
 
 ## Decision History
 

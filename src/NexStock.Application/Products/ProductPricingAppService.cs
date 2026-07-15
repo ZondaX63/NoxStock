@@ -38,7 +38,9 @@ public class ProductPricingAppService : ApplicationService, IProductPricingAppSe
             UsesCurrentExchangeRate = calculation.UsesCurrentExchangeRate,
             ProfitMarkupPercent = product.ProfitMarkupPercent,
             PurchasePrice = product.PurchasePrice,
-            PurchaseCurrency = product.PurchaseCurrency
+            PurchaseCurrency = product.PurchaseCurrency,
+            SalePrice = product.SalePrice,
+            SaleCurrency = product.SaleCurrency
         };
     }
 }

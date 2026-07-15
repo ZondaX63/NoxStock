@@ -158,3 +158,42 @@ body {
     border-bottom-left-radius: 1rem;
     border-bottom-right-radius: 1rem;
 }
+
+.nexstock-error-notifications {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 1000;
+    display: grid;
+    gap: 0.75rem;
+    width: min(24rem, calc(100vw - 2rem));
+}
+
+.nexstock-error-notification {
+    position: relative;
+    display: grid;
+    gap: 0.25rem;
+    padding: 1rem 2.75rem 1rem 1rem;
+    color: #991b1b;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+    font-size: 0.875rem;
+}
+
+.nexstock-error-notification span {
+    color: #b91c1c;
+}
+
+.nexstock-error-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.65rem;
+    border: 0;
+    color: #991b1b;
+    background: transparent;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}

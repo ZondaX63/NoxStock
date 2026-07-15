@@ -8,6 +8,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="nexstock-correlation-id" content="@Context.TraceIdentifier" />
     <title>@ViewData["Title"] - NexStock</title>
 
     <!-- Outfit Font -->
@@ -92,6 +93,7 @@
 
     <abp-script-bundle name="@Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling.LeptonXLiteThemeBundles.Scripts.Global" />
     <script src="~/Abp/ApplicationConfigurationScript"></script>
+    <script src="~/Abp/ApplicationLocalizationScript?cultureName=@CultureInfo.CurrentUICulture.Name"></script>
     <script src="~/Abp/ServiceProxyScript"></script>
 
     @await RenderSectionAsync("scripts", required: false)

@@ -176,6 +176,7 @@ public class NexStockDbContext :
             b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.BusinessPartnerId).IsRequired();
             b.HasOne<Document>().WithMany().HasForeignKey(x => x.SourceDocumentId).IsRequired(false);
             b.HasIndex(x => x.SourceDocumentId);
+            b.HasIndex(x => new { x.TenantId, x.Type, x.DocNumber }).IsUnique();
         });
 
         builder.Entity<DocumentItem>(b =>

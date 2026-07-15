@@ -29,11 +29,16 @@ public class ExchangeRateRefreshHostedService : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var exchangeRateUpdater = scope.ServiceProvider.GetRequiredService<IExchangeRateUpdater>();
-                await exchangeRateUpdater.RefreshAsync();
+                var rates = await exchangeRateUpdater.RefreshAsync();
+                _logger.LogInformation(
+                    "TCMB döviz kurları güncellendi. USD/TRY: {UsdTry}, EUR/TRY: {EurTry}, KurTarihi: {RateDate}",
+                    rates.USD?.Rate,
+                    rates.EUR?.Rate,
+                    rates.LastUpdated);
             }
             catch (Exception exception)
             {
-                _logger.LogWarning(exception, "Döviz kurları yenilenemedi; son kayıtlı değerler kullanılacak.");
+                _logger.LogWarning(exception, "TCMB döviz kurları yenilenemedi; son kayıtlı değerler kullanılacak.");
             }
 
             await Task.Delay(TimeSpan.FromHours(1), stoppingToken);

@@ -1,10 +1,10 @@
 # Active Context
 
-Last updated: 2026-07-13
+Last updated: 2026-07-15
 
 ## Current Work Focus
 
-The commercial product phases and SaaS multi-tenancy hardening Phases 0-11 are complete. The next focus is a live browser/container regression pass, followed by inventory warehouse/location foundations. AI features remain explicitly out of scope.
+The commercial product phases and SaaS multi-tenancy hardening Phases 0-11 are complete, and the current build has been deployed live. The next focus is production hardening and a live regression pass, followed by inventory warehouse/location foundations. AI features remain explicitly out of scope.
 
 ## Recent Changes
 
@@ -34,6 +34,19 @@ The commercial product phases and SaaS multi-tenancy hardening Phases 0-11 are c
 - Tenant Management now uses physical NexStock pages rather than the ABP tenant-list API, which returned an empty list despite persisted tenant rows. The host page reads `ITenantRepository` directly and refreshes after a successful modal result.
 - The NexStock onboarding modal collects a company login code, administrator username, email and password. It provisions through `ITenantManager` + `ITenantRepository` + `IDataSeeder`, explicitly sets the required `IsActive` extension value before insert, and then renames the seeded `admin` account. This fixes the former silent `The IsActive field is required` failure.
 - Unexpected onboarding exceptions are logged and are returned into the modal validation summary; duplicate company codes return a user-facing error. Live Docker verification posted a company, received HTTP 204, and confirmed that it appeared in the company table. The isolated verification tenant was removed afterwards; the existing `asd` tenant was restored from its pre-existing soft-deleted state and is visible again.
+- Tenant authentication and host/tenant administration separation are accepted as working by the product owner, and the current NexStock build has been deployed to a live environment. Treat multi-tenancy as a stabilized foundation; future changes must preserve host-only company management and tenant-only commercial workflows.
+- Added the production error-observability baseline: centralized NexStock exception middleware logs unhandled server errors with trace ID, tenant, user, method, and path; browser-facing failures receive a branded error page or a JSON problem response without technical detail leakage.
+- Added authenticated client-side error reporting for browser, promise, and jQuery AJAX failures. Reports are rate-limited per page, written to Serilog with tenant/user context, and paired with an accessible on-screen error notice. Live tenant smoke test returned HTTP 202 and produced a structured log entry.
+- Serilog file output now rolls daily, retains 30 files, and caps each file at 10 MB. The current local Docker Web mapping is `http://localhost:8080`.
+- Started the invoice-excellence phase with server-authoritative document creation: new documents are always Draft with zero paid balance, line totals/tax/discount totals are recalculated and rounded on the server, dates and partner type are validated, and only Draft documents can be deleted.
+- Added sequential type-specific document numbers (`PREFIX-YYYY-000001`), duplicate-number checks, and migration `20260715174844_Add_Document_Number_Uniqueness` for a tenant/type/number unique index.
+- Added payment-account/document-currency validation and a printable invoice page available from the invoice list. The new migration was applied idempotently through Docker DbMigrator; focused document workflow/integrity tests currently pass 10/10.
+- Replaced the third-party exchange-rate V4 call with TCMB's official `kurlar/today.xml` source. The real refresh failure was an ABP DbContext lifecycle error after Unit of Work completion, not TCMB availability; the refresh now writes within one Unit of Work and returns the validated TCMB values without querying a disposed context. Live Docker verification logged USD/TRY `47.0098` and EUR/TRY `53.5755` from the 2026-07-14 TCMB bulletin.
+- Invoice line pricing now displays product-card purchase and sale amounts with their original currencies; POS product cards and cart lines show the same purchase, original sale, and effective sale-price context.
+- Invoice creation crash `0HNN2JM3FHH6C:000000B8` was traced to culture-sensitive decimal range metadata during Razor model validation (`0.0001` could not be parsed under Turkish culture). Item-level numeric checks remain server-authoritative in `DocumentAppService`; the fragile DTO range metadata is absent. The invoice create page now uses a responsive, fixed-width line grid: quantity, unit price, discount, VAT, and line total each retain readable space, with controlled horizontal scrolling on narrow screens.
+- Follow-up invoice form hardening: `Invoice.Date` and `Invoice.DueDate` now explicitly render as `yyyy-MM-dd` for HTML date controls, preventing `dd.MM.yyyy` model-binding failures under the Turkish UI culture. The invoice item table no longer inherits the generic spaced table treatment; it has a dedicated percentage-based column model, matching header/cell padding, and top-aligned line totals/actions so product price guidance cannot visually shift VAT or discount inputs.
+- Date-post fallback: the invoice create handler also normalizes raw form values before validation and accepts `yyyy-MM-dd`, `dd.MM.yyyy`, and `d.M.yyyy`, so localized browser date submissions cannot block document creation. Docker Desktop is the canonical local daemon/context (`desktop-linux`), with NexStock Web at `http://localhost:8080` and PostgreSQL exposed at `5439`. Do not use `docker --context default` for this project: it is a separate daemon and creates a duplicate stack with port conflicts.
+- Client runtime cleanup: ABP v10 needs `Abp/ApplicationLocalizationScript?cultureName={current culture}` in addition to the application configuration script; without it `abp.localization.getResource("NexStock")` warns because the resource map is empty. The app layout now loads this script before page scripts. Invoice, offer, and order DataTable row-action visibility callbacks accept both ABP callback shapes (`data.record` and the row directly), preventing the `data.record is undefined` crash.
 
 - Removed Book/Author source modules:
   - Domain entities and shared constants/enums
@@ -141,7 +154,7 @@ The commercial product phases and SaaS multi-tenancy hardening Phases 0-11 are c
 
 ## Immediate Next Steps
 
-1. Run the live browser/container walkthrough across implemented commercial workflows.
-2. Start inventory warehouse/location foundations now that tenant ownership rules are proven.
-3. Add CI build/test/migration/container smoke checks and reduce the clean-rebuild warning backlog.
-4. Keep broader accounting, Turkish tax/e-document, purchasing, CRM, integration, security, and reliability work in `memory-bank/features/enterprise-roadmap.md`; AI remains deferred.
+1. Continue invoice excellence: detail/edit view, payment reconciliation and allocation history, tax-inclusive/withholding scenarios, and true PDF/email/archive output.
+2. Perform a production-focused regression pass: tenant onboarding, login/logout, product, invoice, POS, offer/order, report, notification, and audit flows.
+3. Add remaining production safeguards: backups/restore drill, health alerts, secrets/TLS/reverse-proxy review, CI smoke checks, and alert routing.
+4. Start Phase 8 with warehouses, locations, transfers, stock counts, returns, and historical inventory costing after invoice work is stable.

@@ -20,4 +20,6 @@ public class ProductPriceQuoteDto
     public decimal ProfitMarkupPercent { get; set; }
     public decimal PurchasePrice { get; set; }
     public string PurchaseCurrency { get; set; } = "TRY";
+    public decimal SalePrice { get; set; }
+    public string SaleCurrency { get; set; } = "TRY";
 }
