@@ -32,14 +32,14 @@ public class IndexModel : NexStockPageModel
 
     public string FormatMoney(decimal value)
     {
-        return value.ToString("C2", CultureInfo.CurrentCulture);
+        return value.ToString("N2", CultureInfo.CurrentCulture) + " ₺";
     }
 
     public string FormatCompactMoney(decimal value)
     {
         return value >= 1000m
-            ? value.ToString("0.#,K", CultureInfo.CurrentCulture) + " TL"
-            : value.ToString("0", CultureInfo.CurrentCulture) + " TL";
+            ? value.ToString("0.#,K", CultureInfo.CurrentCulture) + " ₺"
+            : value.ToString("0", CultureInfo.CurrentCulture) + " ₺";
     }
 
     public string FormatQuantity(decimal value)

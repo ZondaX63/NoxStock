@@ -5,14 +5,14 @@
     ViewData["Title"] = "Siparişler";
 }
 
-<div class="flex justify-between items-center mb-8">
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-        <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Siparişler</h2>
+        <h2 class="text-2xl font-bold text-slate-800 dark:text-white sm:text-3xl">Siparişler</h2>
         <p class="text-sm text-slate-500 mt-1">Alış ve satış siparişlerini faturaya dönüştürmeden önce takip edin.</p>
     </div>
-    <div class="flex gap-2">
-        <a href="~/Invoices/Create?type=SaleOrder" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-indigo-500/30 flex items-center"><span class="material-icons-round mr-2 text-sm">add</span>Satış Siparişi</a>
-        <a href="~/Invoices/Create?type=PurchaseOrder" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-emerald-500/30 flex items-center"><span class="material-icons-round mr-2 text-sm">add</span>Alış Siparişi</a>
+    <div class="flex flex-col gap-2 sm:flex-row">
+        <a href="~/Invoices/Create?type=SaleOrder" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-md font-medium transition-colors flex items-center justify-center"><span class="material-icons-round mr-2 text-sm">add</span>Satış Siparişi</a>
+        <a href="~/Invoices/Create?type=PurchaseOrder" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-md font-medium transition-colors flex items-center justify-center"><span class="material-icons-round mr-2 text-sm">add</span>Alış Siparişi</a>
     </div>
 </div>
 

@@ -1,12 +1,27 @@
 # Active Context
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 ## Current Work Focus
 
 The commercial product phases and SaaS multi-tenancy hardening Phases 0-11 are complete, and the current build has been deployed live. The next focus is production hardening and a live regression pass, followed by inventory warehouse/location foundations. AI features remain explicitly out of scope.
 
 ## Recent Changes
+
+- Removed the public account-registration UI and its provisioning page model. A minimal route guard redirects legacy `/Account/Register` requests to login before ABP's default register page can render. Tenant/company provisioning remains exclusively in host-only Tenant Management. The host login now identifies platform management; tenant-path login identifies the company workspace. Neither login state contains a registration link or a dead password-reset link, and each directs users to the appropriate administrator for account access.
+- Reworked the auth visual composition after viewport review: the login shell now fills the viewport instead of centering inside a narrow max-width frame, the brand panel uses a stable 42/58 split with readable heading width, and the form panel uses a controlled 29rem column with compact inputs, actions, and language control. Mobile collapses into a short brand header plus form area.
+- Tenant login now shows the resolved company name in a visible context badge above the form, while host platform login remains unchanged. This makes `/t/{tenant}/Account/Login` unambiguous before credentials are entered.
+- Moved the tenant workspace label out of the right-side login form. On tenant login it now appears on the left brand panel directly above `TICARI YONETIM PLATFORMU` as plain icon/text, without a surrounding box; the right form no longer contains the duplicate context chips.
+- Replaced the tenant context building icon with the Turkish lira symbol `₺` to better match NexStock's commercial and currency-focused identity.
+- Fixed dashboard currency rendering: .NET `ToString("C2")` was producing the generic `¤` symbol under the active culture. Dashboard money and compact trend values now use explicit Turkish lira `₺` output while dynamic USD/EUR client formatters remain currency-aware.
+- Fixed ABP language switching: language links now pass both required `culture` and `uiCulture` parameters. Their return URL includes `PathBase`, preserving tenant paths such as `/t/asd/Dashboard` after TR/EN changes instead of falling back to a host route.
+- Expanded the localization foundation beyond the language buttons: the shared sidebar, topbar, login brand copy, login placeholder, and tenant dashboard now read from NexStock `tr`/`en` resources. A Web regression test locks the ABP language-switch contract, including the culture cookie and requested return URL. Live Docker verification confirms `/t/asd/Abp/Languages/Switch?culture=en&uiCulture=en` redirects to `/t/asd/Account/Login` and renders English tenant-login content without a 500 response.
+
+- Completed the first shared frontend quality pass. `global-styles.css` now owns stable light/dark design tokens, compact commercial cards, readable forms, tables, DataTables pagination, modals, report surfaces, and browser error notices. It replaces the previous glass-card treatment, row-spaced tables, and light-only modal/input rules that caused visual drift.
+- Reworked the shared application shell: responsive content gutters and a 1600px operational frame replace the undefined `max-w-8xl` wrapper and duplicated padding; theme preference is applied before paint to prevent a light-theme flash. The sidebar and topbar are denser and retain mobile behavior.
+- Reworked the NexStock auth layout into a restrained, responsive commercial sign-in surface with a solid brand panel, accessible language switcher, and dark-mode-compatible inputs. Decorative animated gradients, blurred shapes, remote avatar images, and oversized glass-card composition were removed.
+- Standardized responsive action headers on invoice, offer, order, customer, supplier, account, brand, category, personnel, product-movement, and retail-sales pages. Multi-action controls stack on narrow screens. Invoice line-grid presentation now inherits the shared dark-aware border/color system; report/page-specific duplicated form styles were removed.
+- Local production-container verification after the frontend pass: `dotnet build NexStock.slnx -m:1 --no-restore -v:minimal` passed with 0 warnings and 0 errors. `docker compose build --quiet web` succeeded; normal `docker compose up -d` brought PostgreSQL healthy, DbMigrator to successful completion, and Web back to `http://localhost:8080`. `/health-status`, `/Account/Login`, and the new auth-layout assets returned HTTP 200.
 
 - Replaced email tenant discovery with trusted `/t/{tenantName}` resolution and explicit resolver order.
 - Added fail-closed tenant guards across all commercial application-service surfaces.
@@ -154,7 +169,7 @@ The commercial product phases and SaaS multi-tenancy hardening Phases 0-11 are c
 
 ## Immediate Next Steps
 
-1. Continue invoice excellence: detail/edit view, payment reconciliation and allocation history, tax-inclusive/withholding scenarios, and true PDF/email/archive output.
-2. Perform a production-focused regression pass: tenant onboarding, login/logout, product, invoice, POS, offer/order, report, notification, and audit flows.
+1. Perform a browser/device regression pass across tenant onboarding, login/logout, products, POS, invoices, offers/orders, reports, notifications, audit logs, modals, and both color themes; fix any page-specific overflow found in real viewport screenshots.
+2. Continue invoice excellence: detail/edit view, payment reconciliation and allocation history, tax-inclusive/withholding scenarios, and true PDF/email/archive output.
 3. Add remaining production safeguards: backups/restore drill, health alerts, secrets/TLS/reverse-proxy review, CI smoke checks, and alert routing.
 4. Start Phase 8 with warehouses, locations, transfers, stock counts, returns, and historical inventory costing after invoice work is stable.

@@ -1,8 +1,24 @@
 # Progress
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 ## What Works
+
+- Public registration UI is removed. New companies and their administrator accounts are provisioned only from host Tenant Management; login copy now clearly distinguishes platform administrators from tenant/company users.
+- Login visual pass completed: full-width desktop composition, readable brand copy without clipping, balanced form column, compact controls, and responsive mobile collapse. Docker health verification passed after rebuild.
+- Tenant login context is explicit: `/t/{tenant}/Account/Login` renders the resolved company name above the form, while host `/Account/Login` remains platform-only. Verified live with `/t/asd/Account/Login` showing `asd` and health returning HTTP 200.
+- Tenant context presentation was refined: `Company: asd` now sits as a plain line on the left brand panel above the commercial-platform label, with no box around either text and no duplicate tenant chips in the form.
+- Dashboard TL display is corrected from generic `¤` to explicit `₺`; the fix is centralized in the dashboard formatter and does not alter USD/EUR product or POS pricing.
+- Language switching now follows the ABP controller contract (`culture` plus `uiCulture`) and preserves the tenant path on redirects. This resolves the former invalid-uiCulture trace error from topbar and login language buttons.
+- The shared UI localization baseline is now active: TR/EN resources drive the sidebar, topbar, login-brand content, login placeholder, and dashboard. The Web suite includes the ABP language-switch redirect/cookie regression test, and live Docker verification confirms tenant English login content at `/t/asd/Account/Login` after switching languages.
+
+- **Frontend foundation pass completed**:
+  - Shared light/dark color tokens now cover cards, forms, tables, DataTables, modals, reports, and error notices.
+  - The main layout uses responsive gutters and a bounded operational content frame; theme selection is applied before initial paint.
+  - Sidebar/topbar density and page action headers are responsive for tablet/mobile widths.
+  - The login/register shell is now NexStock-branded and dark-mode compatible without decorative gradients, glass effects, or remote avatar dependencies.
+  - Invoice, report, product and settings pages now use shared form/table rules instead of conflicting inline style blocks.
+  - Docker validation after the pass succeeded using the standard `docker compose up -d` stack at `http://localhost:8080`.
 
 - ABP layered solution is present.
 - Core product/catalog entities exist:

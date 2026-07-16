@@ -8,9 +8,9 @@
 }
 
 <div class="invoice-page-shell">
-<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-        <h2 class="text-3xl font-bold text-slate-800 dark:text-white">@title</h2>
+        <h2 class="text-2xl font-bold text-slate-800 dark:text-white sm:text-3xl">@title</h2>
         <p class="text-sm text-slate-500 mt-1">Belge kalemlerini ve cari hesap bilgilerini eksiksiz doldurun.</p>
     </div>
     <a href="@Model.GetRedirectPage(Model.Type)" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium flex items-center">
@@ -160,7 +160,7 @@
 
 <style>
     .invoice-page-shell { max-width: 1560px; margin: 0 auto; }
-    .invoice-lines-table { min-width: 1060px; width: 100%; table-layout: fixed; border-collapse: collapse; }
+    .invoice-lines-table { min-width: 980px; width: 100%; table-layout: fixed; border-collapse: collapse; }
     .invoice-lines-table .invoice-col-product { width: 33%; }
     .invoice-lines-table .invoice-col-quantity { width: 10%; }
     .invoice-lines-table .invoice-col-price { width: 18%; }
@@ -168,12 +168,12 @@
     .invoice-lines-table .invoice-col-vat { width: 9%; }
     .invoice-lines-table .invoice-col-total { width: 15%; }
     .invoice-lines-table .invoice-col-actions { width: 5%; }
-    .invoice-lines-table th { padding: 0.875rem 1rem; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
-    .invoice-lines-table td { padding: 1rem; vertical-align: top; border-bottom: 1px solid #f1f5f9; }
+    .invoice-lines-table th { padding: 0.75rem 0.875rem; border-bottom: 1px solid var(--nx-border); background: var(--nx-surface-muted); color: var(--nx-text-muted); font-size: 0.75rem; font-weight: 600; letter-spacing: 0; text-transform: uppercase; }
+    .invoice-lines-table td { padding: 0.875rem; vertical-align: top; border-bottom: 1px solid var(--nx-border); color: var(--nx-text); }
     .invoice-lines-table .row-total, .invoice-lines-table td:last-child { padding-top: 1.75rem; }
     .invoice-lines-table .price-source { min-height: 2.5rem; margin-top: 0.5rem; line-height: 1.35; white-space: normal; }
     .invoice-summary { max-width: 380px; }
-    @@media (max-width: 640px) { .invoice-summary { max-width: none; } .invoice-lines-scroll { margin: 0 -1px; } }
+    @@media (max-width: 640px) { .invoice-summary { max-width: none; } .invoice-lines-scroll { margin: 0; } }
 </style>
 
 @section Scripts {

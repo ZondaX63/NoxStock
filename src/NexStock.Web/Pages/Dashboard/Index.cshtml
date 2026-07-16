@@ -1,14 +1,16 @@
 @page
 @using Microsoft.AspNetCore.Mvc.Localization
+@using NexStock.Localization
 @model NexStock.Web.Pages.Dashboard.IndexModel
+@inject IHtmlLocalizer<NexStockResource> L
 @{
     Layout = "_AppLayout";
-    ViewData["Title"] = "Ana Sayfa";
+    ViewData["Title"] = L["Dashboard:Overview"].Value;
 }
 
 <div class="mb-8">
-    <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Genel Bakış</h2>
-    <p class="text-sm text-slate-500 mt-1">İşletmenizin güncel durumunu takip edin.</p>
+    <h2 class="text-3xl font-bold text-slate-800 dark:text-white">@L["Dashboard:Overview"]</h2>
+    <p class="text-sm text-slate-500 mt-1">@L["Dashboard:Description"]</p>
 </div>
 
 <!-- Stats Grid -->
@@ -20,7 +22,7 @@
             <span class="material-icons-round text-3xl">payments</span>
         </div>
         <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Bugünkü Satış</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">@L["Dashboard:TodaySales"]</p>
             <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.FormatMoney(Model.Summary.TodaySales)</p>
         </div>
     </div>
@@ -31,8 +33,8 @@
             <span class="material-icons-round text-3xl">inventory_2</span>
         </div>
         <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Kritik Stok Uyarıları</p>
-            <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.Summary.CriticalStockCount Ürün</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">@L["Dashboard:CriticalStockAlerts"]</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.Summary.CriticalStockCount @L["Dashboard:Product"]</p>
         </div>
     </div>
 
@@ -42,7 +44,7 @@
             <span class="material-icons-round text-3xl">people</span>
         </div>
         <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Aktif Müşteri</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">@L["Dashboard:ActiveCustomers"]</p>
             <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.Summary.ActiveCustomerCount</p>
         </div>
     </div>
@@ -53,27 +55,27 @@
             <span class="material-icons-round text-3xl">receipt_long</span>
         </div>
         <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Bekleyen Faturalar</p>
-            <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.Summary.PendingInvoiceCount Adet</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">@L["Dashboard:PendingInvoices"]</p>
+            <p class="text-2xl font-bold text-slate-800 dark:text-white">@Model.Summary.PendingInvoiceCount @L["Dashboard:Count"]</p>
         </div>
     </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="card p-6">
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Aylık Ciro</p>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">@L["Dashboard:MonthlyRevenue"]</p>
         <p class="text-2xl font-bold text-slate-800 dark:text-white mt-2">@Model.FormatMoney(Model.Summary.MonthlyRevenue)</p>
     </div>
     <div class="card p-6">
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Kasa/Banka Varlığı</p>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">@L["Dashboard:AccountBalance"]</p>
         <p class="text-2xl font-bold text-slate-800 dark:text-white mt-2">@Model.FormatMoney(Model.Summary.TotalAccountBalance)</p>
     </div>
     <div class="card p-6">
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Müşteri Alacağı</p>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">@L["Dashboard:CustomerReceivables"]</p>
         <p class="text-2xl font-bold text-slate-800 dark:text-white mt-2">@Model.FormatMoney(Model.Summary.CustomerReceivables)</p>
     </div>
     <div class="card p-6">
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Net Durum</p>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">@L["Dashboard:NetPosition"]</p>
         <p class="text-2xl font-bold text-slate-800 dark:text-white mt-2">@Model.FormatMoney(Model.Summary.NetPosition)</p>
     </div>
 </div>
@@ -81,15 +83,15 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="card p-6 lg:col-span-2">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-slate-800 dark:text-white">Aylık Satış Grafiği</h3>
-            <span class="text-xs text-slate-500">Son 6 ay</span>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">@L["Dashboard:MonthlySalesChart"]</h3>
+            <span class="text-xs text-slate-500">@L["Dashboard:LastSixMonths"]</span>
         </div>
         <div class="h-64 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 pt-6 pb-3">
             @if (Model.Summary.SalesTrend.All(x => x.Total == 0))
             {
                 <div class="h-full flex flex-col items-center justify-center text-slate-400">
                     <span class="material-icons-round text-4xl mb-2 opacity-50">bar_chart</span>
-                    <p class="text-sm">Grafik için onaylanmış satış verisi bekleniyor.</p>
+                    <p class="text-sm">@L["Dashboard:ChartNoData"]</p>
                 </div>
             }
             else
@@ -110,13 +112,13 @@
 
     <div class="card p-6">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-slate-800 dark:text-white">Son İşlemler</h3>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">@L["Dashboard:RecentTransactions"]</h3>
         </div>
         @if (Model.Summary.RecentDocuments.Count == 0)
         {
             <div class="h-full flex flex-col items-center justify-center text-slate-400 py-8">
                 <span class="material-icons-round text-4xl mb-2 opacity-50">receipt_long</span>
-                <p class="text-sm">Henüz bir işlem yok.</p>
+                <p class="text-sm">@L["Dashboard:NoTransactions"]</p>
             </div>
         }
         else
@@ -144,16 +146,16 @@
     <div class="card p-6">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <h3 class="text-lg font-bold text-slate-800 dark:text-white">Kritik Stoklar</h3>
-                <p class="text-xs text-slate-500 mt-1">Stok seviyesi kritik sınırda veya altında olan ürünler</p>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white">@L["Dashboard:CriticalStocks"]</h3>
+                <p class="text-xs text-slate-500 mt-1">@L["Dashboard:CriticalStockDescription"]</p>
             </div>
-            <a href="~/Products" class="text-indigo-600 text-sm font-medium hover:underline">Ürünler</a>
+            <a href="~/Products" class="text-indigo-600 text-sm font-medium hover:underline">@L["Menu:Products"]</a>
         </div>
         @if (Model.Summary.CriticalStocks.Count == 0)
         {
             <div class="py-8 text-center text-slate-400">
                 <span class="material-icons-round text-4xl mb-2 opacity-50">inventory_2</span>
-                <p class="text-sm">Kritik stok uyarısı yok.</p>
+                <p class="text-sm">@L["Dashboard:NoCriticalStock"]</p>
             </div>
         }
         else
@@ -168,7 +170,7 @@
                         </div>
                         <div class="text-right whitespace-nowrap">
                             <p class="text-sm font-bold text-rose-600 dark:text-rose-400">@Model.FormatQuantity(product.Quantity) @product.Unit</p>
-                            <p class="text-xs text-slate-500">Kritik: @Model.FormatQuantity(product.CriticalStockLevel)</p>
+                            <p class="text-xs text-slate-500">@L["Dashboard:Critical"]: @Model.FormatQuantity(product.CriticalStockLevel)</p>
                         </div>
                     </div>
                 }
@@ -179,16 +181,16 @@
     <div class="card p-6">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <h3 class="text-lg font-bold text-slate-800 dark:text-white">En Çok Satan Ürünler</h3>
-                <p class="text-xs text-slate-500 mt-1">Onaylanmış satış faturalarına göre</p>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white">@L["Dashboard:TopProducts"]</h3>
+                <p class="text-xs text-slate-500 mt-1">@L["Dashboard:TopProductsDescription"]</p>
             </div>
-            <a href="~/Reports" class="text-indigo-600 text-sm font-medium hover:underline">Raporlar</a>
+            <a href="~/Reports" class="text-indigo-600 text-sm font-medium hover:underline">@L["Menu:Reports"]</a>
         </div>
         @if (Model.Summary.TopProducts.Count == 0)
         {
             <div class="py-8 text-center text-slate-400">
                 <span class="material-icons-round text-4xl mb-2 opacity-50">leaderboard</span>
-                <p class="text-sm">Henüz satış verisi yok.</p>
+                <p class="text-sm">@L["Dashboard:NoSalesData"]</p>
             </div>
         }
         else
@@ -199,7 +201,7 @@
                     <div class="flex items-center justify-between py-3 first:pt-0">
                         <div class="min-w-0 pr-4">
                             <p class="truncate text-sm font-semibold text-slate-800 dark:text-white">@product.Name</p>
-                            <p class="text-xs text-slate-500">@product.Sku · @Model.FormatQuantity(product.Quantity) adet</p>
+                            <p class="text-xs text-slate-500">@product.Sku · @Model.FormatQuantity(product.Quantity) @L["Dashboard:Unit"]</p>
                         </div>
                         <p class="whitespace-nowrap text-sm font-bold text-slate-800 dark:text-white">@Model.FormatMoney(product.Revenue)</p>
                     </div>
@@ -212,16 +214,16 @@
 <div class="card p-6 mt-6">
     <div class="flex items-center justify-between mb-4">
         <div>
-            <h3 class="text-lg font-bold text-slate-800 dark:text-white">Vadesi Yaklaşan Faturalar</h3>
-            <p class="text-xs text-slate-500 mt-1">Gecikmiş ve önümüzdeki 7 gün içinde vadesi dolacak açık faturalar</p>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">@L["Dashboard:DueInvoices"]</h3>
+            <p class="text-xs text-slate-500 mt-1">@L["Dashboard:DueInvoicesDescription"]</p>
         </div>
-        <a href="~/Invoices" class="text-indigo-600 text-sm font-medium hover:underline">Faturalar</a>
+        <a href="~/Invoices" class="text-indigo-600 text-sm font-medium hover:underline">@L["Menu:Invoices"]</a>
     </div>
     @if (Model.Summary.DueDocuments.Count == 0)
     {
         <div class="py-8 text-center text-slate-400">
             <span class="material-icons-round text-4xl mb-2 opacity-50">event_available</span>
-            <p class="text-sm">Yaklaşan veya gecikmiş açık fatura yok.</p>
+            <p class="text-sm">@L["Dashboard:NoDueInvoices"]</p>
         </div>
     }
     else
@@ -230,10 +232,10 @@
             <table class="w-full text-left">
                 <thead>
                     <tr class="border-b border-slate-100 dark:border-slate-700">
-                        <th class="pb-3 text-xs font-semibold uppercase text-slate-500">Fatura</th>
-                        <th class="pb-3 text-xs font-semibold uppercase text-slate-500">Cari Hesap</th>
-                        <th class="pb-3 text-xs font-semibold uppercase text-slate-500">Vade</th>
-                        <th class="pb-3 text-xs font-semibold uppercase text-slate-500 text-right">Kalan</th>
+                        <th class="pb-3 text-xs font-semibold uppercase text-slate-500">@L["Dashboard:Invoice"]</th>
+                        <th class="pb-3 text-xs font-semibold uppercase text-slate-500">@L["Dashboard:BusinessPartner"]</th>
+                        <th class="pb-3 text-xs font-semibold uppercase text-slate-500">@L["Dashboard:DueDate"]</th>
+                        <th class="pb-3 text-xs font-semibold uppercase text-slate-500 text-right">@L["Dashboard:Outstanding"]</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-700">

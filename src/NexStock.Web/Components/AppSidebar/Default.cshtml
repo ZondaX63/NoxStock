@@ -1,6 +1,8 @@
 @using Microsoft.AspNetCore.Mvc.Localization
+@using NexStock.Localization
 @using Volo.Abp.Users
 @inject ICurrentUser CurrentUser
+@inject IHtmlLocalizer<NexStockResource> L
 
 @{
     var currentPath = ViewContext.HttpContext.Request.Path.Value?.ToLower() ?? "";
@@ -15,23 +17,23 @@
 }
 
 <div :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" 
-     class="fixed inset-y-0 left-0 z-30 w-72 bg-slate-900 text-white transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-0 shadow-2xl flex flex-col">
+     class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 bg-slate-900 text-white transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-0 shadow-2xl flex flex-col">
     
-    <div class="flex items-center justify-center h-20 bg-slate-900 border-b border-slate-800 shrink-0">
+    <div class="flex items-center justify-center h-16 bg-slate-900 border-b border-slate-800 shrink-0">
         <a href="~/" class="flex items-center space-x-2">
             <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
                 <span class="text-white font-bold text-lg">N</span>
             </div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">NEX<span class="text-indigo-400">STOCK</span></h1>
+            <h1 class="text-2xl font-bold tracking-normal text-white">NEX<span class="text-indigo-400">STOCK</span></h1>
         </a>
     </div>
 
-    <nav class="mt-8 px-4 space-y-2 flex-1 overflow-y-auto no-scrollbar">
+    <nav class="sidebar-nav mt-5 px-3 space-y-1 flex-1 overflow-y-auto no-scrollbar">
         @if (CurrentUser.TenantId is null)
         {
             <a href="~/TenantManagement/Tenants" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/tenantmanagement/tenants") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
                 <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/tenantmanagement/tenants") ? "text-white" : "text-slate-500 group-hover:text-white")">business</span>
-                Şirketler
+                @L["Menu:Companies"]
             </a>
         }
         else
@@ -39,13 +41,13 @@
         <!-- Dashboard -->
         <a href="~/Dashboard" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/dashboard") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
             <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/dashboard") ? "text-white" : "text-slate-500 group-hover:text-white")">dashboard</span>
-            Anasayfa
+            @L["Menu:Dashboard"]
         </a>
 
         <!-- Sales -->
         <a href="~/Sales" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/sales") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
             <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/sales") ? "text-white" : "text-slate-500 group-hover:text-white")">shopping_cart</span>
-            Perakende
+            @L["Menu:Sales"]
         </a>
 
         <!-- Inventory Dropdown -->
@@ -53,16 +55,16 @@
             <button @@click="expanded = !expanded" class="group flex items-center justify-between px-4 py-3.5 text-sm font-medium rounded-xl w-full text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200">
                 <div class="flex items-center">
                     <span class="material-icons-round mr-4 flex-shrink-0 text-slate-500 group-hover:text-white transition-colors">inventory</span>
-                    Stok Yönetimi
+                    @L["Menu:Inventory"]
                 </div>
                 <span class="material-icons-round text-sm" x-text="expanded ? 'expand_less' : 'expand_more'"></span>
             </button>
             <div x-show="expanded" class="ml-4 mt-1 space-y-1">
-                <a href="~/Products" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/products") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Ürünler</a>
-                <a href="~/Brands" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/brands") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Markalar</a>
-                <a href="~/Categories" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/categories") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Kategoriler</a>
-                <a href="~/ProductMovements" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/productmovements") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Stok Hareketleri</a>
-                <a href="~/PrintLabels" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/printlabels") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Etiket Yazdır</a>
+                <a href="~/Products" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/products") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Products"]</a>
+                <a href="~/Brands" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/brands") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Brands"]</a>
+                <a href="~/Categories" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/categories") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Categories"]</a>
+                <a href="~/ProductMovements" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/productmovements") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:StockMovements"]</a>
+                <a href="~/PrintLabels" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/printlabels") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:PrintLabels"]</a>
             </div>
         </div>
 
@@ -71,14 +73,14 @@
             <button @@click="expanded = !expanded" class="group flex items-center justify-between px-4 py-3.5 text-sm font-medium rounded-xl w-full text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200">
                 <div class="flex items-center">
                     <span class="material-icons-round mr-4 flex-shrink-0 text-slate-500 group-hover:text-white transition-colors">account_balance_wallet</span>
-                    Finans
+                    @L["Menu:Finance"]
                 </div>
                 <span class="material-icons-round text-sm" x-text="expanded ? 'expand_less' : 'expand_more'"></span>
             </button>
             <div x-show="expanded" class="ml-4 mt-1 space-y-1">
-                <a href="~/Accounts" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/accounts") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Kasa ve Bankalar</a>
-                <a href="~/Offers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/offers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Teklifler</a>
-                <a href="~/Invoices" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/invoices") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Faturalar</a>
+                <a href="~/Accounts" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/accounts") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Accounts"]</a>
+                <a href="~/Offers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/offers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Offers"]</a>
+                <a href="~/Invoices" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/invoices") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Invoices"]</a>
             </div>
         </div>
 
@@ -87,33 +89,33 @@
             <button @@click="expanded = !expanded" class="group flex items-center justify-between px-4 py-3.5 text-sm font-medium rounded-xl w-full text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200">
                 <div class="flex items-center">
                     <span class="material-icons-round mr-4 flex-shrink-0 text-slate-500 group-hover:text-white transition-colors">people</span>
-                    Cari Hesaplar
+                    @L["Menu:BusinessPartners"]
                 </div>
                 <span class="material-icons-round text-sm" x-text="expanded ? 'expand_less' : 'expand_more'"></span>
             </button>
             <div x-show="expanded" class="ml-4 mt-1 space-y-1">
-                <a href="~/Orders" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/orders") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Siparişler</a>
-                <a href="~/Customers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/customers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Müşteriler</a>
-                <a href="~/Suppliers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/suppliers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Tedarikçiler</a>
-                <a href="~/Personnel" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/personnel") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">Personeller</a>
+                <a href="~/Orders" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/orders") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Orders"]</a>
+                <a href="~/Customers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/customers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Customers"]</a>
+                <a href="~/Suppliers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/suppliers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Suppliers"]</a>
+                <a href="~/Personnel" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/personnel") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Personnel"]</a>
             </div>
         </div>
 
         <!-- Reports -->
         <a href="~/Reports" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/reports") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
             <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/reports") ? "text-white" : "text-slate-500 group-hover:text-white")">analytics</span>
-            Raporlar
+            @L["Menu:Reports"]
         </a>
 
         <a href="~/AuditLogs" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/auditlogs") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
             <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/auditlogs") ? "text-white" : "text-slate-500 group-hover:text-white")">history</span>
-            Denetim Kayıtları
+            @L["Menu:AuditLogs"]
         </a>
 
         <!-- Admin -->
         <a href="~/Identity/Users" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/identity") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
             <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/identity") ? "text-white" : "text-slate-500 group-hover:text-white")">supervisor_account</span>
-            Kullanıcı & Roller
+            @L["Menu:UsersAndRoles"]
         </a>
         }
 
@@ -124,13 +126,13 @@
         {
         <a href="~/Settings" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-400 rounded-xl hover:bg-slate-800 hover:text-white transition-colors">
             <span class="material-icons-round mr-3 h-5 w-5">settings</span>
-            Ayarlar
+            @L["Menu:Settings"]
         </a>
         }
         <form method="post" asp-page="/Account/Logout">
             <button type="submit" class="flex items-center w-full px-4 py-3 mt-2 text-sm font-medium text-red-400 rounded-xl hover:bg-red-500/10 hover:text-red-300 transition-colors">
                 <span class="material-icons-round mr-3 h-5 w-5">logout</span>
-                Çıkış Yap
+                @L["Menu:Logout"]
             </button>
         </form>
     </div>
