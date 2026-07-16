@@ -156,12 +156,6 @@ public class NexStockMenuContributor : IMenuContributor
                 ).RequirePermissions(NexStockPermissions.Reports.Default)
             ).AddItem(
                 new ApplicationMenuItem(
-                    "Management.AuditLogs",
-                    "Denetim Kayıtları",
-                    url: "/AuditLogs"
-                ).RequirePermissions(NexStockPermissions.AuditLogs.Default)
-            ).AddItem(
-                new ApplicationMenuItem(
                     "Management.Personnel",
                     l["Menu:Personnel"],
                     url: "/Personnel"

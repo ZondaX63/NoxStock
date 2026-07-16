@@ -14,6 +14,7 @@ public class PosProductLookupDto
     public string Name { get; set; } = string.Empty;
     public string Sku { get; set; } = string.Empty;
     public string Barcode { get; set; } = string.Empty;
+    public string? OemCodes { get; set; }
     public string Unit { get; set; } = string.Empty;
     public decimal SalePrice { get; set; }
     public string Currency { get; set; } = "TRY";

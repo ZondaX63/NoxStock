@@ -97,6 +97,7 @@ public class ProductAppService :
     {
         var queryable = await Repository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
+        var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
         var stockStatus = input.StockStatus?.Trim().ToLowerInvariant();
 
         queryable = queryable
@@ -106,7 +107,7 @@ public class ProductAppService :
                 x.Name.Contains(filter!) ||
                 x.Sku.Contains(filter!) ||
                 (x.Barcode != null && x.Barcode.Contains(filter!)) ||
-                x.OemCodes.Any(o => o.OemCode.Contains(filter!)))
+                (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode.Contains(normalizedOemFilter))))
             .WhereIf(stockStatus == "critical", x => x.TrackStock && x.Quantity > 0 && x.Quantity <= x.CriticalStockLevel)
             .WhereIf(stockStatus == "zero", x => x.Quantity <= 0)
             .WhereIf(stockStatus == "normal", x => !x.TrackStock || x.Quantity > x.CriticalStockLevel);
@@ -199,6 +200,8 @@ public class ProductAppService :
     {
         return (oemCodes ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
+            .Where(code => ProductOemCodeNormalizer.Normalize(code).Length > 0)
+            .GroupBy(ProductOemCodeNormalizer.Normalize, StringComparer.Ordinal)
+            .Select(group => group.First());
     }
 }

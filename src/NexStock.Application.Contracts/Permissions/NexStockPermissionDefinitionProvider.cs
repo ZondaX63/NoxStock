@@ -55,7 +55,10 @@ public class NexStockPermissionDefinitionProvider : PermissionDefinitionProvider
         AddTenantChild(reportsPermission, NexStockPermissions.Reports.Export, L("Permission:Reports.Export"));
 
         AddTenantPermission(myGroup, NexStockPermissions.Notifications.Default, L("Permission:Notifications"));
-        AddTenantPermission(myGroup, NexStockPermissions.AuditLogs.Default, L("Permission:AuditLogs"));
+        myGroup.AddPermission(
+            NexStockPermissions.AuditLogs.Default,
+            L("Permission:AuditLogs"),
+            multiTenancySide: MultiTenancySides.Host);
 
         var settingsPermission = AddTenantPermission(myGroup, NexStockPermissions.Settings.Default, L("Permission:Settings"));
         AddTenantChild(settingsPermission, NexStockPermissions.Settings.Edit, L("Permission:Settings.Edit"));

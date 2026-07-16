@@ -18,6 +18,15 @@ public class NexStockDefaultUserPermissionDataSeedContributor : IDataSeedContrib
 
     public virtual async Task SeedAsync(DataSeedContext context)
     {
+        if (context.TenantId is null)
+        {
+            await _permissionDataSeeder.SeedAsync(
+                RolePermissionValueProvider.ProviderName,
+                "admin",
+                ["NexStock.AuditLogs"]);
+            return;
+        }
+
         await _permissionDataSeeder.SeedAsync(
             RolePermissionValueProvider.ProviderName,
             "user",

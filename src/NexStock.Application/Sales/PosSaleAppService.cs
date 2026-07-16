@@ -25,6 +25,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
     private readonly IRepository<Document, Guid> _documentRepository;
     private readonly IRepository<Product, Guid> _productRepository;
+    private readonly IRepository<ProductOEMCode, Guid> _productOemCodeRepository;
     private readonly IRepository<BusinessPartner, Guid> _businessPartnerRepository;
     private readonly IRepository<Account, Guid> _accountRepository;
     private readonly IRepository<AccountTransaction, Guid> _accountTransactionRepository;
@@ -35,6 +36,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     public PosSaleAppService(
         IRepository<Document, Guid> documentRepository,
         IRepository<Product, Guid> productRepository,
+        IRepository<ProductOEMCode, Guid> productOemCodeRepository,
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
         IRepository<Account, Guid> accountRepository,
         IRepository<AccountTransaction, Guid> accountTransactionRepository,
@@ -44,6 +46,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     {
         _documentRepository = documentRepository;
         _productRepository = productRepository;
+        _productOemCodeRepository = productOemCodeRepository;
         _businessPartnerRepository = businessPartnerRepository;
         _accountRepository = accountRepository;
         _accountTransactionRepository = accountTransactionRepository;
@@ -60,16 +63,25 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var normalizedFilter = filter.ToLower();
+            var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
             query = query.Where(x =>
                 x.Name.ToLower().Contains(normalizedFilter) ||
                 x.Sku.ToLower().Contains(normalizedFilter) ||
-                (!string.IsNullOrEmpty(x.Barcode) && x.Barcode.Contains(normalizedFilter)));
+                (!string.IsNullOrEmpty(x.Barcode) && x.Barcode.Contains(normalizedFilter)) ||
+                (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode.Contains(normalizedOemFilter))));
         }
 
         var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 50);
         var products = await AsyncExecuter.ToListAsync(query
             .OrderBy(x => x.Name)
             .Take(maxResultCount));
+
+        var productIds = products.Select(product => product.Id).ToList();
+        var oemCodeQuery = await _productOemCodeRepository.GetQueryableAsync();
+        var oemCodesByProduct = (await AsyncExecuter.ToListAsync(oemCodeQuery
+                .Where(code => productIds.Contains(code.ProductId))))
+            .GroupBy(code => code.ProductId)
+            .ToDictionary(group => group.Key, group => string.Join(", ", group.Select(code => code.OemCode)));
 
         var result = new List<PosProductLookupDto>();
         foreach (var product in products)
@@ -82,6 +94,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 Name = product.Name,
                 Sku = product.Sku,
                 Barcode = product.Barcode,
+                OemCodes = oemCodesByProduct.GetValueOrDefault(product.Id),
                 Unit = product.Unit,
                 SalePrice = calculation.UnitPrice,
                 Currency = calculation.Currency,

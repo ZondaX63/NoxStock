@@ -30,7 +30,7 @@
                 <div><label asp-for="Product.Name" class="mb-1 block text-sm font-medium">Ürün adı</label><input asp-for="Product.Name" class="input-field" /><span asp-validation-for="Product.Name" class="text-xs text-red-600"></span></div>
                 <div class="grid gap-4 sm:grid-cols-2"><div><label asp-for="Product.Sku" class="mb-1 block text-sm font-medium">Stok kodu</label><input asp-for="Product.Sku" class="input-field" /></div><div><label asp-for="Product.Barcode" class="mb-1 block text-sm font-medium">Barkod</label><input asp-for="Product.Barcode" class="input-field" /></div></div>
                 <div class="grid gap-4 sm:grid-cols-2"><div><label asp-for="Product.CategoryId" class="mb-1 block text-sm font-medium">Kategori</label><select asp-for="Product.CategoryId" asp-items="Model.Categories" class="input-field"></select></div><div><label asp-for="Product.BrandId" class="mb-1 block text-sm font-medium">Marka</label><select asp-for="Product.BrandId" asp-items="Model.Brands" class="input-field"></select></div></div>
-                <div><label asp-for="Product.OemCodes" class="mb-1 block text-sm font-medium">OEM kodları</label><input asp-for="Product.OemCodes" placeholder="Örnek: 1234, 5678" class="input-field" /></div>
+                <div><label asp-for="Product.OemCodes" class="mb-1 block text-sm font-medium">OEM / referans kodları</label><input asp-for="Product.OemCodes" placeholder="Örnek: 34116775277, 34 11 6 775 277" class="input-field" /><p class="mt-1 text-xs text-slate-500">Virgülle ayırın. Aynı OEM kodu farklı marka ve stok kartlarında kullanılabilir.</p></div>
                 <div><label asp-for="Product.Description" class="mb-1 block text-sm font-medium">Açıklama</label><textarea asp-for="Product.Description" rows="3" class="input-field"></textarea></div>
             </div>
             <div class="space-y-4 lg:col-span-4">
@@ -59,7 +59,7 @@
                 <span class="material-icons-round absolute left-3 top-2.5 text-base text-slate-400">search</span>
                 <input id="ProductSearch" type="search" placeholder="Ürün adı, stok kodu, barkod veya OEM ara" class="input-field pl-9" />
             </div>
-            <div class="text-xs text-slate-500">Listeleme, arama ve filtreler sunucu tarafında çalışır.</div>
+            <div class="text-xs text-slate-500">OEM araması boşluk ve tireleri yok sayar; eşleşen tüm marka alternatiflerini listeler.</div>
         </div>
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <select id="ProductBrandFilter" class="input-field">

@@ -116,6 +116,29 @@ public class TenantPathIntegrationTests : NexStockWebTestBase
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
+    [Theory]
+    [InlineData("AuditLogs")]
+    [InlineData("Identity/Users")]
+    public async Task Tenant_Route_Is_Blocked_From_Platform_Administration(string route)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = $"/t/company-a/{route}";
+        var nextCalled = false;
+        var middleware = new PlatformAdministrationMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        using var scope = Server.Services.CreateScope();
+        var currentTenant = scope.ServiceProvider.GetRequiredService<ICurrentTenant>();
+
+        await middleware.InvokeAsync(context, currentTenant);
+
+        context.Response.StatusCode.ShouldBe(StatusCodes.Status403Forbidden);
+        nextCalled.ShouldBeFalse();
+    }
+
     private async Task CreateTenantAsync(string tenantName, bool isActive)
     {
         Guid tenantId;

@@ -27,7 +27,7 @@ $(function () {
         var $grid = $('#PosProductGrid');
         $grid.empty();
         if (!products.length) {
-            $grid.append('<div class="col-span-full flex min-h-72 flex-col items-center justify-center text-slate-400"><span class="material-icons-round text-5xl opacity-40">inventory_2</span><p class="mt-3 font-medium">Ürün bulunamadı.</p><p class="mt-1 text-sm">Barkod, ürün adı veya stok kodu ile arayın.</p></div>');
+            $grid.append('<div class="col-span-full flex min-h-72 flex-col items-center justify-center text-slate-400"><span class="material-icons-round text-5xl opacity-40">inventory_2</span><p class="mt-3 font-medium">Ürün bulunamadı.</p><p class="mt-1 text-sm">Barkod, ürün adı, stok kodu veya OEM ile arayın.</p></div>');
             return;
         }
 
@@ -41,6 +41,7 @@ $(function () {
             $grid.append('<button type="button" data-product-id="' + product.id + '" class="pos-product-card text-left border border-slate-200 dark:border-slate-700 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 rounded-lg p-4 transition-colors ' + disabled + '" ' + (disabled ? 'disabled' : '') + '>' +
                 '<p class="font-semibold text-slate-800 dark:text-white truncate">' + escapeHtml(product.name) + '</p>' +
                 '<p class="mt-1 text-xs text-slate-500 truncate">' + escapeHtml(product.sku) + (product.barcode ? ' · ' + escapeHtml(product.barcode) : '') + '</p>' +
+                (product.oemCodes ? '<p class="mt-1 text-xs text-slate-500 truncate">OEM: ' + escapeHtml(product.oemCodes) + '</p>' : '') +
                 '<p class="mt-2 text-xs text-slate-500">' + pricingText + '</p>' +
                 '<p class="mt-1 text-xs text-slate-500">' + purchasePriceText + '</p>' +
                 '<p class="mt-1 text-xs text-slate-500">' + cardPriceText + '</p>' +

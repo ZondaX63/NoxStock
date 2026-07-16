@@ -9,6 +9,7 @@ public class ProductOEMCode : FullAuditedEntity<Guid>, IMultiTenant
     public Guid? TenantId { get; protected set; }
     public Guid ProductId { get; set; }
     public string OemCode { get; set; }
+    public string SearchCode { get; private set; } = string.Empty;
 
     protected ProductOEMCode()
     {
@@ -19,5 +20,6 @@ public class ProductOEMCode : FullAuditedEntity<Guid>, IMultiTenant
         TenantId = tenantId;
         ProductId = productId;
         OemCode = oemCode;
+        SearchCode = ProductOemCodeNormalizer.Normalize(oemCode);
     }
 }

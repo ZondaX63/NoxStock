@@ -132,7 +132,27 @@ public class PosSaleAppServiceTests : NexStockEntityFrameworkCoreTestBase
         productAfterCancel.Quantity.ShouldBe(4);
     }
 
-    private async Task<ProductDto> CreateProductAsync(string sku, string barcode, decimal quantity, decimal salePrice)
+    [Fact]
+    public async Task Should_Find_All_Brand_Alternatives_By_Shared_Oem_Code()
+    {
+        const string oemCode = "34116775277";
+        var delphi = await CreateProductAsync("DELPHI-F10-DISC", "869000000011", 5, 100, oemCode);
+        var fourU = await CreateProductAsync("4U-F10-DISC", "869000000012", 5, 100, "34 116 775 277");
+        var bmwGroup = await CreateProductAsync("BMW-GROUP-F10-DISC", "869000000013", 5, 100, "34-116-775-277");
+
+        var catalogResults = await _productAppService.GetListAsync(new ProductGetListInput { Filter = "34 116-775 277", MaxResultCount = 10 });
+        var posResults = await _posSaleAppService.GetProductsAsync(new PosProductLookupInputDto { Filter = oemCode });
+
+        catalogResults.Items.Select(product => product.Id).ShouldContain(delphi.Id);
+        catalogResults.Items.Select(product => product.Id).ShouldContain(fourU.Id);
+        catalogResults.Items.Select(product => product.Id).ShouldContain(bmwGroup.Id);
+        posResults.Select(product => product.Id).ShouldContain(delphi.Id);
+        posResults.Select(product => product.Id).ShouldContain(fourU.Id);
+        posResults.Select(product => product.Id).ShouldContain(bmwGroup.Id);
+        posResults.Single(product => product.Id == delphi.Id).OemCodes.ShouldBe(oemCode);
+    }
+
+    private async Task<ProductDto> CreateProductAsync(string sku, string barcode, decimal quantity, decimal salePrice, string? oemCodes = null)
     {
         return await _productAppService.CreateAsync(new CreateUpdateProductDto
         {
@@ -149,7 +169,8 @@ public class PosSaleAppServiceTests : NexStockEntityFrameworkCoreTestBase
             TrackStock = true,
             Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
+            SaleCurrency = "TRY",
+            OemCodes = oemCodes
         });
     }
 }

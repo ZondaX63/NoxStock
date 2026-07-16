@@ -381,6 +381,7 @@ public class NexStockWebModule : AbpModule
 
         app.UseUnitOfWork();
         app.UseMiddleware<TenantActivationMiddleware>();
+        app.UseMiddleware<PlatformAdministrationMiddleware>();
         app.UseDynamicClaims();
         app.UseAuthorization();
 
@@ -402,6 +403,11 @@ public class NexStockWebModule : AbpModule
             Volo.Abp.Authorization.Permissions.RolePermissionValueProvider.ProviderName,
             "user",
             NexStockDefaultUserPermissions.Basic
+        ));
+        AsyncHelper.RunSync(() => permissionDataSeeder.SeedAsync(
+            Volo.Abp.Authorization.Permissions.RolePermissionValueProvider.ProviderName,
+            "admin",
+            [NexStockPermissions.AuditLogs.Default]
         ));
     }
 }

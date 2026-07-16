@@ -4,6 +4,7 @@ Last updated: 2026-07-16
 
 ## What Works
 
+- OEM/reference-code product lookup is hardened for spare-parts inventory. Multiple product cards and brands can share one OEM without a uniqueness restriction; product and POS searches return every matching alternative. Search ignores case, spaces, and punctuation (`34116775277`, `34 116 775 277`, and `34-116-775-277` match alike), existing codes are backfilled by migration `20260716152420_Add_Product_Oem_Search_Code`, and the UI displays OEM values in product and POS results. A focused integration test verifies three alternatives for BMW OEM `34116775277`.
 - Public registration UI is removed. New companies and their administrator accounts are provisioned only from host Tenant Management; login copy now clearly distinguishes platform administrators from tenant/company users.
 - Login visual pass completed: full-width desktop composition, readable brand copy without clipping, balanced form column, compact controls, and responsive mobile collapse. Docker health verification passed after rebuild.
 - Tenant login context is explicit: `/t/{tenant}/Account/Login` renders the resolved company name above the form, while host `/Account/Login` remains platform-only. Verified live with `/t/asd/Account/Login` showing `asd` and health returning HTTP 200.
@@ -11,6 +12,10 @@ Last updated: 2026-07-16
 - Dashboard TL display is corrected from generic `¤` to explicit `₺`; the fix is centralized in the dashboard formatter and does not alter USD/EUR product or POS pricing.
 - Language switching now follows the ABP controller contract (`culture` plus `uiCulture`) and preserves the tenant path on redirects. This resolves the former invalid-uiCulture trace error from topbar and login language buttons.
 - The shared UI localization baseline is now active: TR/EN resources drive the sidebar, topbar, login-brand content, login placeholder, and dashboard. The Web suite includes the ABP language-switch redirect/cookie regression test, and live Docker verification confirms tenant English login content at `/t/asd/Account/Login` after switching languages.
+- Platform administration is now cleanly separated from tenant operations. Host sidebar: Platform Administration -> Companies, Users & Roles, Audit Logs. Tenant sidebars no longer expose user/role or audit links, and direct tenant-path requests to those host routes return HTTP 403. The tenant sidebar now uses Workspace, Operations, and Customers & Organization headings, with orders under Commercial rather than business partners. Web tests pass 16/16 and Docker host-admin verification returns HTTP 200 for Audit Logs.
+- Desktop visual density and shell clipping pass completed: desktop UI now targets 90% rem density at normal browser zoom, and topbar/sidebar headers use fixed non-shrinking 64px dimensions. The web image was rebuilt without cache; the running container serves the new CSS and login responds with HTTP 200.
+- NexStock branding assets are now integrated across auth and application layouts. The supplied favicon set is published from `wwwroot`, the manifest is named NexStock with branded theme colors, and live Docker checks return HTTP 200 for `favicon.ico` and `site.webmanifest`.
+- The actual application logo now replaces the placeholder `N` in the sidebar, topbar, and login brand header. All three surfaces use the same supplied Android logo asset, which is present and served successfully by the running Docker web container.
 
 - **Frontend foundation pass completed**:
   - Shared light/dark color tokens now cover cards, forms, tables, DataTables, modals, reports, and error notices.

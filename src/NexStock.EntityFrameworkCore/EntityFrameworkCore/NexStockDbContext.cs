@@ -144,6 +144,8 @@ public class NexStockDbContext :
             b.ToTable(NexStockConsts.DbTablePrefix + "ProductOEMCodes", NexStockConsts.DbSchema);
             b.ConfigureByConvention();
             b.Property(x => x.OemCode).IsRequired().HasMaxLength(150);
+            b.Property(x => x.SearchCode).IsRequired().HasMaxLength(150);
+            b.HasIndex(x => new { x.TenantId, x.SearchCode });
             b.HasOne<Product>().WithMany(p => p.OemCodes).HasForeignKey(x => x.ProductId).IsRequired();
         });
 

@@ -22,7 +22,7 @@ public class AuditLogAppService : ApplicationService, IAuditLogAppService
 
     public async Task<AuditLogSnapshotDto> GetListAsync(AuditLogRequestDto input)
     {
-        CurrentTenant.RequireTenantId();
+        CurrentTenant.RequireHost();
         var dateFrom = input.DateFrom?.Date;
         var dateTo = input.DateTo?.Date.AddDays(1);
         var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 100);

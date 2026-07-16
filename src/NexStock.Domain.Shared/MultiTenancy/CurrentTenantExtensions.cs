@@ -10,4 +10,12 @@ public static class CurrentTenantExtensions
     {
         return currentTenant.Id ?? throw new BusinessException("NexStock:TenantRequired");
     }
+
+    public static void RequireHost(this ICurrentTenant currentTenant)
+    {
+        if (currentTenant.Id.HasValue)
+        {
+            throw new BusinessException("NexStock:HostOnly");
+        }
+    }
 }

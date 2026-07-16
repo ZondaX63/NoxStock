@@ -172,8 +172,10 @@ $(function () {
                 title: 'Kodlar',
                 data: 'sku',
                 render: function (data, type, row) {
-                    var extra = (row.barcode || '-') + (row.oemCodes ? ' · ' + row.oemCodes : '');
-                    return '<div>' + (data || '') + '</div><div class="mt-1 text-xs text-slate-500">' + extra + '</div>';
+                    var barcode = row.barcode ? 'Barkod: ' + row.barcode : '';
+                    var oem = row.oemCodes ? 'OEM: ' + row.oemCodes : '';
+                    var details = [barcode, oem].filter(Boolean).join(' · ') || '-';
+                    return '<div>' + (data || '') + '</div><div class="mt-1 max-w-sm truncate text-xs text-slate-500" title="' + details + '">' + details + '</div>';
                 }
             },
             {
