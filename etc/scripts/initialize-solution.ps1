@@ -25,7 +25,7 @@ $jobs += Start-Job -Name "InstallLibs" -ScriptBlock {
 
 $jobs += Start-Job -Name "DbMigrator" -ScriptBlock {
     $ErrorActionPreference = "Stop"
-    Set-Location (Join-Path $using:scriptRoot "../../src/NexStock.DbMigrator")
+    Set-Location (Join-Path $using:scriptRoot "../../src/NoxStock.DbMigrator")
     dotnet run
     dotnet run
 
@@ -36,7 +36,7 @@ $jobs += Start-Job -Name "DbMigrator" -ScriptBlock {
 
 $jobs += Start-Job -Name "DevCert" -ScriptBlock {
     $ErrorActionPreference = "Stop"
-    Set-Location (Join-Path $using:scriptRoot "../../src/NexStock.Web")
+    Set-Location (Join-Path $using:scriptRoot "../../src/NoxStock.Web")
     dotnet dev-certs https -v -ep openiddict.pfx -p cba5d22f-c20b-4743-a128-8fc8cfc370db
 
     if ($LASTEXITCODE -ne 0) {

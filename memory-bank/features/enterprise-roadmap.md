@@ -1,8 +1,8 @@
-# NexStock Enterprise Product Roadmap
+# NoxStock Enterprise Product Roadmap
 
 Last updated: 2026-07-15
 
-This roadmap defines the work remaining after the initial commercial prototype phases. The goal is to make NexStock a serious Turkish-first inventory, accounting, customer management, purchasing, sales, and retail platform rather than a collection of CRUD pages.
+This roadmap defines the work remaining after the initial commercial prototype phases. The goal is to make NoxStock a serious Turkish-first inventory, accounting, customer management, purchasing, sales, and retail platform rather than a collection of CRUD pages.
 
 ## Product Quality Bar
 

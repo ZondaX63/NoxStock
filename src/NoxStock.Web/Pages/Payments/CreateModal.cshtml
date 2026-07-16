@@ -1,0 +1,56 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using NoxStock.Documents
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NoxStock.Web.Pages.Payments.CreateModalModel
+@{
+    Layout = null;
+    var title = Model.Type == DocumentType.Collection ? "Yeni Tahsilat" : "Yeni Tediye (Ödeme)";
+}
+
+<form asp-page="/Payments/CreateModal" method="post">
+    <abp-modal>
+        <abp-modal-header title="@title"></abp-modal-header>
+        <abp-modal-body>
+            <input type="hidden" asp-for="Type" />
+            
+            <div class="mb-4">
+                <label asp-for="Payment.DocNumber" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Makbuz No</label>
+                <input asp-for="Payment.DocNumber" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required />
+                <span asp-validation-for="Payment.DocNumber" class="text-sm text-red-600 mt-1 block"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Payment.Date" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tarih</label>
+                <input asp-for="Payment.Date" type="date" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required />
+                <span asp-validation-for="Payment.Date" class="text-sm text-red-600 mt-1 block"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Payment.BusinessPartnerId" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cari Hesap</label>
+                <select asp-for="Payment.BusinessPartnerId" asp-items="Model.BusinessPartners" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required></select>
+                <span asp-validation-for="Payment.BusinessPartnerId" class="text-sm text-red-600 mt-1 block"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Payment.AccountId" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">İşlem Yapılacak Kasa/Banka</label>
+                <select asp-for="Payment.AccountId" asp-items="Model.Accounts" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required></select>
+                <span asp-validation-for="Payment.AccountId" class="text-sm text-red-600 mt-1 block"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Payment.Amount" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tutar (TRY)</label>
+                <input asp-for="Payment.Amount" type="number" min="0.01" step="0.01" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required />
+                <span asp-validation-for="Payment.Amount" class="text-sm text-red-600 mt-1 block"></span>
+            </div>
+            
+            <div class="mb-4">
+                <label asp-for="Payment.Description" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Açıklama</label>
+                <textarea asp-for="Payment.Description" rows="2" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white"></textarea>
+                <span asp-validation-for="Payment.Description" class="text-sm text-red-600 mt-1 block"></span>
+            </div>
+
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel | AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

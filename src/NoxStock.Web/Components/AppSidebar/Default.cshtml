@@ -1,0 +1,152 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using NoxStock.Localization
+@using Volo.Abp.Users
+@inject ICurrentUser CurrentUser
+@inject IHtmlLocalizer<NoxStockResource> L
+
+@{
+    var currentPath = ViewContext.HttpContext.Request.Path.Value?.ToLower() ?? "";
+    
+    // Helper function to determine if a menu item is active
+    bool IsActive(string path)
+    {
+        if (path == "/" && (currentPath == "/" || currentPath == "/dashboard")) return true;
+        if (path != "/" && currentPath.StartsWith(path)) return true;
+        return false;
+    }
+}
+
+<div :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" 
+     class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 bg-slate-900 text-white transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-0 shadow-2xl flex flex-col">
+    
+    <div class="flex items-center justify-center h-16 bg-slate-900 border-b border-slate-800 shrink-0">
+        <a href="~/" class="flex items-center space-x-2">
+            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 p-1">
+                <img src="~/android-chrome-192x192.png" alt="NoxStock" class="h-full w-full object-contain" />
+            </div>
+            <h1 class="text-2xl font-bold tracking-normal text-white">NOX<span class="text-indigo-400">STOCK</span></h1>
+        </a>
+    </div>
+
+    <nav class="sidebar-nav mt-5 px-3 space-y-1 flex-1 overflow-y-auto no-scrollbar">
+        @if (CurrentUser.TenantId is null)
+        {
+            <p class="px-4 pb-2 pt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">@L["Sidebar:Platform"]</p>
+            <div x-data="{ expanded: true }">
+                <button @@click="expanded = !expanded" class="group flex items-center justify-between px-4 py-3.5 text-sm font-medium rounded-xl w-full text-slate-300 hover:bg-slate-800 hover:text-white transition-all duration-200">
+                    <div class="flex items-center">
+                        <span class="material-icons-round mr-4 flex-shrink-0 text-indigo-300">admin_panel_settings</span>
+                        @L["Menu:PlatformAdministration"]
+                    </div>
+                    <span class="material-icons-round text-sm" x-text="expanded ? 'expand_less' : 'expand_more'"></span>
+                </button>
+                <div x-show="expanded" class="ml-4 mt-1 space-y-1">
+                    <a href="~/TenantManagement/Tenants" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/tenantmanagement/tenants") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Companies"]</a>
+                    <a href="~/Identity/Users" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/identity") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:UsersAndRoles"]</a>
+                    <a href="~/AuditLogs" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/auditlogs") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:AuditLogs"]</a>
+                </div>
+            </div>
+        }
+        else
+        {
+        <p class="px-4 pb-2 pt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">@L["Sidebar:Workspace"]</p>
+        <a href="~/Dashboard" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/dashboard") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
+            <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/dashboard") ? "text-white" : "text-slate-500 group-hover:text-white")">dashboard</span>
+            @L["Menu:Dashboard"]
+        </a>
+
+        <p class="px-4 pb-2 pt-6 text-[10px] font-bold uppercase tracking-widest text-slate-500">@L["Sidebar:Operations"]</p>
+
+        <div x-data="{ expanded: @(IsActive("/sales") || IsActive("/invoices") || IsActive("/offers") || IsActive("/orders") ? "true" : "false") }">
+            <button @@click="expanded = !expanded" class="group flex items-center justify-between px-4 py-3.5 text-sm font-medium rounded-xl w-full text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
+                    <span class="material-icons-round mr-4 flex-shrink-0 text-slate-500 group-hover:text-white transition-colors">receipt_long</span>
+                    @L["Menu:Commercial"]
+                </div>
+                <span class="material-icons-round text-sm" x-text="expanded ? 'expand_less' : 'expand_more'"></span>
+            </button>
+            <div x-show="expanded" class="ml-4 mt-1 space-y-1">
+                <a href="~/Sales" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/sales") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Sales"]</a>
+                <a href="~/Invoices" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/invoices") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Invoices"]</a>
+                <a href="~/Offers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/offers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Offers"]</a>
+                <a href="~/Orders" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/orders") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Orders"]</a>
+            </div>
+        </div>
+
+        <!-- Inventory Dropdown -->
+        <div x-data="{ expanded: @(IsActive("/products") || IsActive("/brands") || IsActive("/categories") || IsActive("/productmovements") || IsActive("/printlabels") ? "true" : "false") }">
+            <button @@click="expanded = !expanded" class="group flex items-center justify-between px-4 py-3.5 text-sm font-medium rounded-xl w-full text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
+                    <span class="material-icons-round mr-4 flex-shrink-0 text-slate-500 group-hover:text-white transition-colors">inventory</span>
+                    @L["Menu:Inventory"]
+                </div>
+                <span class="material-icons-round text-sm" x-text="expanded ? 'expand_less' : 'expand_more'"></span>
+            </button>
+            <div x-show="expanded" class="ml-4 mt-1 space-y-1">
+                <a href="~/Products" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/products") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Products"]</a>
+                <a href="~/Brands" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/brands") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Brands"]</a>
+                <a href="~/Categories" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/categories") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Categories"]</a>
+                <a href="~/ProductMovements" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/productmovements") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:StockMovements"]</a>
+                <a href="~/PrintLabels" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/printlabels") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:PrintLabels"]</a>
+            </div>
+        </div>
+
+        <div x-data="{ expanded: @(IsActive("/accounts") ? "true" : "false") }">
+            <button @@click="expanded = !expanded" class="group flex items-center justify-between px-4 py-3.5 text-sm font-medium rounded-xl w-full text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
+                    <span class="material-icons-round mr-4 flex-shrink-0 text-slate-500 group-hover:text-white transition-colors">account_balance_wallet</span>
+                    @L["Menu:Finance"]
+                </div>
+                <span class="material-icons-round text-sm" x-text="expanded ? 'expand_less' : 'expand_more'"></span>
+            </button>
+            <div x-show="expanded" class="ml-4 mt-1 space-y-1">
+                <a href="~/Accounts" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/accounts") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Accounts"]</a>
+            </div>
+        </div>
+
+        <p class="px-4 pb-2 pt-6 text-[10px] font-bold uppercase tracking-widest text-slate-500">@L["Sidebar:Organization"]</p>
+        <div x-data="{ expanded: @(IsActive("/customers") || IsActive("/suppliers") || IsActive("/personnel") ? "true" : "false") }">
+            <button @@click="expanded = !expanded" class="group flex items-center justify-between px-4 py-3.5 text-sm font-medium rounded-xl w-full text-slate-400 hover:bg-slate-800 hover:text-white transition-all duration-200">
+                <div class="flex items-center">
+                    <span class="material-icons-round mr-4 flex-shrink-0 text-slate-500 group-hover:text-white transition-colors">people</span>
+                    @L["Menu:BusinessPartners"]
+                </div>
+                <span class="material-icons-round text-sm" x-text="expanded ? 'expand_less' : 'expand_more'"></span>
+            </button>
+            <div x-show="expanded" class="ml-4 mt-1 space-y-1">
+                <a href="~/Customers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/customers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Customers"]</a>
+                <a href="~/Suppliers" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/suppliers") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Suppliers"]</a>
+                <a href="~/Personnel" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/personnel") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Personnel"]</a>
+            </div>
+        </div>
+
+        <div class="my-3 border-t border-slate-800"></div>
+        <a href="~/Reports" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/reports") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
+            <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/reports") ? "text-white" : "text-slate-500 group-hover:text-white")">analytics</span>
+            @L["Menu:Reports"]
+        </a>
+
+        <a href="~/Notifications" class="group flex items-center px-4 py-3.5 text-sm font-medium rounded-xl w-full transition-all duration-200 ease-in-out @(IsActive("/notifications") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">
+            <span class="material-icons-round mr-4 flex-shrink-0 transition-colors @(IsActive("/notifications") ? "text-white" : "text-slate-500 group-hover:text-white")">notifications</span>
+            @L["Menu:Notifications"]
+        </a>
+        }
+
+    </nav>
+
+    <div class="p-6 bg-slate-900 border-t border-slate-800 shrink-0">
+        @if (CurrentUser.TenantId is not null)
+        {
+        <a href="~/Settings" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-400 rounded-xl hover:bg-slate-800 hover:text-white transition-colors">
+            <span class="material-icons-round mr-3 h-5 w-5">settings</span>
+            @L["Menu:Settings"]
+        </a>
+        }
+        <form method="post" asp-page="/Account/Logout">
+            <button type="submit" class="flex items-center w-full px-4 py-3 mt-2 text-sm font-medium text-red-400 rounded-xl hover:bg-red-500/10 hover:text-red-300 transition-colors">
+                <span class="material-icons-round mr-3 h-5 w-5">logout</span>
+                @L["Menu:Logout"]
+            </button>
+        </form>
+    </div>
+</div>

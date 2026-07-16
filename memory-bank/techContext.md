@@ -18,13 +18,13 @@ Last updated: 2026-07-10
 Main solution root:
 
 ```text
-/home/zondax/VSCode/NexStock/NexStock
+.
 ```
 
 Legacy reference implementation:
 
 ```text
-/home/zondax/VSCode/NexStock/A
+../A
 ```
 
 ## Common Commands
@@ -32,31 +32,31 @@ Legacy reference implementation:
 Build Web:
 
 ```bash
-dotnet build src/NexStock.Web/NexStock.Web.csproj --no-restore -v:minimal -m:1
+dotnet build src/NoxStock.Web/NoxStock.Web.csproj --no-restore -v:minimal -m:1
 ```
 
 Build DbMigrator:
 
 ```bash
-dotnet build src/NexStock.DbMigrator/NexStock.DbMigrator.csproj --no-restore -v:minimal -m:1
+dotnet build src/NoxStock.DbMigrator/NoxStock.DbMigrator.csproj --no-restore -v:minimal -m:1
 ```
 
 Run tests:
 
 ```bash
-dotnet test NexStock.slnx --no-build -m:1
+dotnet test NoxStock.slnx --no-build -m:1
 ```
 
 List migrations:
 
 ```bash
-dotnet ef migrations list --project src/NexStock.EntityFrameworkCore/NexStock.EntityFrameworkCore.csproj --startup-project src/NexStock.DbMigrator/NexStock.DbMigrator.csproj --no-build
+dotnet ef migrations list --project src/NoxStock.EntityFrameworkCore/NoxStock.EntityFrameworkCore.csproj --startup-project src/NoxStock.DbMigrator/NoxStock.DbMigrator.csproj --no-build
 ```
 
 Add migration:
 
 ```bash
-dotnet ef migrations add Migration_Name --project src/NexStock.EntityFrameworkCore/NexStock.EntityFrameworkCore.csproj --startup-project src/NexStock.DbMigrator/NexStock.DbMigrator.csproj
+dotnet ef migrations add Migration_Name --project src/NoxStock.EntityFrameworkCore/NoxStock.EntityFrameworkCore.csproj --startup-project src/NoxStock.DbMigrator/NoxStock.DbMigrator.csproj
 ```
 
 ## Environment Notes
@@ -64,9 +64,9 @@ dotnet ef migrations add Migration_Name --project src/NexStock.EntityFrameworkCo
 - In this workspace, plain parallel MSBuild can fail silently with `Build FAILED. 0 Error(s)`. Use `-m:1`.
 - VSTest needs local socket access. In sandboxed execution it can fail with `System.Net.Sockets.SocketException (13): Permission denied`.
 - EF migration list may show database access permission errors if PostgreSQL on `localhost:5433` is not accessible, but it can still list known migrations.
-- Local Web and DbMigrator settings expect PostgreSQL at `localhost:5433` with database `NexStock`, user `postgres`, password `1121`.
+- Local Web and DbMigrator settings expect PostgreSQL at `localhost:5433` with database `NoxStock`, user `postgres`, password `1121`.
 - On 2026-07-10, `pg_isready -h localhost -p 5433` returned `no response`; web server was not started because the app needs the database for a usable prototype.
-- No local `docker-compose.yml` was found. Existing container files are `src/NexStock.Web/Dockerfile` and `src/NexStock.DbMigrator/Dockerfile`.
+- No local `docker-compose.yml` was found. Existing container files are `src/NoxStock.Web/Dockerfile` and `src/NoxStock.DbMigrator/Dockerfile`.
 - Network access is restricted in the coding environment.
 
 ## Technical Constraints

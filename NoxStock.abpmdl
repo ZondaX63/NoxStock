@@ -1,0 +1,118 @@
+{
+  "template": "app",
+  "imports": {
+    "Volo.Abp.LeptonXLiteTheme": {
+      "version": "5.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    },
+    "Volo.Abp.Account": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    },
+    "Volo.Abp.OpenIddict": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    },
+    "Volo.Abp.Identity": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    },
+    "Volo.Abp.TenantManagement": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    },
+    "Volo.Abp.SettingManagement": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    },
+    "Volo.Abp.PermissionManagement": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    },
+    "Volo.Abp.FeatureManagement": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    },
+    "Volo.Abp.BlobStoring.Database": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "06/22/2026 21:58:52 +00:00"
+    }
+  },
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {}
+    }
+  },
+  "packages": {
+    "NoxStock.Application": {
+      "path": "src/NoxStock.Application/NoxStock.Application.abppkg",
+      "folder": "src"
+    },
+    "NoxStock.Application.Tests": {
+      "path": "test/NoxStock.Application.Tests/NoxStock.Application.Tests.abppkg",
+      "folder": "test"
+    },
+    "NoxStock.Domain.Shared": {
+      "path": "src/NoxStock.Domain.Shared/NoxStock.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "NoxStock.Application.Contracts": {
+      "path": "src/NoxStock.Application.Contracts/NoxStock.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "NoxStock.HttpApi": {
+      "path": "src/NoxStock.HttpApi/NoxStock.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "NoxStock.HttpApi.Client": {
+      "path": "src/NoxStock.HttpApi.Client/NoxStock.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "NoxStock.Web": {
+      "path": "src/NoxStock.Web/NoxStock.Web.abppkg",
+      "folder": "src"
+    },
+    "NoxStock.Web.Tests": {
+      "path": "test/NoxStock.Web.Tests/NoxStock.Web.Tests.abppkg",
+      "folder": "test"
+    },
+    "NoxStock.EntityFrameworkCore.Tests": {
+      "path": "test/NoxStock.EntityFrameworkCore.Tests/NoxStock.EntityFrameworkCore.Tests.abppkg",
+      "folder": "test"
+    },
+    "NoxStock.EntityFrameworkCore": {
+      "path": "src/NoxStock.EntityFrameworkCore/NoxStock.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "NoxStock.TestBase": {
+      "path": "test/NoxStock.TestBase/NoxStock.TestBase.abppkg",
+      "folder": "test"
+    },
+    "NoxStock.Domain.Tests": {
+      "path": "test/NoxStock.Domain.Tests/NoxStock.Domain.Tests.abppkg",
+      "folder": "test"
+    },
+    "NoxStock.HttpApi.Client.ConsoleTestApp": {
+      "path": "test/NoxStock.HttpApi.Client.ConsoleTestApp/NoxStock.HttpApi.Client.ConsoleTestApp.abppkg",
+      "folder": "test"
+    },
+    "NoxStock.DbMigrator": {
+      "path": "src/NoxStock.DbMigrator/NoxStock.DbMigrator.abppkg",
+      "folder": "src"
+    },
+    "NoxStock.Domain": {
+      "path": "src/NoxStock.Domain/NoxStock.Domain.abppkg",
+      "folder": "src"
+    }
+  }
+}

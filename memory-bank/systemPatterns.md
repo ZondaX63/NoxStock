@@ -1,19 +1,19 @@
 # System Patterns
 
-Last updated: 2026-07-10
+Last updated: 2026-07-16
 
 ## Architecture
 
-NexStock uses the ABP layered monolith structure:
+NoxStock uses the ABP layered monolith structure:
 
-- `NexStock.Domain`: entities, domain services, domain constants, settings, data seed/migration services
-- `NexStock.Domain.Shared`: shared enums, localization resource, multi-tenancy constants
-- `NexStock.Application.Contracts`: DTOs, app service interfaces, permission constants and definitions
-- `NexStock.Application`: application services and object mapping
-- `NexStock.EntityFrameworkCore`: DbContext, EF model configuration, migrations
-- `NexStock.HttpApi`: HTTP API module
-- `NexStock.Web`: Razor Pages UI, menu contributors, custom layout/sidebar/topbar
-- `NexStock.DbMigrator`: migration runner and seed host
+- `NoxStock.Domain`: entities, domain services, domain constants, settings, data seed/migration services
+- `NoxStock.Domain.Shared`: shared enums, localization resource, multi-tenancy constants
+- `NoxStock.Application.Contracts`: DTOs, app service interfaces, permission constants and definitions
+- `NoxStock.Application`: application services and object mapping
+- `NoxStock.EntityFrameworkCore`: DbContext, EF model configuration, migrations
+- `NoxStock.HttpApi`: HTTP API module
+- `NoxStock.Web`: Razor Pages UI, menu contributors, custom layout/sidebar/topbar
+- `NoxStock.DbMigrator`: migration runner and seed host
 
 ## Key Patterns
 
@@ -41,9 +41,13 @@ Commercial behavior should move beyond basic CRUD. High-risk workflows should us
 
 These services should coordinate repositories inside one unit of work.
 
+High-risk command methods must declare a transactional unit of work explicitly. Client retries must carry an operation key, and a tenant-scoped database uniqueness rule must guard concurrent duplicate requests. Query-before-write checks improve normal retry behavior but do not replace the database constraint.
+
+Document status changes in commercial workflows must use the `Document.TransitionTo` domain rule. Application services must not invent status paths or directly move a document backward.
+
 ### Entity Configuration
 
-EF configuration lives in `NexStockDbContext.OnModelCreating`.
+EF configuration lives in `NoxStockDbContext.OnModelCreating`.
 
 Current commercial tables include:
 
@@ -62,8 +66,8 @@ Current commercial tables include:
 
 Permissions are centralized in:
 
-- `src/NexStock.Application.Contracts/Permissions/NexStockPermissions.cs`
-- `src/NexStock.Application.Contracts/Permissions/NexStockPermissionDefinitionProvider.cs`
+- `src/NoxStock.Application.Contracts/Permissions/NoxStockPermissions.cs`
+- `src/NoxStock.Application.Contracts/Permissions/NoxStockPermissionDefinitionProvider.cs`
 
 Current permission groups:
 
@@ -87,8 +91,8 @@ Current permission groups:
 
 Two navigation surfaces exist:
 
-- ABP menu contributor: `src/NexStock.Web/Menus/NexStockMenuContributor.cs`
-- Custom sidebar: `src/NexStock.Web/Components/AppSidebar/Default.cshtml`
+- ABP menu contributor: `src/NoxStock.Web/Menus/NoxStockMenuContributor.cs`
+- Custom sidebar: `src/NoxStock.Web/Components/AppSidebar/Default.cshtml`
 
 Keep both aligned when adding new modules.
 
@@ -141,3 +145,9 @@ Current implemented path:
 5. Preserve original records; do not delete commercial history.
 
 Important invariant: original commercial movement rows remain in place. New rows with reversal types undo their effects.
+
+### Inventory Source Of Truth
+
+`Product.Quantity` is a transitional single-location balance, not the long-term inventory source. The approved target is an append-only `StockMovement` ledger plus a `WarehouseStock` current-balance projection keyed by `(TenantId, WarehouseId, ProductId)`.
+
+Warehouse entities are intentionally deferred until the staged backfill and reconciliation plan in `memory-bank/inventoryArchitecture.md` is implemented. Do not switch reads or remove `Product.Quantity` in the same release that introduces warehouse tables.

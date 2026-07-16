@@ -1,0 +1,114 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Volo.Abp.Users
+@using System.Globalization
+@inject ICurrentUser CurrentUser
+
+<!DOCTYPE html>
+<html lang="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" class="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="noxstock-correlation-id" content="@Context.TraceIdentifier" />
+    <meta name="theme-color" content="#111827" />
+    <link rel="icon" href="~/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="~/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="~/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="~/apple-touch-icon.png" />
+    <link rel="manifest" href="~/site.webmanifest" />
+    <title>@ViewData["Title"] - NoxStock</title>
+
+    <script>
+        (function () {
+            var savedTheme = localStorage.getItem('noxstock.theme') || (localStorage.getItem('darkMode') === 'true' ? 'dark' : 'light');
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        })();
+    </script>
+
+    <!-- Outfit Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+    <!-- Alpine.js for lightweight interactions (Modals, Dropdowns) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        html.dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        /* Hide scrollbar for sidebar */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+
+    <abp-style-bundle name="@Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling.LeptonXLiteThemeBundles.Styles.Global" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="font-sans antialiased transition-colors duration-200" x-data="{ sidebarOpen: false, darkMode: false }" x-init="darkMode = document.documentElement.classList.contains('dark'); $watch('darkMode', val => { localStorage.setItem('darkMode', val); localStorage.setItem('noxstock.theme', val ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', val); });">
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar ViewComponent -->
+        @await Component.InvokeAsync("AppSidebar")
+
+        <div class="flex-1 flex flex-col overflow-hidden">
+            
+            <!-- Topbar ViewComponent -->
+            @await Component.InvokeAsync("AppTopbar")
+
+            <!-- Main Content -->
+            <main class="app-main flex-1 overflow-x-hidden overflow-y-auto transition-colors duration-200 relative">
+                <div class="app-content-frame">
+                    <div class="mb-4">
+                        <abp-page-alerts />
+                    </div>
+                    <div id="AbpContentToolbar">
+                        @await RenderSectionAsync("content_toolbar", required: false)
+                    </div>
+                    @RenderBody()
+                </div>
+            </main>
+            
+        </div>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div x-show="sidebarOpen" 
+             x-transition:enter="transition-opacity ease-linear duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-300"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm lg:hidden"
+             @@click="sidebarOpen = false"
+             style="display: none;">
+        </div>
+
+    </div>
+
+    <abp-script-bundle name="@Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling.LeptonXLiteThemeBundles.Scripts.Global" />
+    <script src="~/Abp/ApplicationConfigurationScript"></script>
+    <script src="~/Abp/ApplicationLocalizationScript?cultureName=@CultureInfo.CurrentUICulture.Name"></script>
+    <script src="~/Abp/ServiceProxyScript"></script>
+
+    @await RenderSectionAsync("scripts", required: false)
+</body>
+</html>

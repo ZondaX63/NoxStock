@@ -1,0 +1,53 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@model NoxStock.Web.Pages.Accounts.IndexModel
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = "Kasa ve Bankalar";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Kasa & Banka Hesapları</h2>
+        <p class="text-sm text-slate-500 mt-1">Şirketinizin tüm finansal hesaplarını ve nakit akışını yönetin.</p>
+    </div>
+    <div class="flex gap-2">
+        <button id="TransferButton" style="background-color: #2563eb; color: white;" type="button" class="hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-blue-500/30 flex items-center">
+            <span class="material-icons-round mr-2 text-sm">swap_horiz</span>
+            Transfer Yap
+        </button>
+        <button id="AddTransactionButton" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-emerald-500/30 flex items-center">
+            <span class="material-icons-round mr-2 text-sm">payments</span>
+            Gelir/Gider Ekle
+        </button>
+        <button id="NewAccountButton" type="button" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-indigo-500/30 flex items-center">
+            <span class="material-icons-round mr-2 text-sm">add</span>
+            Yeni Hesap Ekle
+        </button>
+    </div>
+</div>
+
+<div class="card overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-none">
+    <div class="p-6">
+        <div class="overflow-x-auto">
+            <table id="AccountsTable" class="table w-full text-left whitespace-nowrap">
+                <thead>
+                <tr>
+                    <th class="py-4 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">İşlemler</th>
+                    <th class="py-4 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Hesap Adı</th>
+                    <th class="py-4 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Tür</th>
+                    <th class="py-4 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Para Birimi</th>
+                    <th class="py-4 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200 text-right">Bakiye</th>
+                    <th class="py-4 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Durum</th>
+                </tr>
+                </thead>
+                <tbody class="text-sm">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <abp-script src="/Pages/Accounts/Index.js" />
+}

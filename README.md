@@ -1,4 +1,4 @@
-# NexStock
+# NoxStock
 
 ## About this solution
 
@@ -13,12 +13,12 @@ This is a layered startup solution based on [Domain Driven Design (DDD)](https:/
 
 The solution comes with a default configuration that works out of the box. However, you may consider to change the following configuration before running your solution:
 
-* Check the `ConnectionStrings` in `appsettings.json` files under the `NexStock.Web` and `NexStock.DbMigrator` projects and change it if you need.
+* Check the `ConnectionStrings` in `appsettings.json` files under the `NoxStock.Web` and `NoxStock.DbMigrator` projects and change it if you need.
 
 ### Before running the application
 
 * Run `abp install-libs` command on your solution folder to install client-side package dependencies. This step is automatically done when you create a new solution, if you didn't especially disabled it. However, you should run it yourself if you have first cloned this solution from your source control, or added a new client-side package dependency to your solution.
-* Run `NexStock.DbMigrator` to create the initial database. This step is also automatically done when you create a new solution, if you didn't especially disabled it. This should be done in the first run. It is also needed if a new database migration is added to the solution later.
+* Run `NoxStock.DbMigrator` to create the initial database. This step is also automatically done when you create a new solution, if you didn't especially disabled it. This should be done in the first run. It is also needed if a new database migration is added to the solution later.
 
 #### Generating a Signing Certificate
 
@@ -42,16 +42,16 @@ For more information, please refer to: [OpenIddict Certificate Configuration](ht
 
 This is a layered monolith application that consists of the following applications:
 
-* `NexStock.DbMigrator`: A console application which applies the migrations and also seeds the initial data. It is useful on development as well as on production environment.
-* `NexStock.Web`: ASP.NET Core MVC / Razor Pages application that is the essential web application of the solution.
+* `NoxStock.DbMigrator`: A console application which applies the migrations and also seeds the initial data. It is useful on development as well as on production environment.
+* `NoxStock.Web`: ASP.NET Core MVC / Razor Pages application that is the essential web application of the solution.
 
 #### Test Projects
 
 The `test` folder contains the following test projects:
 
-* `NexStock.Application.Tests`: Application layer tests.
-* `NexStock.Domain.Tests`: Domain layer tests.
-* `NexStock.EntityFrameworkCore.Tests`: Entity Framework Core integration tests.
+* `NoxStock.Application.Tests`: Application layer tests.
+* `NoxStock.Domain.Tests`: Domain layer tests.
+* `NoxStock.EntityFrameworkCore.Tests`: Entity Framework Core integration tests.
 
 
 

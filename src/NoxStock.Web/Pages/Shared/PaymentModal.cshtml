@@ -1,0 +1,27 @@
+@page
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NoxStock.Web.Pages.Shared.PaymentModalModel
+@{
+    Layout = null;
+}
+
+<form asp-page="/Shared/PaymentModal">
+    <abp-modal>
+        <abp-modal-header title="@(Model.Payment.IsCollection ? "Tahsilat Al" : "Ödeme Yap")"></abp-modal-header>
+        <abp-modal-body>
+            <input type="hidden" asp-for="Payment.BusinessPartnerId" />
+            <input type="hidden" asp-for="Payment.IsCollection" />
+            
+            <div class="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <span class="text-xs text-slate-500 uppercase font-semibold">Cari:</span>
+                <span class="font-bold text-slate-800 ml-2">@Model.BusinessPartnerName</span>
+            </div>
+
+            <abp-select asp-for="Payment.AccountId" asp-items="Model.Accounts" label="Kasa / Banka Hesabı" />
+            <abp-input asp-for="Payment.Amount" label="Tutar" />
+            <abp-input asp-for="Payment.Date" label="Tarih" />
+            <abp-input asp-for="Payment.Description" label="Açıklama" />
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

@@ -146,7 +146,7 @@ Required capabilities:
 
 ## Enterprise Scope To Add
 
-The initial modules above are the current commercial foundation. The following capabilities are required before NexStock can compete with mature market products:
+The initial modules above are the current commercial foundation. The following capabilities are required before NoxStock can compete with mature market products:
 
 ### Inventory Operations
 

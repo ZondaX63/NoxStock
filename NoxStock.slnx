@@ -1,0 +1,24 @@
+<Solution>
+    <Configurations>
+        <Platform Name="Any CPU" />
+    </Configurations>
+    <Folder Name="/src/">
+        <Project Path="src/NoxStock.Domain/NoxStock.Domain.csproj" />
+        <Project Path="src/NoxStock.Application/NoxStock.Application.csproj" />
+        <Project Path="src/NoxStock.EntityFrameworkCore/NoxStock.EntityFrameworkCore.csproj" />
+        <Project Path="src/NoxStock.Web/NoxStock.Web.csproj" />
+        <Project Path="src/NoxStock.Domain.Shared/NoxStock.Domain.Shared.csproj" />
+        <Project Path="src/NoxStock.Application.Contracts/NoxStock.Application.Contracts.csproj" />
+        <Project Path="src/NoxStock.HttpApi/NoxStock.HttpApi.csproj" />
+        <Project Path="src/NoxStock.HttpApi.Client/NoxStock.HttpApi.Client.csproj" />
+        <Project Path="src/NoxStock.DbMigrator/NoxStock.DbMigrator.csproj" />
+    </Folder>
+    <Folder Name="/test/">
+        <Project Path="test/NoxStock.Application.Tests/NoxStock.Application.Tests.csproj" />
+        <Project Path="test/NoxStock.Web.Tests/NoxStock.Web.Tests.csproj" />
+        <Project Path="test/NoxStock.EntityFrameworkCore.Tests/NoxStock.EntityFrameworkCore.Tests.csproj" />
+        <Project Path="test/NoxStock.TestBase/NoxStock.TestBase.csproj" />
+        <Project Path="test/NoxStock.Domain.Tests/NoxStock.Domain.Tests.csproj" />
+        <Project Path="test/NoxStock.HttpApi.Client.ConsoleTestApp/NoxStock.HttpApi.Client.ConsoleTestApp.csproj" />
+    </Folder>
+</Solution>

@@ -7,7 +7,7 @@ Last updated: 2026-07-13
 Current command:
 
 ```bash
-dotnet test NexStock.slnx -m:1
+dotnet test NoxStock.slnx -m:1
 ```
 
 Status on 2026-07-13:
@@ -22,9 +22,9 @@ Frontend interaction verification on 2026-07-11:
 
 - Static button-to-handler audit found no unbound visible command buttons in implemented workflows.
 - `node --check` passes for changed Products, Print Labels, Current Account, and Stock Movements scripts.
-- `dotnet build NexStock.slnx -m:1 --no-restore -v:minimal` passes with 0 warnings and 0 errors.
+- `dotnet build NoxStock.slnx -m:1 --no-restore -v:minimal` passes with 0 warnings and 0 errors.
 - A forced `-t:Rebuild` passes but reports 153 pre-existing nullable and Mapperly diagnostics.
-- `dotnet test test/NexStock.Web.Tests/NexStock.Web.Tests.csproj -m:1 --no-build --no-restore -v:minimal` passed 12/12 after the host sidebar and ABP page-script layout changes.
+- `dotnet test test/NoxStock.Web.Tests/NoxStock.Web.Tests.csproj -m:1 --no-build --no-restore -v:minimal` passed 12/12 after the host sidebar and ABP page-script layout changes.
 
 Latest multi-tenant isolation verification:
 

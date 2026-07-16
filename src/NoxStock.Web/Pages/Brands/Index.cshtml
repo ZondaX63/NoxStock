@@ -1,0 +1,39 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@model NoxStock.Web.Pages.Brands.IndexModel
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = "Markalar";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Markalar</h2>
+        <p class="text-sm text-slate-500 mt-1">Sistemdeki tüm markaları yönetin.</p>
+    </div>
+    <button id="NewBrandButton" type="button" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-indigo-500/30 flex items-center">
+        <span class="material-icons-round mr-2 text-sm">add</span>
+        Yeni Marka Ekle
+    </button>
+</div>
+
+<div class="card overflow-hidden">
+    <div class="p-6">
+        <div class="overflow-x-auto">
+            <table id="BrandsTable" class="table w-full text-left">
+                <thead>
+                    <tr>
+                        <th class="py-4 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">İşlemler</th>
+                        <th class="py-4 px-4 text-slate-500 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">Marka Adı</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <abp-script src="/Pages/Brands/Index.js" />
+}

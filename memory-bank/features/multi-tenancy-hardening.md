@@ -8,7 +8,7 @@ Last updated: 2026-07-13
 - Current phase: Program complete; production resolver and data-ownership operations remain future work
 - Completed phases: Phase 0 through Phase 11
 - Blocked phases: none
-- Last successful build: `dotnet build NexStock.slnx -m:1 --no-restore -v:minimal` passed with 0 warnings and 0 errors on 2026-07-13
+- Last successful build: `dotnet build NoxStock.slnx -m:1 --no-restore -v:minimal` passed with 0 warnings and 0 errors on 2026-07-13
 - Last successful tests: EntityFrameworkCore 31/31 and Web 12/12 passed; Domain and Application projects currently contain no discoverable tests
 - Latest migration: `20260713123858_Add_Tenant_Activation`, applied and verified in the local Docker PostgreSQL database
 
@@ -18,7 +18,7 @@ Last updated: 2026-07-13
 - Commercial entities use ABP `IMultiTenant`, `ICurrentTenant`, and the standard data filter.
 - Input DTOs must not accept or trust `TenantId`.
 - Development tenant resolution target is `/t/{tenantName}`.
-- Production tenant resolution target is `{tenant}.nexstock.com`.
+- Production tenant resolution target is `{tenant}.noxstock.com`.
 - Commercial permissions are tenant-only; platform and tenant administration permissions are host-only.
 - `TenantId` identifies the business, `BranchId` identifies an internal branch, and `WarehouseId` identifies a stock location.
 - Dedicated tenant databases are deferred; the current DbMigrator remains compatible with tenant connection strings for a future hybrid model.
@@ -55,10 +55,10 @@ DATABASE/MIGRATION:
 - No schema change in Phase 0.
 
 TESTS:
-- `dotnet test NexStock.slnx -m:1 --no-build -v:minimal`: 15 EntityFrameworkCore and 1 Web test passed.
+- `dotnet test NoxStock.slnx -m:1 --no-build -v:minimal`: 15 EntityFrameworkCore and 1 Web test passed.
 
 BUILD:
-- `dotnet build NexStock.slnx -m:1 --no-restore -v:minimal`: passed with one pre-existing Web test entry-point warning.
+- `dotnet build NoxStock.slnx -m:1 --no-restore -v:minimal`: passed with one pre-existing Web test entry-point warning.
 
 RISKS:
 - Existing null-tenant commercial data remains unresolved.
@@ -78,27 +78,27 @@ IMPLEMENTED:
 - Made optional test secret files conditional so a clean checkout builds without a local secrets file.
 
 CHANGED FILES:
-- `src/NexStock.Domain.Shared/MultiTenancy/CurrentTenantExtensions.cs`
-- `src/NexStock.Application/Products/ProductAppService.cs`
-- `test/NexStock.EntityFrameworkCore.Tests/EntityFrameworkCore/MultiTenancy/TwoTenantTestContext.cs`
-- `test/NexStock.EntityFrameworkCore.Tests/EntityFrameworkCore/MultiTenancy/TenantIsolationTests.cs`
-- `test/NexStock.EntityFrameworkCore.Tests/EntityFrameworkCore/NexStockEntityFrameworkCoreTestBase.cs`
-- `test/NexStock.EntityFrameworkCore.Tests/EntityFrameworkCore/Applications/ReportingAppServiceTests.cs`
-- `test/NexStock.EntityFrameworkCore.Tests/EntityFrameworkCore/Samples/SampleRepositoryTests.cs`
-- `test/NexStock.TestBase/NexStockTestConsts.cs`
-- `test/NexStock.TestBase/Security/FakeCurrentPrincipalAccessor.cs`
-- `test/NexStock.TestBase/NexStock.TestBase.csproj`
-- `test/NexStock.HttpApi.Client.ConsoleTestApp/NexStock.HttpApi.Client.ConsoleTestApp.csproj`
+- `src/NoxStock.Domain.Shared/MultiTenancy/CurrentTenantExtensions.cs`
+- `src/NoxStock.Application/Products/ProductAppService.cs`
+- `test/NoxStock.EntityFrameworkCore.Tests/EntityFrameworkCore/MultiTenancy/TwoTenantTestContext.cs`
+- `test/NoxStock.EntityFrameworkCore.Tests/EntityFrameworkCore/MultiTenancy/TenantIsolationTests.cs`
+- `test/NoxStock.EntityFrameworkCore.Tests/EntityFrameworkCore/NoxStockEntityFrameworkCoreTestBase.cs`
+- `test/NoxStock.EntityFrameworkCore.Tests/EntityFrameworkCore/Applications/ReportingAppServiceTests.cs`
+- `test/NoxStock.EntityFrameworkCore.Tests/EntityFrameworkCore/Samples/SampleRepositoryTests.cs`
+- `test/NoxStock.TestBase/NoxStockTestConsts.cs`
+- `test/NoxStock.TestBase/Security/FakeCurrentPrincipalAccessor.cs`
+- `test/NoxStock.TestBase/NoxStock.TestBase.csproj`
+- `test/NoxStock.HttpApi.Client.ConsoleTestApp/NoxStock.HttpApi.Client.ConsoleTestApp.csproj`
 
 DATABASE/MIGRATION:
 - No schema change; no migration generated.
 
 TESTS:
-- `dotnet test test/NexStock.EntityFrameworkCore.Tests/NexStock.EntityFrameworkCore.Tests.csproj -m:1`: 22/22 passed.
+- `dotnet test test/NoxStock.EntityFrameworkCore.Tests/NoxStock.EntityFrameworkCore.Tests.csproj -m:1`: 22/22 passed.
 - Seven focused two-tenant isolation scenarios passed.
 
 BUILD:
-- `dotnet build NexStock.slnx -m:1 --no-restore -v:minimal`: passed before final fixture-only adjustments; the solution build is repeated at the next checkpoint.
+- `dotnet build NoxStock.slnx -m:1 --no-restore -v:minimal`: passed before final fixture-only adjustments; the solution build is repeated at the next checkpoint.
 
 RISKS:
 - The full tenant-required guard is still scheduled for Phase 3; only Product creation is guarded at this checkpoint.
@@ -127,7 +127,7 @@ STATUS: COMPLETED
 DATE: 2026-07-13
 
 IMPLEMENTED:
-- Added fail-closed `NexStock:TenantRequired` guards to catalog, stock, current-account, document, POS, reporting, dashboard, settings, alerts, labels, pricing, statement, and audit application-service entry points.
+- Added fail-closed `NoxStock:TenantRequired` guards to catalog, stock, current-account, document, POS, reporting, dashboard, settings, alerts, labels, pricing, statement, and audit application-service entry points.
 - Global exchange-rate reads/worker updates and host tenant registration remain outside the commercial guard.
 
 TESTS:
@@ -138,8 +138,8 @@ STATUS: COMPLETED
 DATE: 2026-07-13
 
 IMPLEMENTED:
-- Marked all NexStock commercial permissions and children as `MultiTenancySides.Tenant`.
-- Added host-only `NexStock.ExchangeRates.Refresh`.
+- Marked all NoxStock commercial permissions and children as `MultiTenancySides.Tenant`.
+- Added host-only `NoxStock.ExchangeRates.Refresh`.
 - Moved scheduled exchange refresh behind an internal updater so the worker does not impersonate a user permission.
 
 PHASE: Phase 5 - Cross-tenant relation validation
@@ -223,8 +223,8 @@ IMPLEMENTED:
 - Rebuilt the DbMigrator image from current source, applied migrations idempotently, and removed the missing GSS runtime-library warning.
 
 CHANGED FILES:
-- `test/NexStock.EntityFrameworkCore.Tests/EntityFrameworkCore/MultiTenancy/TenantIsolationTests.cs`
-- `src/NexStock.DbMigrator/Dockerfile`
+- `test/NoxStock.EntityFrameworkCore.Tests/EntityFrameworkCore/MultiTenancy/TenantIsolationTests.cs`
+- `src/NoxStock.DbMigrator/Dockerfile`
 - `memory-bank/features/multi-tenancy-hardening.md`
 - `memory-bank/activeContext.md`
 - `memory-bank/progress.md`

@@ -1,5 +1,27 @@
 # Progress
 
+## 2026-07-16 NoxStock Product Rename
+
+- Renamed all active backend, frontend, ABP, test, solution, project, localization, permission, setting, proxy, and Docker identifiers to NoxStock.
+- Renamed the operational PostgreSQL database to `NoxStock` and moved active persistence to `noxstock-postgres-data` and `noxstock-data-protection` without deleting rollback volumes.
+- Added reversible persisted-identifier migrations `20260716204050_Rename_Product_To_NoxStock` and `20260716205742_Complete_NoxStock_Persisted_Rename`.
+- Confirmed persisted rename results: 6 settings, 205 permission grants, and the OpenIddict scope use NoxStock; a scan of every PostgreSQL text column found no old product-name value.
+- Confirmed runtime names: `noxstock-postgres`, `noxstock-dbmigrator`, `noxstock-web`, `noxstock-dbmigrator:latest`, and `noxstock-web:latest`.
+- Verification: solution build succeeds; Domain 2/2, EntityFrameworkCore 35/35, and Web 16/16 tests pass; Docker health/login smoke checks return HTTP 200.
+
+## 2026-07-16 Commercial Stabilization Gate
+
+- Added explicit transactional units of work to invoice approval/payment/cancellation, POS creation/cancellation, and offer/order conversion workflows.
+- Added domain-owned document status transitions and rejected invalid backward or repeated terminal transitions.
+- Added tenant-scoped operation-key idempotency for invoice payments and POS sales, backed by filtered unique indexes in migration `20260716155704_Add_Commercial_Operation_Idempotency`.
+- Verified that duplicate approval, payment, cancellation, and POS retries do not create a second stock movement, account transaction, current-account balance effect, or commercial document.
+- Extended tenant A/B integration coverage to invoice payments while retaining product, document, POS, stock, relation, and report isolation coverage.
+- Stabilized the SQLite integration runner by serializing test collections and keeping its shared in-memory connection alive for the test host lifetime.
+- Verification result: solution build 0 warnings/0 errors; EntityFrameworkCore 35/35; Domain 2/2; Web 16/16; EF reports no pending model changes; `git diff --check` passes.
+- Docker result: PostgreSQL healthy; host, `asd`, and `asd2` migrations successful; Web running at `http://localhost:8080`; host and tenant login smoke checks return HTTP 200.
+- Designed but did not implement Branch, Warehouse, WarehouseStock, StockTransfer, and StockReservation. The approved invariants and staged Product.Quantity migration are in `inventoryArchitecture.md`.
+- Remaining reliability work: production-PostgreSQL rollback fault tests, authenticated Playwright A/B scenarios, graceful handling of concurrent unique-key races, and reconciliation tooling before warehouse backfill.
+
 Last updated: 2026-07-16
 
 ## What Works
@@ -14,14 +36,14 @@ Last updated: 2026-07-16
 - The shared UI localization baseline is now active: TR/EN resources drive the sidebar, topbar, login-brand content, login placeholder, and dashboard. The Web suite includes the ABP language-switch redirect/cookie regression test, and live Docker verification confirms tenant English login content at `/t/asd/Account/Login` after switching languages.
 - Platform administration is now cleanly separated from tenant operations. Host sidebar: Platform Administration -> Companies, Users & Roles, Audit Logs. Tenant sidebars no longer expose user/role or audit links, and direct tenant-path requests to those host routes return HTTP 403. The tenant sidebar now uses Workspace, Operations, and Customers & Organization headings, with orders under Commercial rather than business partners. Web tests pass 16/16 and Docker host-admin verification returns HTTP 200 for Audit Logs.
 - Desktop visual density and shell clipping pass completed: desktop UI now targets 90% rem density at normal browser zoom, and topbar/sidebar headers use fixed non-shrinking 64px dimensions. The web image was rebuilt without cache; the running container serves the new CSS and login responds with HTTP 200.
-- NexStock branding assets are now integrated across auth and application layouts. The supplied favicon set is published from `wwwroot`, the manifest is named NexStock with branded theme colors, and live Docker checks return HTTP 200 for `favicon.ico` and `site.webmanifest`.
+- NoxStock branding assets are now integrated across auth and application layouts. The supplied favicon set is published from `wwwroot`, the manifest is named NoxStock with branded theme colors, and live Docker checks return HTTP 200 for `favicon.ico` and `site.webmanifest`.
 - The actual application logo now replaces the placeholder `N` in the sidebar, topbar, and login brand header. All three surfaces use the same supplied Android logo asset, which is present and served successfully by the running Docker web container.
 
 - **Frontend foundation pass completed**:
   - Shared light/dark color tokens now cover cards, forms, tables, DataTables, modals, reports, and error notices.
   - The main layout uses responsive gutters and a bounded operational content frame; theme selection is applied before initial paint.
   - Sidebar/topbar density and page action headers are responsive for tablet/mobile widths.
-  - The login/register shell is now NexStock-branded and dark-mode compatible without decorative gradients, glass effects, or remote avatar dependencies.
+  - The login/register shell is now NoxStock-branded and dark-mode compatible without decorative gradients, glass effects, or remote avatar dependencies.
   - Invoice, report, product and settings pages now use shared form/table rules instead of conflicting inline style blocks.
   - Docker validation after the pass succeeded using the standard `docker compose up -d` stack at `http://localhost:8080`.
 
@@ -55,7 +77,7 @@ Last updated: 2026-07-16
 - Dashboard lists overdue and next-seven-day open invoices; paid and cancelled documents are excluded.
 - Current account document list exposes due date and outstanding balance, highlighting overdue open items.
 - Current-account detail includes a dedicated invoice-linked payment history with the account used, transaction direction, amount, date, description, and reversal records.
-- Real NexStock permission constants and definitions exist.
+- Real NoxStock permission constants and definitions exist.
 - BookStore tutorial source modules were removed.
 - Root page redirects to Dashboard.
 - Web build passes.
@@ -113,7 +135,7 @@ Last updated: 2026-07-16
 - The stabilized host/tenant login split and tenant commercial experience have been deployed live.
 - Host administrators remain limited to tenant/company provisioning; tenant users enter their own `/t/{tenantName}` commercial workspace.
 - The immediate release gate is now operational reliability: production regression checks, backups, monitoring, error reporting, TLS/secrets review, and repeatable deployment/rollback procedures.
-- Centralized error observability is now implemented: unhandled server errors are logged with trace ID, tenant/user context, request method, and path; programmatic requests receive JSON problem responses and page requests receive a NexStock error page with a support tracking code.
+- Centralized error observability is now implemented: unhandled server errors are logged with trace ID, tenant/user context, request method, and path; programmatic requests receive JSON problem responses and page requests receive a NoxStock error page with a support tracking code.
 - Browser and jQuery AJAX failures are surfaced to users as non-blocking error notices and reported through an authenticated diagnostics endpoint. The endpoint was live-tested as tenant `asd`, returned HTTP 202, and wrote the tenant/user-scoped event to Docker Serilog output.
 - Serilog file retention is bounded by daily rolling files, a 30-file retention limit, and a 10 MB per-file cap.
 
@@ -130,12 +152,12 @@ Last updated: 2026-07-16
 - Completed null-tenant dry-run reporting; manual ownership mapping remains an operational decision.
 - Completed DbMigrator order review and tenant-seed idempotency verification.
 - Completed final verification: 31 EntityFrameworkCore tests, 13 Web tests, no pending EF model changes, and all nine migrations applied in local Docker PostgreSQL.
-- Docker stack is running: `nexstock-postgres` healthy on host port `5439`, `nexstock-dbmigrator` completed successfully, and `nexstock-web` is available at `http://localhost:5002`.
+- Docker stack is running: `noxstock-postgres` healthy on host port `5439`, `noxstock-dbmigrator` completed successfully, and `noxstock-web` is available at `http://localhost:5002`.
 - Host admin UX now restricts the sidebar to tenant management. The ABP Tenant Management new-tenant modal script bundle and its required `#AbpContentToolbar` selector are rendered by the custom application layout; the authorized modal endpoint returns HTTP 200.
 - Login and logout hardening completed: failed sign-ins show a form-level error, tenant sign-ins remain under `/t/{tenant-name}`, and logout clears the identity cookie before returning to login. Verified against the live Docker stack.
 - Tenant login now supports the documented username-or-email field correctly: it resolves e-mail addresses through `UserManager.FindByEmailAsync` before password sign-in. This fixes valid provisioned administrator e-mail credentials being rejected by the username-only sign-in overload; failure outcomes are logged for diagnosis.
 - Tenant login now writes the authenticated user's ABP tenant claim to the identity ticket. This prevents tenant dashboard requests from being treated as host sessions and redirecting to `/TenantManagement/Tenants`; live Docker verification renders `/t/asd/Dashboard` successfully.
-- Docker now retains ASP.NET Data Protection keys in the `nexstock-data-protection` volume, preventing stale login-form antiforgery tokens from returning HTTP 400 after a Web container recreate. This was validated with a token captured before and posted after a forced recreate.
+- Docker now retains ASP.NET Data Protection keys in the `noxstock-data-protection` volume, preventing stale login-form antiforgery tokens from returning HTTP 400 after a Web container recreate. This was validated with a token captured before and posted after a forced recreate.
 - Finalized tenant onboarding UI: host administrators now create a company together with a chosen administrator username, email and password instead of relying on the hidden ABP default `admin` username. The form shows the tenant login route convention before creation.
 - Tenant list reliability fix: the host company page no longer relies on the ABP list endpoint that returned an empty payload for persisted rows. It reads `ITenantRepository` directly, so successful provisioning reloads into a visible row.
 - Tenant provisioning reliability fix: the onboarding page sets the required tenant `IsActive` extension property before persistence, seeds the tenant administrator, handles duplicate codes, logs unexpected exceptions, and shows validation errors in the modal. A live Docker POST returned HTTP 204 and was visible in the table immediately.
@@ -154,7 +176,7 @@ Last updated: 2026-07-16
 - Fixed the Turkish-culture invoice submit failure reported with trace `0HNN2JM3FHH6C:000000B8`. Decimal range metadata that parsed the dot-decimal lower bound during Razor validation has been removed in favor of the existing application-service validation. The invoice entry grid was also redesigned with stable column widths and mobile-safe scrolling so VAT and discount fields remain usable.
 - Corrected the next Turkish-culture invoice binding issue: date inputs now render ISO values for the browser (`yyyy-MM-dd`) rather than posting localized `dd.MM.yyyy` values. The dedicated invoice table layout replaces the generic table spacing that caused header and input columns to appear offset.
 - Added a server-side date-post fallback on invoice creation. Both localized Turkish dates and ISO dates are parsed before model-state validation, which closes the remaining browser-culture dependency. Docker Desktop's `desktop-linux` context is the canonical local environment: the application is `http://localhost:8080` and PostgreSQL external access is `localhost:5439`.
-- Cleared the ABP client warning caused by an unloaded NexStock localization resource by adding the culture-aware application-localization script to the shared layout. Hardened DataTable row-action visibility callbacks in invoices, offers, and orders so the ABP callback can pass either its wrapper or a raw record without a JavaScript exception.
+- Cleared the ABP client warning caused by an unloaded NoxStock localization resource by adding the culture-aware application-localization script to the shared layout. Hardened DataTable row-action visibility callbacks in invoices, offers, and orders so the ABP callback can pass either its wrapper or a raw record without a JavaScript exception.
 - Production regression walkthrough across tenant onboarding, authentication, products, invoices, POS, offers/orders, reports, notifications, and audit logs
 - Pagination and export polish for high-volume reports and audit logs
 - Frontend/runtime regression pass across all implemented workflows
@@ -189,10 +211,10 @@ Last updated: 2026-07-16
 - 2026-07-10: ASP.NET Core + Razor Pages + ABP confirmed as final product direction.
 - 2026-07-10: Legacy React/Node implementation confirmed as reference only.
 - 2026-07-10: BookStore tutorial source artifacts removed.
-- 2026-07-10: NexStock module permission system introduced.
+- 2026-07-10: NoxStock module permission system introduced.
 - 2026-07-10: Next phases fixed around commercial workflow correctness before AI or polish.
 - 2026-07-10: Phase 1 backend prototype slice added for accounts, stock movements, dashboard summary, and document approval/cancellation.
 - 2026-07-10: Cancellation policy confirmed as reversal-based commercial history preservation.
 - 2026-07-10: Phase 1 completed successfully with UI wiring and Purchase Invoice tests. Focus shifted to Phase 2.
 - 2026-07-13: Shared database/shared schema confirmed as the initial SaaS model; multi-tenancy security hardening started before Branch/Warehouse expansion.
-- 2026-07-13: `/t/{tenantName}` selected for development resolution and `{tenant}.nexstock.com` selected for production.
+- 2026-07-13: `/t/{tenantName}` selected for development resolution and `{tenant}.noxstock.com` selected for production.

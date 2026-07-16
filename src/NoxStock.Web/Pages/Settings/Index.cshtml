@@ -1,0 +1,66 @@
+@page
+@model NoxStock.Web.Pages.Settings.IndexModel
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = "Firma Ayarları";
+}
+
+<form method="post" id="CompanySettingsForm">
+    <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Firma Ayarları</h2>
+            <p class="mt-1 text-sm text-slate-500">Firma, belge ve stok varsayımları.</p>
+        </div>
+        <button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
+            <span class="material-icons-round text-base">save</span>Kaydet
+        </button>
+    </div>
+
+    @if (TempData["SettingsSaved"] is string settingsSaved)
+    {
+        <div class="mb-5 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><span class="material-icons-round text-base">check_circle</span>@settingsSaved</div>
+    }
+
+    <div asp-validation-summary="ModelOnly" class="mb-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <section class="border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6">
+            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Firma Bilgileri</h3></div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div class="xl:col-span-2"><label asp-for="Settings.CompanyName" class="field-label">Firma unvanı</label><input asp-for="Settings.CompanyName" class="field-input" /><span asp-validation-for="Settings.CompanyName" class="field-error"></span></div>
+                <div><label asp-for="Settings.TaxNumber" class="field-label">Vergi no</label><input asp-for="Settings.TaxNumber" inputmode="numeric" class="field-input" /><span asp-validation-for="Settings.TaxNumber" class="field-error"></span></div>
+                <div><label asp-for="Settings.TaxOffice" class="field-label">Vergi dairesi</label><input asp-for="Settings.TaxOffice" class="field-input" /><span asp-validation-for="Settings.TaxOffice" class="field-error"></span></div>
+                <div><label asp-for="Settings.Phone" class="field-label">Telefon</label><input asp-for="Settings.Phone" class="field-input" /><span asp-validation-for="Settings.Phone" class="field-error"></span></div>
+                <div><label asp-for="Settings.Email" class="field-label">E-posta</label><input asp-for="Settings.Email" type="email" class="field-input" /><span asp-validation-for="Settings.Email" class="field-error"></span></div>
+                <div class="md:col-span-2 xl:col-span-3"><label asp-for="Settings.Address" class="field-label">Adres</label><textarea asp-for="Settings.Address" rows="3" class="field-input resize-y"></textarea><span asp-validation-for="Settings.Address" class="field-error"></span></div>
+            </div>
+        </section>
+
+        <section class="border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6">
+            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Ticari Varsayımlar</h3></div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div><label asp-for="Settings.DefaultCurrency" class="field-label">Varsayılan para birimi</label><select asp-for="Settings.DefaultCurrency" class="field-input"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option></select><span asp-validation-for="Settings.DefaultCurrency" class="field-error"></span></div>
+                <div><label asp-for="Settings.DefaultVatRate" class="field-label">Varsayılan KDV (%)</label><input asp-for="Settings.DefaultVatRate" type="number" min="0" max="100" step="0.01" class="field-input" /><span asp-validation-for="Settings.DefaultVatRate" class="field-error"></span></div>
+                <div><label asp-for="Settings.DefaultUnit" class="field-label">Varsayılan birim</label><select asp-for="Settings.DefaultUnit" class="field-input"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select><span asp-validation-for="Settings.DefaultUnit" class="field-error"></span></div>
+                <div><label asp-for="Settings.DefaultLabelFormat" class="field-label">Etiket kodu</label><select asp-for="Settings.DefaultLabelFormat" class="field-input"><option value="barcode">Barkod</option><option value="qr">QR</option></select><span asp-validation-for="Settings.DefaultLabelFormat" class="field-error"></span></div>
+                <div><label asp-for="Settings.DefaultCashAccountId" class="field-label">Varsayılan kasa</label><select asp-for="Settings.DefaultCashAccountId" asp-items="Model.CashAccounts" class="field-input"></select></div>
+                <div><label asp-for="Settings.DefaultBankAccountId" class="field-label">Varsayılan banka / kart</label><select asp-for="Settings.DefaultBankAccountId" asp-items="Model.BankAccounts" class="field-input"></select></div>
+                <div><label for="ThemeMode" class="field-label">Görünüm</label><select id="ThemeMode" class="field-input"><option value="light">Açık</option><option value="dark">Koyu</option></select></div>
+            </div>
+        </section>
+
+        <section class="p-5 sm:p-6">
+            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Belge Numaralandırma</h3></div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div><label asp-for="Settings.SaleInvoiceNumberPrefix" class="field-label">Satış faturası öneki</label><input asp-for="Settings.SaleInvoiceNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.SaleInvoiceNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.PurchaseInvoiceNumberPrefix" class="field-label">Alış faturası öneki</label><input asp-for="Settings.PurchaseInvoiceNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PurchaseInvoiceNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.OfferNumberPrefix" class="field-label">Teklif öneki</label><input asp-for="Settings.OfferNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.OfferNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.SaleOrderNumberPrefix" class="field-label">Satış siparişi öneki</label><input asp-for="Settings.SaleOrderNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.SaleOrderNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.PurchaseOrderNumberPrefix" class="field-label">Alış siparişi öneki</label><input asp-for="Settings.PurchaseOrderNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PurchaseOrderNumberPrefix" class="field-error"></span></div>
+                <div><label asp-for="Settings.PosSaleNumberPrefix" class="field-label">POS fişi öneki</label><input asp-for="Settings.PosSaleNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PosSaleNumberPrefix" class="field-error"></span></div>
+            </div>
+        </section>
+    </div>
+</form>
+
+@section Scripts { <abp-script src="/Pages/Settings/Index.js" /> }

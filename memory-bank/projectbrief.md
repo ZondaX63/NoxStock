@@ -1,10 +1,10 @@
-# NexStock Project Brief
+# NoxStock Project Brief
 
 Last updated: 2026-07-10
 
 ## Purpose
 
-NexStock is a commercial business management web application for small and medium-sized businesses. The product must bring inventory, customers, suppliers, invoices, orders, offers, POS sales, cash/bank accounts, basic accounting, reporting, personnel, roles, permissions, audit logs, settings, barcode/QR labels, currency rates, and later AI-assisted workflows into one coherent panel.
+NoxStock is a commercial business management web application for small and medium-sized businesses. The product must bring inventory, customers, suppliers, invoices, orders, offers, POS sales, cash/bank accounts, basic accounting, reporting, personnel, roles, permissions, audit logs, settings, barcode/QR labels, currency rates, and later AI-assisted workflows into one coherent panel.
 
 ## Product Direction
 
@@ -41,7 +41,7 @@ Implemented or started:
 
 - The system can support day-to-day commercial operations from a single web panel.
 - Business rules create consistent stock, account, and current-account movements.
-- Permissions map to real NexStock modules, not tutorial entities.
+- Permissions map to real NoxStock modules, not tutorial entities.
 - Migrations are the only schema evolution mechanism.
 - Pages expose useful data, not static placeholder values.
 - Tests cover high-risk business flows before each phase is considered done.

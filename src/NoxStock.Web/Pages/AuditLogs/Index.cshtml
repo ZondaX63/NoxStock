@@ -1,0 +1,51 @@
+@page
+@model NoxStock.Web.Pages.AuditLogs.IndexModel
+@{
+    ViewData["Title"] = "Denetim Kayıtları";
+}
+
+<div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <div>
+        <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">Şeffaf işlem geçmişi</p>
+        <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Denetim Kayıtları</h1>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">ABP tarafından kaydedilen kullanıcı ve servis işlemlerini inceleyin.</p>
+    </div>
+
+    <form method="get" class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-2 lg:grid-cols-5 dark:border-slate-700 dark:bg-slate-900">
+        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Başlangıç<input asp-for="DateFrom" type="date" class="mt-1 block w-full rounded-lg border-slate-300 text-sm dark:border-slate-600 dark:bg-slate-800" /></label>
+        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Bitiş<input asp-for="DateTo" type="date" class="mt-1 block w-full rounded-lg border-slate-300 text-sm dark:border-slate-600 dark:bg-slate-800" /></label>
+        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Kullanıcı<input asp-for="UserName" class="mt-1 block w-full rounded-lg border-slate-300 text-sm dark:border-slate-600 dark:bg-slate-800" placeholder="Kullanıcı adı" /></label>
+        <label class="text-sm font-medium text-slate-700 dark:text-slate-300">HTTP yöntemi<select asp-for="HttpMethod" class="mt-1 block w-full rounded-lg border-slate-300 text-sm dark:border-slate-600 dark:bg-slate-800"><option value="">Tümü</option><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select></label>
+        <label class="flex items-end gap-2 pb-2 text-sm font-medium text-slate-700 dark:text-slate-300"><input asp-for="ShowExceptions" type="checkbox" class="rounded border-slate-300 text-indigo-600" /> Hata içerenler</label>
+        <div class="sm:col-span-2 lg:col-span-5"><button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><span class="material-icons-round text-base">filter_alt</span> Filtrele</button></div>
+    </form>
+
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+            <h2 class="font-semibold text-slate-900 dark:text-white">İşlem geçmişi</h2>
+            <span class="text-sm text-slate-500 dark:text-slate-400">Toplam @Model.Snapshot.TotalCount kayıt</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800/70 dark:text-slate-400"><tr><th class="px-5 py-3">Zaman</th><th class="px-5 py-3">Kullanıcı</th><th class="px-5 py-3">İşlem</th><th class="px-5 py-3">Adres</th><th class="px-5 py-3">Süre</th><th class="px-5 py-3">Durum</th></tr></thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                @foreach (var item in Model.Snapshot.Items)
+                {
+                    <tr class="@(item.HasException ? "bg-red-50/60 dark:bg-red-950/10" : "")">
+                        <td class="whitespace-nowrap px-5 py-3 text-slate-600 dark:text-slate-300">@Model.FormatDate(item.ExecutionTime)</td>
+                        <td class="px-5 py-3 font-medium text-slate-900 dark:text-white">@item.UserName<div class="text-xs font-normal text-slate-500">@item.ClientIpAddress</div></td>
+                        <td class="px-5 py-3"><span class="font-semibold text-slate-700 dark:text-slate-200">@item.HttpMethod</span><div class="max-w-xs truncate text-xs text-slate-500" title="@item.Url">@(string.IsNullOrWhiteSpace(item.MethodName) ? item.Url : item.MethodName)</div></td>
+                        <td class="px-5 py-3 text-slate-600 dark:text-slate-300">@item.EntityChangeCount değişiklik</td>
+                        <td class="whitespace-nowrap px-5 py-3 text-slate-600 dark:text-slate-300">@item.ExecutionDuration ms</td>
+                        <td class="px-5 py-3">@if (item.HasException) { <span class="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">Hata</span> } else { <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">@(item.HttpStatusCode?.ToString() ?? "Başarılı")</span> }</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Snapshot.Items.Count == 0)
+        {
+            <div class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">Seçilen filtrelerde denetim kaydı bulunamadı.</div>
+        }
+    </section>
+</div>

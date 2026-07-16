@@ -1,0 +1,111 @@
+@using System.Globalization
+@using NoxStock.Localization
+@using Volo.Abp.MultiTenancy
+@using Microsoft.AspNetCore.Mvc.Localization
+@inject ICurrentTenant CurrentTenant
+@inject IHtmlLocalizer<NoxStockResource> L
+@{
+    var currentCulture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
+    var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+}
+<!DOCTYPE html>
+<html lang="@currentCulture">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111827" />
+    <link rel="icon" href="~/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="~/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="~/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="~/apple-touch-icon.png" />
+    <link rel="manifest" href="~/site.webmanifest" />
+    <title>@ViewData["Title"] - NoxStock</title>
+    <script>
+        (function () {
+            var savedTheme = localStorage.getItem('noxstock.theme') || (localStorage.getItem('darkMode') === 'true' ? 'dark' : 'light');
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        })();
+    </script>
+    <link rel="stylesheet" href="~/tailwind.css" />
+    <link rel="stylesheet" href="~/global-styles.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" />
+    <style>
+        .auth-shell { min-height: 100vh; background: var(--nx-bg); }
+        .auth-layout { display: grid; min-height: 100vh; width: 100%; grid-template-columns: minmax(25rem, 42%) minmax(0, 1fr); }
+        .auth-brand-panel { display: flex; min-width: 0; background: #101827; color: #fff; }
+        .auth-brand-inner { display: flex; width: 100%; max-width: 42rem; margin: 0 auto; flex-direction: column; justify-content: space-between; padding: 3rem 4.5rem; }
+        .auth-brand-copy { max-width: 34rem; }
+        .auth-tenant-context { display: flex; align-items: center; gap: .5rem; margin-bottom: 1.25rem; color: #c7d2fe; font-size: .875rem; font-weight: 600; }
+        .auth-currency-icon { display: inline-flex; width: 1.25rem; height: 1.25rem; align-items: center; justify-content: center; color: #a5b4fc; font-size: 1.15rem; font-weight: 700; line-height: 1; }
+        .auth-tenant-context strong { color: #fff; font-weight: 700; }
+        .auth-eyebrow { color: #a5b4fc; letter-spacing: .08em; }
+        .auth-brand-title { max-width: 34rem; color: #fff; font-size: 3rem; line-height: 1.08; }
+        .auth-brand-description { max-width: 32rem; color: #c5d0df; }
+        .auth-brand-rule { width: 4rem; height: 2px; background: #6366f1; }
+        .auth-brand-meta { color: #8795a9; }
+        .auth-form-panel { position: relative; display: flex; min-width: 0; min-height: 100vh; align-items: center; justify-content: center; background: var(--nx-surface); padding: 6rem 3rem 3rem; }
+        .auth-form-container { width: min(100%, 29rem); }
+        .auth-language { position: absolute; top: 2rem; right: 3rem; }
+        .auth-input { min-height: 2.75rem; }
+        .auth-btn { min-height: 3rem; background: #4f46e5; }
+        .auth-btn:hover { background: #4338ca; }
+        @@media (max-width: 1023px) {
+            .auth-layout { display: block; }
+            .auth-brand-panel { min-height: 15rem; }
+            .auth-brand-inner { padding: 2rem 1.5rem; }
+            .auth-brand-copy { display: block; max-width: none; }
+            .auth-brand-rule, .auth-eyebrow, .auth-brand-title, .auth-brand-description, .auth-brand-meta { display: none; }
+            .auth-tenant-context { margin: 2rem 0 0; }
+            .auth-form-panel { min-height: calc(100vh - 15rem); padding: 5.5rem 1.5rem 3rem; }
+            .auth-language { top: 1.5rem; right: 1.5rem; }
+        }
+    </style>
+</head>
+<body class="auth-shell min-h-screen">
+    <main class="auth-layout">
+        <section class="auth-brand-panel">
+            <div class="auth-brand-inner">
+                <a href="~/" class="inline-flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800 p-1">
+                        <img src="~/android-chrome-192x192.png" alt="NoxStock" class="h-full w-full object-contain" />
+                    </span>
+                    <span class="text-2xl font-bold">NOX<span class="text-indigo-300">STOCK</span></span>
+                </a>
+                <div class="auth-brand-copy">
+                    @if (CurrentTenant.Id.HasValue && !string.IsNullOrWhiteSpace(CurrentTenant.Name))
+                    {
+                        <div class="auth-tenant-context">
+                            <span class="auth-currency-icon" aria-hidden="true">₺</span>
+                            <span>@L["Auth:TenantLoginFor"]:</span>
+                            <strong>@CurrentTenant.Name</strong>
+                        </div>
+                    }
+                    <div class="auth-brand-rule mb-6"></div>
+                    <p class="auth-eyebrow mb-4 text-xs font-semibold">@L["Auth:BrandEyebrow"]</p>
+                    <h1 class="auth-brand-title font-bold">@L["Auth:BrandHeadline"]</h1>
+                    <p class="auth-brand-description mt-6 text-base leading-relaxed">@L["Auth:BrandDescription"]</p>
+                </div>
+                <div class="auth-brand-meta flex items-center gap-2 text-sm">
+                    <span class="material-icons-round text-base text-indigo-300">verified</span>
+                    <span>NoxStock</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="auth-form-panel">
+            <div class="auth-language flex rounded-md border border-slate-200 bg-white p-1 text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <a href="~/Abp/Languages/Switch?culture=tr&uiCulture=tr&returnUrl=@encodedReturnUrl" class="rounded px-2.5 py-1.5 @(currentCulture == "tr" ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white")">TR</a>
+                <a href="~/Abp/Languages/Switch?culture=en&uiCulture=en&returnUrl=@encodedReturnUrl" class="rounded px-2.5 py-1.5 @(currentCulture == "en" ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white")">EN</a>
+            </div>
+
+            <div class="auth-form-container">
+                <div class="mb-4"><abp-page-alerts /></div>
+                @RenderBody()
+            </div>
+        </section>
+    </main>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

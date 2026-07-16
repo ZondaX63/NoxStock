@@ -1,9 +1,9 @@
 {
   "applications": {
-    "NexStock.Web": {
+    "NoxStock.Web": {
       "type": "dotnet-project",
       "launchUrl": "https://localhost:44396",
-      "path": "../../../src/NexStock.Web/NexStock.Web.csproj",
+      "path": "../../../src/NoxStock.Web/NoxStock.Web.csproj",
       "kubernetesService": ".*-web$",
       "healthCheckEndpoint": "/health-status",
       "healthUiEndpoint": "/health-ui",
@@ -13,7 +13,7 @@
     }
   },
   "containers": {
-    "serviceName": "NexStock-Containers",
+    "serviceName": "NoxStock-Containers",
   },
   "tasks":{
     "Initialize Solution":{

@@ -40,7 +40,7 @@ Known migration order:
 
 ## Migration Workflow
 
-1. Update Domain entities and `NexStockDbContext` configuration.
+1. Update Domain entities and `NoxStockDbContext` configuration.
 2. Build EntityFrameworkCore and DbMigrator with `-m:1`.
 3. Add migration using EF tooling.
 4. Review generated `Up`, `Down`, designer, and model snapshot.

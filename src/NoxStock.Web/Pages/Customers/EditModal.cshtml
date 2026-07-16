@@ -1,0 +1,26 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NoxStock.Web.Pages.Customers.EditModalModel
+@{
+    Layout = null;
+}
+
+<form asp-page="/Customers/EditModal">
+    <abp-modal>
+        <abp-modal-header title="Müşteri Düzenle"></abp-modal-header>
+        <abp-modal-body>
+            <abp-input asp-for="Id" />
+            <abp-input asp-for="Customer.Name" label="Adı Soyadı / Ünvan" />
+            <abp-input asp-for="Customer.Email" label="E-Posta" />
+            <abp-input asp-for="Customer.Phone" label="Telefon" />
+            <abp-input asp-for="Customer.TaxOffice" label="Vergi Dairesi" />
+            <abp-input asp-for="Customer.TaxNumber" label="Vergi Numarası / TCKN" />
+            <abp-input asp-for="Customer.Address" label="Adres" />
+            <abp-input asp-for="Customer.CreditLimit" label="Kredi Limiti" />
+            <abp-input asp-for="Customer.Currency" label="Para Birimi" />
+            <input type="hidden" asp-for="Customer.Type" />
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

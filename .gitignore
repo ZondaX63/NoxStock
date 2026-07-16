@@ -265,17 +265,17 @@ paket-files/
 !.vscode/extensions.json
 *.code-workspace
 
-# NexStock
-src/NexStock.Web/Logs/*
-src/NexStock.Web.Host/Logs/*
-src/NexStock.Web.Public/Logs/*
-src/NexStock.Web.Public.Host/Logs/*
-src/NexStock.AuthServer/Logs/*
-src/NexStock.HttpApi.Host/Logs/*
-src/NexStock.HttpApi.HostWithIds/Logs/*
-src/NexStock.DbMigrator/Logs/*
-src/NexStock.Blazor.Server/Logs/*
-src/NexStock.Blazor.Server.Tiered/Logs/*
+# NoxStock
+src/NoxStock.Web/Logs/*
+src/NoxStock.Web.Host/Logs/*
+src/NoxStock.Web.Public/Logs/*
+src/NoxStock.Web.Public.Host/Logs/*
+src/NoxStock.AuthServer/Logs/*
+src/NoxStock.HttpApi.Host/Logs/*
+src/NoxStock.HttpApi.HostWithIds/Logs/*
+src/NoxStock.DbMigrator/Logs/*
+src/NoxStock.Blazor.Server/Logs/*
+src/NoxStock.Blazor.Server.Tiered/Logs/*
 
 # Use abp install-libs to restore.
 **/wwwroot/libs/*

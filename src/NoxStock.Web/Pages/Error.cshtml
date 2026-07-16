@@ -1,0 +1,25 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using NoxStock.Localization
+@model NoxStock.Web.Pages.ErrorModel
+@inject IHtmlLocalizer<NoxStockResource> L
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = L["Error:Title"].Value;
+}
+
+<div class="text-center">
+    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600">
+        <span class="material-icons-round text-3xl">error_outline</span>
+    </div>
+    <h1 class="mt-6 text-2xl font-bold text-slate-900">@L["Error:Title"]</h1>
+    <p class="mt-3 text-sm leading-6 text-slate-500">@L["Error:Description"]</p>
+    <div class="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">@L["Error:TraceId"]</p>
+        <code class="mt-1 block break-all text-xs text-slate-700">@Model.TraceId</code>
+    </div>
+    <a href="~/" class="mt-6 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700">
+        <span class="material-icons-round text-lg">home</span>
+        @L["Error:Home"]
+    </a>
+</div>

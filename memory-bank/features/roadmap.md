@@ -1,4 +1,4 @@
-# NexStock Phase Roadmap
+# NoxStock Phase Roadmap
 
 Last updated: 2026-07-11
 

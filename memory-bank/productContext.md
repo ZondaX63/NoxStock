@@ -2,9 +2,9 @@
 
 Last updated: 2026-07-10
 
-## Why NexStock Exists
+## Why NoxStock Exists
 
-Small and medium-sized businesses often track stock, invoices, customer balances, supplier debt, cash accounts, and POS sales in disconnected tools. NexStock exists to make these operations visible and consistent in one web application.
+Small and medium-sized businesses often track stock, invoices, customer balances, supplier debt, cash accounts, and POS sales in disconnected tools. NoxStock exists to make these operations visible and consistent in one web application.
 
 ## Problems It Solves
 
@@ -42,4 +42,4 @@ Small and medium-sized businesses often track stock, invoices, customer balances
 
 ## Long-Term Product Positioning
 
-NexStock aims to become a Turkish-first, commercially trustworthy operating system for small and medium-sized businesses: fast enough for retail, disciplined enough for accounting, and broad enough to connect inventory, purchasing, sales, customer relationships, cash, bank, tax documents, and management reporting in one consistent ledger. “Best in market” means reliable business outcomes, not simply the largest number of screens: every feature must reduce manual work, prevent inconsistent records, explain its calculations, and remain usable in daily operations.
+NoxStock aims to become a Turkish-first, commercially trustworthy operating system for small and medium-sized businesses: fast enough for retail, disciplined enough for accounting, and broad enough to connect inventory, purchasing, sales, customer relationships, cash, bank, tax documents, and management reporting in one consistent ledger. “Best in market” means reliable business outcomes, not simply the largest number of screens: every feature must reduce manual work, prevent inconsistent records, explain its calculations, and remain usable in daily operations.
