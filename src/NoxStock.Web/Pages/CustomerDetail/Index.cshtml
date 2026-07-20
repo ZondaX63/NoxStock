@@ -1,6 +1,8 @@
 @page
 @using Microsoft.AspNetCore.Mvc.Localization
+@using NoxStock.Localization
 @model NoxStock.Web.Pages.CustomerDetail.IndexModel
+@inject IHtmlLocalizer<NoxStockResource> L
 @{
     Layout = "_AppLayout";
     ViewData["Title"] = "Cari Ekstresi";
@@ -12,6 +14,10 @@
         <p class="text-sm text-slate-500 mt-1">Seçili cari hesabın detaylarını ve geçmiş hareketlerini inceleyin.</p>
     </div>
     <div class="flex gap-2">
+        <a href="~/Customers/@Model.Id/SalesHistory" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-indigo-500/30 flex items-center">
+            <span class="material-icons-round mr-2 text-sm">history</span>
+            @L["CustomerSalesHistory:Title"]
+        </a>
         <button id="NewCollectionBtn" type="button" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-md shadow-indigo-500/30 flex items-center">
             <span class="material-icons-round mr-2 text-sm">add</span>
             Tahsilat Al

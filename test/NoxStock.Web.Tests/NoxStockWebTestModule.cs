@@ -3,15 +3,20 @@ using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NoxStock.EntityFrameworkCore;
 using NoxStock.Web;
 using NoxStock.Web.Menus;
+using NoxStock.Security;
 using Volo.Abp.AspNetCore.TestBase;
 using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.UI.Navigation;
+using Volo.Abp.Security.Claims;
 
 namespace NoxStock;
 
@@ -44,6 +49,12 @@ public class NoxStockWebTestModule : AbpModule
 
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        context.Services.RemoveAll<IAuthorizationService>();
+        context.Services.AddTransient<IAuthorizationService, AuthenticatedTestAuthorizationService>();
+        context.Services.AddSingleton<IStartupFilter, TestAuthenticationStartupFilter>();
+        context.Services.Replace(
+            ServiceDescriptor.Transient<ICurrentPrincipalAccessor, TestHttpContextCurrentPrincipalAccessor>());
+
         ConfigureLocalizationServices(context.Services);
         ConfigureNavigationServices(context.Services);
     }

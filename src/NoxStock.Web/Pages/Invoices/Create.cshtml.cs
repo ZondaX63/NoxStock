@@ -14,7 +14,7 @@ namespace NoxStock.Web.Pages.Invoices;
 
 public class CreateModel : NoxStockPageModel
 {
-    private static readonly string[] AcceptedDateFormats = ["yyyy-MM-dd", "dd.MM.yyyy", "d.M.yyyy"];
+    private static readonly string[] AcceptedDateFormats = ["yyyy-MM-dd", "dd.MM.yyyy", "d.M.yyyy", "MM/dd/yyyy", "M/d/yyyy", "yyyy/MM/dd"];
 
     [BindProperty(SupportsGet = true)]
     public DocumentType Type { get; set; } = DocumentType.SaleInvoice;
@@ -125,7 +125,7 @@ public class CreateModel : NoxStockPageModel
         if (DateTime.TryParseExact(
                 rawValue,
                 AcceptedDateFormats,
-                CultureInfo.GetCultureInfo("tr-TR"),
+                CultureInfo.InvariantCulture,
                 DateTimeStyles.AllowWhiteSpaces,
                 out var parsedDate))
         {

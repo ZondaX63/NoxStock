@@ -1,16 +1,19 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using NoxStock.Accounts;
 using NoxStock.BusinessPartners;
 using NoxStock.Documents;
 using NoxStock.Products;
 using NoxStock.MultiTenancy;
+using NoxStock.Permissions;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
 namespace NoxStock.Dashboard;
 
+[Authorize(NoxStockPermissions.Dashboard.Default)]
 public class DashboardAppService : ApplicationService, IDashboardAppService
 {
     private readonly IRepository<Account, Guid> _accountRepository;

@@ -106,6 +106,10 @@
 
     <abp-script-bundle name="@Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling.LeptonXLiteThemeBundles.Scripts.Global" />
     <script src="~/Abp/ApplicationConfigurationScript"></script>
+    <script>
+        // ABP derives appPath from App:SelfUrl, but tenant routes use a per-request PathBase.
+        abp.appPath = '@(Context.Request.PathBase.HasValue ? Context.Request.PathBase.Value!.TrimEnd('/') + "/" : "/")';
+    </script>
     <script src="~/Abp/ApplicationLocalizationScript?cultureName=@CultureInfo.CurrentUICulture.Name"></script>
     <script src="~/Abp/ServiceProxyScript"></script>
 

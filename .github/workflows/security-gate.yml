@@ -1,0 +1,38 @@
+name: Security Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-test-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore NoxStock.slnx --disable-parallel
+
+      - name: Build
+        run: dotnet build NoxStock.slnx -c Release -m:1 --no-restore
+
+      - name: Test
+        run: dotnet test NoxStock.slnx -c Release -m:1 --no-build --no-restore
+
+      - name: Scan production dependency graphs
+        shell: bash
+        run: |
+          dotnet package list --project src/NoxStock.Web/NoxStock.Web.csproj --vulnerable --include-transitive --format json > web-vulnerabilities.json
+          dotnet package list --project src/NoxStock.DbMigrator/NoxStock.DbMigrator.csproj --vulnerable --include-transitive --format json > migrator-vulnerabilities.json
+          if grep -Eiq '"severity"[[:space:]]*:[[:space:]]*"(High|Critical)"' *-vulnerabilities.json; then
+            cat *-vulnerabilities.json
+            exit 1
+          fi

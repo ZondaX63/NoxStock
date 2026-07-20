@@ -47,6 +47,9 @@ RUN dotnet publish "NoxStock.Web.csproj" -c Release -o /app/publish /p:UseAppHos
 # ==========================================
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
 EXPOSE 80
 EXPOSE 443
 COPY --from=publish /app/publish .

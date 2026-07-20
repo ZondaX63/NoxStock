@@ -23,6 +23,8 @@ public class ExchangeRateAppService : ApplicationService, IExchangeRateAppServic
         _exchangeRateUpdater = exchangeRateUpdater;
     }
 
+    // Exchange rates are global market data and contain no tenant or commercial records.
+    [AllowAnonymous]
     public async Task<ExchangeRatesDto> GetCurrentAsync()
     {
         return ExchangeRateUpdater.CreateResponse(await GetStoredRatesAsync());

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using NoxStock.MultiTenancy;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -9,6 +10,7 @@ using NoxStock.Permissions;
 
 namespace NoxStock.Categories;
 
+[Authorize(NoxStockPermissions.Categories.Default)]
 public class CategoryAppService :
     CrudAppService<
         Category,

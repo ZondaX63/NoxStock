@@ -60,7 +60,6 @@
     <PackageReference Include="Volo.Abp.Autofac" Version="10.4.1" />
     <PackageReference Include="Volo.Abp.AspNetCore.Serilog" Version="10.4.1" />
     <PackageReference Include="Volo.Abp.AspNetCore.Authentication.JwtBearer" Version="10.4.1" />
-    <PackageReference Include="Volo.Abp.Swashbuckle" Version="10.4.1" />
     <PackageReference Include="Volo.Abp.FeatureManagement.Web" Version="10.4.1" />
   </ItemGroup>
 
@@ -72,10 +71,6 @@
     <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" Version="10.4.1" />
     <PackageReference Include="Volo.Abp.Identity.Web" Version="10.4.1" />
     <PackageReference Include="Volo.Abp.TenantManagement.Web" Version="10.4.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Volo.Abp.Studio.Client.AspNetCore" Version="3.0.6" />
   </ItemGroup>
 
 </Project>

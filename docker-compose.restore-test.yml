@@ -1,0 +1,55 @@
+name: noxstock-restore-test
+
+services:
+  postgres-restore:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: NoxStockRestore
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: noxstock-restore-local-only
+    ports:
+      - "127.0.0.1:5443:5432"
+    volumes:
+      - noxstock-restore-postgres-data:/var/lib/postgresql/data
+      - ./etc/operations:/operations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d NoxStockRestore"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  db-migrator-restore:
+    image: noxstock-dbmigrator
+    build:
+      context: .
+      dockerfile: src/NoxStock.DbMigrator/Dockerfile
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=postgres-restore;Port=5432;Database=NoxStockRestore;User ID=postgres;Password=noxstock-restore-local-only;"
+      Identity__AdminPassword: NoxStock-Restore-Local-Only-123!
+    depends_on:
+      postgres-restore:
+        condition: service_healthy
+
+  web-restore:
+    image: noxstock-web
+    build:
+      context: .
+      dockerfile: src/NoxStock.Web/Dockerfile
+    ports:
+      - "127.0.0.1:8085:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__Default: "Host=postgres-restore;Port=5432;Database=NoxStockRestore;User ID=postgres;Password=noxstock-restore-local-only;"
+      App__SelfUrl: http://localhost:8085
+      AuthServer__Authority: http://localhost:8085
+      AuthServer__RequireHttpsMetadata: "false"
+      App__EnableHealthUi: "false"
+    depends_on:
+      db-migrator-restore:
+        condition: service_completed_successfully
+
+volumes:
+  noxstock-restore-postgres-data:

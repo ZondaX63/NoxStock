@@ -12,10 +12,12 @@ using NoxStock.MultiTenancy;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Security.Claims;
+using Volo.Abp.Auditing;
 using AbpIdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace NoxStock.Web.Pages.Account;
 
+[DisableAuditing]
 public class LoginModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
 {
     private readonly SignInManager<AbpIdentityUser> _signInManager;

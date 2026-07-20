@@ -1,0 +1,110 @@
+name: noxstock-performance
+
+services:
+  postgres-performance:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: NoxStockPerformance
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${NOXSTOCK_PERF_DB_PASSWORD:-noxstock-performance-local-only}"
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - track_io_timing=on
+      - -c
+      - log_min_duration_statement=${NOXSTOCK_PERF_SLOW_QUERY_MS:-250}
+      - -c
+      - statement_timeout=${NOXSTOCK_PERF_STATEMENT_TIMEOUT:-60s}
+      - -c
+      - lock_timeout=${NOXSTOCK_PERF_LOCK_TIMEOUT:-5s}
+      - -c
+      - idle_in_transaction_session_timeout=${NOXSTOCK_PERF_IDLE_TX_TIMEOUT:-30s}
+    ports:
+      - "127.0.0.1:${NOXSTOCK_PERF_DB_PORT:-5440}:5432"
+    volumes:
+      - noxstock-performance-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d NoxStockPerformance"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-migrator-performance:
+    image: noxstock-performance-dbmigrator
+    build:
+      context: .
+      dockerfile: src/NoxStock.DbMigrator/Dockerfile
+    environment:
+      DOTNET_ENVIRONMENT: "Development"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__Default: "Host=postgres-performance;Port=5432;Database=NoxStockPerformance;User ID=postgres;Password=${NOXSTOCK_PERF_DB_PASSWORD:-noxstock-performance-local-only};"
+      Identity__AdminPassword: "${NOXSTOCK_PERF_ADMIN_PASSWORD:-NoxStock-Performance-Admin-123!}"
+    depends_on:
+      postgres-performance:
+        condition: service_healthy
+
+  seeder-performance:
+    profiles: ["tools"]
+    image: postgres:17-alpine
+    environment:
+      PGHOST: postgres-performance
+      PGPORT: 5432
+      PGDATABASE: NoxStockPerformance
+      PGUSER: postgres
+      PGPASSWORD: "${NOXSTOCK_PERF_DB_PASSWORD:-noxstock-performance-local-only}"
+      NOXSTOCK_PERF_PROFILE: "${NOXSTOCK_PERF_PROFILE:-small}"
+      NOXSTOCK_PERF_ACTION: "${NOXSTOCK_PERF_ACTION:-seed}"
+      NOXSTOCK_PERF_ANCHOR_DATE: "${NOXSTOCK_PERF_ANCHOR_DATE:-2026-07-01}"
+    volumes:
+      - ./etc/performance:/performance:ro
+    entrypoint: ["/bin/sh", "/performance/seed.sh"]
+    depends_on:
+      db-migrator-performance:
+        condition: service_completed_successfully
+
+  web-performance:
+    image: noxstock-performance-web
+    build:
+      context: .
+      dockerfile: src/NoxStock.Web/Dockerfile
+    ports:
+      - "127.0.0.1:${NOXSTOCK_PERF_WEB_PORT:-8081}:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:80"
+      ConnectionStrings__Default: "Host=postgres-performance;Port=5432;Database=NoxStockPerformance;User ID=postgres;Password=${NOXSTOCK_PERF_DB_PASSWORD:-noxstock-performance-local-only};Maximum Pool Size=${NOXSTOCK_PERF_MAX_POOL_SIZE:-40};Command Timeout=${NOXSTOCK_PERF_COMMAND_TIMEOUT_SECONDS:-60};"
+      App__SelfUrl: "http://localhost:${NOXSTOCK_PERF_WEB_PORT:-8081}"
+      AuthServer__Authority: "http://localhost:${NOXSTOCK_PERF_WEB_PORT:-8081}"
+      AuthServer__RequireHttpsMetadata: "false"
+      App__HealthUiCheckUrl: "http://localhost:80/health-status"
+      App__DisablePII: "true"
+    volumes:
+      - noxstock-performance-data-protection:/root/.aspnet/DataProtection-Keys
+    depends_on:
+      db-migrator-performance:
+        condition: service_completed_successfully
+
+  observer-performance:
+    profiles: ["tools"]
+    image: postgres:17-alpine
+    environment:
+      PGHOST: postgres-performance
+      PGPORT: 5432
+      PGDATABASE: NoxStockPerformance
+      PGUSER: postgres
+      PGPASSWORD: "${NOXSTOCK_PERF_DB_PASSWORD:-noxstock-performance-local-only}"
+    volumes:
+      - ./etc/performance:/performance:ro
+      - ./docs/performance/results:/results
+    entrypoint: ["/bin/sh", "/performance/capture-baseline.sh"]
+    depends_on:
+      postgres-performance:
+        condition: service_healthy
+
+volumes:
+  noxstock-performance-postgres-data:
+  noxstock-performance-data-protection:

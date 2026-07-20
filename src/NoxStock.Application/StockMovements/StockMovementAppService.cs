@@ -12,7 +12,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace NoxStock.StockMovements;
 
-[Authorize(NoxStockPermissions.Products.Default)]
+[Authorize(NoxStockPermissions.StockMovements.Default)]
 public class StockMovementAppService : ReadOnlyAppService<StockMovement, StockMovementDto, Guid, StockMovementGetListInput>, IStockMovementAppService
 {
     private readonly IRepository<Product, Guid> _productRepository;

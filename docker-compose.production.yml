@@ -1,0 +1,74 @@
+name: noxstock-production
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: NoxStock
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${NOXSTOCK_DB_PASSWORD:?NOXSTOCK_DB_PASSWORD is required}"
+    volumes:
+      - noxstock-production-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d NoxStock"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  db-migrator:
+    image: noxstock-dbmigrator
+    build:
+      context: .
+      dockerfile: src/NoxStock.DbMigrator/Dockerfile
+    environment:
+      DOTNET_ENVIRONMENT: "Production"
+      ASPNETCORE_ENVIRONMENT: "Production"
+      App__RequireProductionEnvironment: "true"
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NoxStock;User ID=postgres;Password=${NOXSTOCK_DB_PASSWORD:?NOXSTOCK_DB_PASSWORD is required};"
+      Identity__AdminPassword: "${NOXSTOCK_ADMIN_PASSWORD:?NOXSTOCK_ADMIN_PASSWORD is required}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    image: noxstock-web
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: src/NoxStock.Web/Dockerfile
+    ports:
+      - "127.0.0.1:${NOXSTOCK_HTTP_PORT:-8080}:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      App__RequireProductionEnvironment: "true"
+      ASPNETCORE_URLS: "http://+:80"
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NoxStock;User ID=postgres;Password=${NOXSTOCK_DB_PASSWORD:?NOXSTOCK_DB_PASSWORD is required};"
+      App__SelfUrl: "${NOXSTOCK_PUBLIC_URL:?NOXSTOCK_PUBLIC_URL must be an HTTPS URL}"
+      AuthServer__Authority: "${NOXSTOCK_PUBLIC_URL:?NOXSTOCK_PUBLIC_URL must be an HTTPS URL}"
+      AuthServer__RequireHttpsMetadata: "true"
+      AuthServer__CertificatePassPhrase: "${NOXSTOCK_CERTIFICATE_PASSPHRASE:?NOXSTOCK_CERTIFICATE_PASSPHRASE is required}"
+      StringEncryption__DefaultPassPhrase: "${NOXSTOCK_STRING_ENCRYPTION_PASSPHRASE:?NOXSTOCK_STRING_ENCRYPTION_PASSPHRASE is required}"
+      App__DisablePII: "true"
+      App__EnableSwagger: "false"
+      App__EnableHealthUi: "false"
+      App__DetailedHealthResponse: "false"
+      Proxy__Enabled: "true"
+      Proxy__KnownProxies: "${NOXSTOCK_TRUSTED_PROXY_IPS:?NOXSTOCK_TRUSTED_PROXY_IPS is required}"
+      Proxy__ForwardLimit: "${NOXSTOCK_FORWARDED_HEADER_LIMIT:-1}"
+    volumes:
+      - noxstock-production-data-protection:/root/.aspnet/DataProtection-Keys
+      - "${NOXSTOCK_OPENIDDICT_PFX_PATH:?NOXSTOCK_OPENIDDICT_PFX_PATH is required}:/app/openiddict.pfx:ro"
+    depends_on:
+      db-migrator:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'X-Forwarded-Proto: https' http://localhost/health/ready >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  noxstock-production-postgres-data:
+  noxstock-production-data-protection:

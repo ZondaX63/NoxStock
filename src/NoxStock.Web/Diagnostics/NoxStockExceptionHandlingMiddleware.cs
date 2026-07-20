@@ -30,13 +30,14 @@ public sealed class NoxStockExceptionHandlingMiddleware
         {
             var traceId = context.TraceIdentifier;
             logger.LogError(
-                exception,
-                "Unhandled request failure. TraceId: {TraceId}; TenantId: {TenantId}; UserId: {UserId}; Method: {Method}; Path: {Path}",
+                "Unhandled request failure. TraceId: {TraceId}; TenantId: {TenantId}; UserId: {UserId}; Method: {Method}; Path: {Path}; ExceptionType: {ExceptionType}; Message: {Message}",
                 traceId,
                 currentTenant.Id,
                 currentUser.Id,
                 context.Request.Method,
-                context.Request.Path);
+                context.Request.Path,
+                exception.GetType().Name,
+                SensitiveDataSanitizer.Sanitize(exception.Message, 500));
 
             context.Response.Clear();
             context.Response.Headers["X-Correlation-Id"] = traceId;

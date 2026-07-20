@@ -13,7 +13,7 @@ using Volo.Abp.SettingManagement;
 
 namespace NoxStock.Settings;
 
-[Authorize]
+[Authorize(NoxStockPermissions.Settings.Default)]
 public class CompanySettingsAppService : ApplicationService, ICompanySettingsAppService
 {
     private readonly ISettingProvider _settingProvider;

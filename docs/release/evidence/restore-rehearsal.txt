@@ -1,0 +1,21 @@
+rehearsal_utc=2026-07-17T13:05:47Z
+backup_sha256=398e5ba861e1729e8104a9d9e29b922e77e8ddd6d4856ed82429d0b041c1e068
+CREATE TABLE
+INSERT 0 10
+DO
+             check_name              | result 
+-------------------------------------+--------
+ account_transaction_tenant_mismatch |      0
+ business_partners                   |      6
+ document_item_tenant_mismatch       |      0
+ document_partner_tenant_mismatch    |      0
+ invoices                            |      3
+ oem_product_tenant_mismatch         |      0
+ products                            |     10
+ stock_movement_tenant_mismatch      |      0
+ stock_movements                     |      6
+ tenants                             |      2
+(10 rows)
+
+{"status":"Healthy","totalDuration":"00:00:00.0053599","entries":{"NoxStock DbContext Check":{"data":{},"description":"Could connect to database and get record.","duration":"00:00:00.0046962","status":"Healthy","tags":["database","ready"]}}}
+restore_status=passed

@@ -53,7 +53,7 @@ public class NoxStockEntityFrameworkCoreTestModule : AbpModule
         {
             options.Configure(context =>
             {
-                context.DbContextOptions.UseSqlite(_sqliteConnection);
+                context.DbContextOptions.UseSqlite(_sqliteConnection).AddInterceptors(SqlCommandCounter.Instance);
             });
         });
     }

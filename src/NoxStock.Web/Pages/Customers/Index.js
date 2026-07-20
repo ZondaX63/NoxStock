@@ -25,6 +25,18 @@ $(function () {
                     items:
                         [
                             {
+                                text: l('CustomerSalesHistory:CustomerDetail'),
+                                action: function (data) {
+                                    window.location.href = abp.appPath + 'CustomerDetail?id=' + encodeURIComponent(data.record.id);
+                                }
+                            },
+                            {
+                                text: l('CustomerSalesHistory:Title'),
+                                action: function (data) {
+                                    window.location.href = abp.appPath + 'Customers/' + encodeURIComponent(data.record.id) + '/SalesHistory';
+                                }
+                            },
+                            {
                                 text: 'Tahsilat Al',
                                 action: function (data) {
                                     paymentModal.open({ businessPartnerId: data.record.id, isCollection: true });
@@ -82,5 +94,16 @@ $(function () {
     $('#NewCustomerButton').click(function (e) {
         e.preventDefault();
         createModal.open();
+    });
+
+    $('#CustomersTable tbody').on('click', 'tr', function (event) {
+        if ($(event.target).closest('a, button, .dropdown-menu, .dropdown-toggle').length) {
+            return;
+        }
+
+        var row = dataTable.row(this).data();
+        if (row && row.id) {
+            window.location.href = abp.appPath + 'CustomerDetail?id=' + encodeURIComponent(row.id);
+        }
     });
 });

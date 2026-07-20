@@ -6,6 +6,7 @@ $(function () {
     var paymentMethod = 1;
     var searchTimer;
     var operationKey = createOperationKey();
+    var posQuantityStep = 1;
 
     function createOperationKey() {
         return window.crypto && window.crypto.randomUUID
@@ -23,7 +24,11 @@ $(function () {
     }
 
     function cartCurrency() {
-        return cart.length ? cart[0].currency : 'TRY';
+        return selectedSaleCurrency() || (cart.length ? cart[0].currency : 'TRY');
+    }
+
+    function selectedSaleCurrency() {
+        return $('#PosSaleCurrency').val() || null;
     }
 
     function cartTotal() {
@@ -111,7 +116,7 @@ $(function () {
                 abp.notify.warn('Stok miktarından fazla ürün eklenemez.');
                 return;
             }
-            item.quantity++;
+            item.quantity += posQuantityStep;
         } else {
             cart.push($.extend({}, product, { quantity: 1 }));
         }
@@ -126,7 +131,7 @@ $(function () {
             abp.notify.warn('Stok miktarından fazla ürün eklenemez.');
             return;
         }
-        item.quantity += delta;
+        item.quantity += delta * posQuantityStep;
         if (item.quantity <= 0) {
             cart = cart.filter(function (cartItem) { return cartItem.id !== productId; });
         }
@@ -135,7 +140,7 @@ $(function () {
 
     function loadProducts() {
         var filter = $('#PosSearch').val();
-        posService.getProducts({ filter: filter, maxResultCount: 30 }).then(function (items) {
+        posService.getProducts({ filter: filter, currency: selectedSaleCurrency(), maxResultCount: 30 }).then(function (items) {
             products = items.map(function (product) {
                 product.quantityAvailable = product.quantity;
                 return product;
@@ -180,7 +185,7 @@ $(function () {
             event.preventDefault();
             var barcode = $('#PosSearch').val().trim();
             if (!barcode) return;
-            posService.getProducts({ filter: barcode, maxResultCount: 30 }).then(function (items) {
+            posService.getProducts({ filter: barcode, currency: selectedSaleCurrency(), maxResultCount: 30 }).then(function (items) {
                 products = items.map(function (product) {
                     product.quantityAvailable = product.quantity;
                     return product;
@@ -198,6 +203,15 @@ $(function () {
     });
     $('#PosCartItems').on('click', '.pos-cart-increase', function () { updateCartQuantity($(this).data('product-id'), 1); });
     $('#PosCartItems').on('click', '.pos-cart-decrease', function () { updateCartQuantity($(this).data('product-id'), -1); });
+    $('#PosSaleCurrency').change(function () {
+        if (cart.length) {
+            cart = [];
+            abp.notify.info('Satış para birimi değiştiği için sepet temizlendi.');
+        }
+        renderCart();
+        renderCheckoutOptions();
+        loadProducts();
+    });
     $('#ClearPosCartButton').click(function () { cart = []; renderCart(); });
     $('#RefreshPosButton').click(function () { loadProducts(); loadCheckoutOptions(); loadRecentSales(); });
 
@@ -226,6 +240,7 @@ $(function () {
         var $button = $(this).prop('disabled', true);
         posService.create({
             operationKey: operationKey,
+            currency: selectedSaleCurrency(),
             paymentMethod: paymentMethod,
             accountId: accountId,
             businessPartnerId: businessPartnerId,

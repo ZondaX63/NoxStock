@@ -1,6 +1,6 @@
 # System Patterns
 
-Last updated: 2026-07-16
+Last updated: 2026-07-20
 
 ## Architecture
 
@@ -132,6 +132,16 @@ Expected path:
 5. If cash/bank payment, increase selected account.
 6. If customer credit sale, increase customer receivable.
 7. Persist audit trail.
+
+### Customer Sales History
+
+`CustomerSalesHistoryAppService` is a tenant-only read model, not a new ledger or aggregate. It reads customer-linked `SaleInvoice` and `PosSale` `DocumentItem` rows only after their documents reach `Approved`, `PartiallyPaid`, `Paid` or `Completed`.
+
+- Use a projection joining document, item, product, brand and category; do not call document/product services per row.
+- Customer lookup must remain tenant filtered and must validate `Customer` or `Both` partner type before the history query.
+- Amount summaries must remain separated by stored document currency. Do not convert or add cross-currency values implicitly.
+- Keep dates bounded to 366 days and rows bounded to a page cap of 100. Fixed newest-first order is `Date desc`, then `DocumentItemId desc`.
+- Cancelled source documents are excluded. Current returns-only filters are empty until a return/credit-note document model exists; cancellation is represented by existing reversal ledger entries, not by rewriting a positive sales row.
 
 ### Cancellation/Reversal
 

@@ -10,10 +10,12 @@ using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.Validation;
+using Volo.Abp.Auditing;
 using AbpIdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace NoxStock.Web.Pages.TenantManagement.Tenants;
 
+[DisableAuditing]
 public class CreateModalModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
 {
     private readonly ITenantManager _tenantManager;
@@ -107,7 +109,11 @@ public class CreateModalModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
         }
         catch (System.Exception ex)
         {
-            _logger.LogError(ex, "Tenant creation failed for company code {CompanyName}", Input.CompanyName);
+            _logger.LogError(
+                "Tenant creation failed. TraceId: {TraceId}; CompanyCode: {CompanyCode}; ExceptionType: {ExceptionType}",
+                HttpContext.TraceIdentifier,
+                Input.CompanyName,
+                ex.GetType().Name);
             ModelState.AddModelError(string.Empty, "Şirket oluşturulurken beklenmeyen bir hata oluştu. İşlem kaydedilmedi.");
             return Page();
         }

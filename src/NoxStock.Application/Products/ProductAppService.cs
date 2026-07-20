@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -14,6 +15,7 @@ using Volo.Abp;
 
 namespace NoxStock.Products;
 
+[Authorize(NoxStockPermissions.Products.Default)]
 public class ProductAppService :
     CrudAppService<
         Product,

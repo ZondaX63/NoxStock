@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using NoxStock.MultiTenancy;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
+using Volo.Abp.Users;
 
 namespace NoxStock.Web.MultiTenancy;
 
@@ -18,8 +19,31 @@ public sealed class TenantActivationMiddleware
     public async Task InvokeAsync(
         HttpContext context,
         ICurrentTenant currentTenant,
-        ITenantRepository tenantRepository)
+        ITenantRepository tenantRepository,
+        ICurrentUser currentUser)
     {
+        if (context.Items[TenantPathMiddleware.TenantNameItem] is string tenantName)
+        {
+            var pathTenant = await tenantRepository.FindByNameAsync(tenantName.ToUpperInvariant());
+            if (pathTenant is null)
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            if (currentUser.IsAuthenticated && currentUser.TenantId != pathTenant.Id)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
+            }
+
+            using (currentTenant.Change(pathTenant.Id, pathTenant.Name))
+            {
+                await ContinueForTenantAsync(context, pathTenant);
+            }
+            return;
+        }
+
         if (currentTenant.Id.HasValue)
         {
             var tenant = await tenantRepository.FindAsync(currentTenant.Id.Value);
@@ -28,22 +52,6 @@ public sealed class TenantActivationMiddleware
                 await ContinueForTenantAsync(context, tenant);
                 return;
             }
-        }
-
-        if (context.Items[TenantPathMiddleware.TenantNameItem] is string tenantName)
-        {
-            var tenant = await tenantRepository.FindByNameAsync(tenantName.ToUpperInvariant());
-            if (tenant is null)
-            {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
-
-            using (currentTenant.Change(tenant.Id, tenant.Name))
-            {
-                await ContinueForTenantAsync(context, tenant);
-            }
-            return;
         }
 
         await _next(context);

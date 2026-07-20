@@ -59,6 +59,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     public async Task<List<PosProductLookupDto>> GetProductsAsync(PosProductLookupInputDto input)
     {
         CurrentTenant.RequireTenantId();
+        var targetCurrency = NormalizePosCurrency(input.Currency);
         var query = await _productRepository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
         if (!string.IsNullOrWhiteSpace(filter))
@@ -87,7 +88,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         var result = new List<PosProductLookupDto>();
         foreach (var product in products)
         {
-            var currency = string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency;
+            var currency = targetCurrency ?? (string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency);
             var calculation = await _priceCalculator.CalculateAsync(product, currency);
             result.Add(new PosProductLookupDto
             {
@@ -154,6 +155,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     public async Task<PosSaleDto> CreateAsync(CreatePosSaleDto input)
     {
         CurrentTenant.RequireTenantId();
+        var targetCurrency = NormalizePosCurrency(input.Currency);
         var operationKey = NormalizeOperationKey(input.OperationKey);
         if (operationKey is not null)
         {
@@ -207,7 +209,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         foreach (var cartItem in cartItems)
         {
             var product = await _productRepository.GetAsync(cartItem.ProductId);
-            var productCurrency = string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency;
+            var productCurrency = targetCurrency ?? (string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency);
             var calculation = await _priceCalculator.CalculateAsync(product, productCurrency);
             if (document.Items.Count == 0)
             {
@@ -444,6 +446,22 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         if (normalized.Length > 100)
         {
             throw new BusinessException("NoxStock:OperationKeyTooLong");
+        }
+
+        return normalized;
+    }
+
+    private static string? NormalizePosCurrency(string? currency)
+    {
+        if (string.IsNullOrWhiteSpace(currency))
+        {
+            return null;
+        }
+
+        var normalized = currency.Trim().ToUpperInvariant();
+        if (normalized is not ("TRY" or "USD" or "EUR"))
+        {
+            throw new BusinessException("NoxStock:UnsupportedCurrency").WithData("Currency", currency);
         }
 
         return normalized;

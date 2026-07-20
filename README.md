@@ -4,6 +4,16 @@
 
 This is a layered startup solution based on [Domain Driven Design (DDD)](https://abp.io/docs/latest/framework/architecture/domain-driven-design) practises. All the fundamental ABP modules are already installed. Check the [Application Startup Template](https://abp.io/docs/latest/solution-templates/layered-web-application) documentation for more info.
 
+## Private Beta Prototype
+
+NoxStock is currently prepared for a controlled private beta, not unrestricted production scale. The pilot target is 5-10 active tenants, limited users, and 5,000-10,000 products per tenant.
+
+Supported beta flows include tenant URL login/logout, tenant management by host admin, product creation and OEM search, dynamic TRY/USD/EUR pricing, POS sale and cancellation, sales invoice approval, payment/collection, account and current-account movement checks, dashboard, TR/EN switching, and tenant isolation guards.
+
+Out of scope for this beta are Warehouse/Branch/WarehouseStock rollout, stock reservation, e-Invoice/e-Archive, CRM automation, advanced accounting, broad report refactors, and 100,000-product or 100-300-concurrent-user claims.
+
+Before opening a pilot tenant, follow the release runbook in [`docs/release/PRIVATE_BETA_RELEASE.md`](docs/release/PRIVATE_BETA_RELEASE.md). Production secrets must be injected at runtime and previously exposed credentials must be rotated.
+
 ### Pre-requirements
 
 * [.NET10.0+ SDK](https://dotnet.microsoft.com/download/dotnet)
@@ -27,10 +37,11 @@ In the production environment, you need to use a production signing certificate.
 To generate a signing certificate, you can use the following command:
 
 ```bash
-dotnet dev-certs https -v -ep openiddict.pfx -p cba5d22f-c20b-4743-a128-8fc8cfc370db
+: "${NOXSTOCK_CERTIFICATE_PASSPHRASE:?Set NOXSTOCK_CERTIFICATE_PASSPHRASE first}"
+dotnet dev-certs https -v -ep openiddict.pfx -p "$NOXSTOCK_CERTIFICATE_PASSPHRASE"
 ```
 
-> `cba5d22f-c20b-4743-a128-8fc8cfc370db` is the password of the certificate, you can change it to any password you want.
+Keep the passphrase in a local or platform secret source. Do not commit it to the repository.
 
 It is recommended to use **two** RSA certificates, distinct from the certificate(s) used for HTTPS: one for encryption, one for signing.
 

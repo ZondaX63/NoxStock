@@ -37,7 +37,11 @@ $jobs += Start-Job -Name "DbMigrator" -ScriptBlock {
 $jobs += Start-Job -Name "DevCert" -ScriptBlock {
     $ErrorActionPreference = "Stop"
     Set-Location (Join-Path $using:scriptRoot "../../src/NoxStock.Web")
-    dotnet dev-certs https -v -ep openiddict.pfx -p cba5d22f-c20b-4743-a128-8fc8cfc370db
+    if ([string]::IsNullOrWhiteSpace($env:NOXSTOCK_CERTIFICATE_PASSPHRASE)) {
+        throw "NOXSTOCK_CERTIFICATE_PASSPHRASE must be supplied from a local secret source"
+    }
+
+    dotnet dev-certs https -v -ep openiddict.pfx -p $env:NOXSTOCK_CERTIFICATE_PASSPHRASE
 
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet dev-certs exited with code $LASTEXITCODE"

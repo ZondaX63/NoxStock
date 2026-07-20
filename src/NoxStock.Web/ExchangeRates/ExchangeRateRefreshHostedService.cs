@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NoxStock.ExchangeRates;
+using NoxStock.Web.Diagnostics;
 
 namespace NoxStock.Web.ExchangeRates;
 
@@ -38,7 +39,10 @@ public class ExchangeRateRefreshHostedService : BackgroundService
             }
             catch (Exception exception)
             {
-                _logger.LogWarning(exception, "TCMB döviz kurları yenilenemedi; son kayıtlı değerler kullanılacak.");
+                _logger.LogWarning(
+                    "TCMB döviz kurları yenilenemedi; son kayıtlı değerler kullanılacak. ExceptionType: {ExceptionType}; Message: {Message}",
+                    exception.GetType().Name,
+                    SensitiveDataSanitizer.Sanitize(exception.Message, 500));
             }
 
             await Task.Delay(TimeSpan.FromHours(1), stoppingToken);

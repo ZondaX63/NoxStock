@@ -12,6 +12,7 @@ using Shouldly;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.Uow;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Users;
 using Xunit;
 
 namespace NoxStock.MultiTenancy;
@@ -132,7 +133,6 @@ public class TenantPathIntegrationTests : NoxStockWebTestBase
 
         using var scope = Server.Services.CreateScope();
         var currentTenant = scope.ServiceProvider.GetRequiredService<ICurrentTenant>();
-
         await middleware.InvokeAsync(context, currentTenant);
 
         context.Response.StatusCode.ShouldBe(StatusCodes.Status403Forbidden);
@@ -177,6 +177,7 @@ public class TenantPathIntegrationTests : NoxStockWebTestBase
         using var scope = Server.Services.CreateScope();
         var currentTenant = scope.ServiceProvider.GetRequiredService<ICurrentTenant>();
         var tenantRepository = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+        var currentUser = scope.ServiceProvider.GetRequiredService<ICurrentUser>();
         var context = new DefaultHttpContext();
         context.Items[TenantPathMiddleware.TenantNameItem] = tenantName;
         var nextCalled = false;
@@ -186,7 +187,7 @@ public class TenantPathIntegrationTests : NoxStockWebTestBase
             return Task.CompletedTask;
         });
 
-        await middleware.InvokeAsync(context, currentTenant, tenantRepository);
+        await middleware.InvokeAsync(context, currentTenant, tenantRepository, currentUser);
 
         context.Response.StatusCode.ShouldBe(StatusCodes.Status403Forbidden);
         nextCalled.ShouldBeFalse();

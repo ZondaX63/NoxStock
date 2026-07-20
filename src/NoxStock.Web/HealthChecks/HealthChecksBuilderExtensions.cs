@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace NoxStock.Web.HealthChecks;
 
@@ -12,18 +15,28 @@ public static class HealthChecksBuilderExtensions
 {
     public static void AddNoxStockHealthChecks(this IServiceCollection services)
     {
-        // Add your health checks here
         var healthChecksBuilder = services.AddHealthChecks();
-        healthChecksBuilder.AddCheck<NoxStockDatabaseCheck>("NoxStock DbContext Check", tags: new string[] { "database" });
-
-        services.ConfigureHealthCheckEndpoint("/health-status");
+        healthChecksBuilder.AddCheck("NoxStock Process Check", () => HealthCheckResult.Healthy(), tags: new[] { "live" });
+        healthChecksBuilder.AddCheck<NoxStockDatabaseCheck>("NoxStock DbContext Check", tags: new[] { "database", "ready" });
 
         var configuration = services.GetConfiguration();
+        var environment = services.GetHostingEnvironment();
+        var detailedResponse = environment.IsDevelopment() &&
+                               configuration.GetValue("App:DetailedHealthResponse", false);
+        services.ConfigureHealthCheckEndpoint("/health-status", detailedResponse);
+        services.ConfigureHealthCheckEndpoint("/health/live", detailedResponse, registration => registration.Tags.Contains("live"));
+        services.ConfigureHealthCheckEndpoint("/health/ready", detailedResponse, registration => registration.Tags.Contains("ready"));
+
         var healthCheckUrl = configuration["App:HealthCheckUrl"];
 
         if (string.IsNullOrEmpty(healthCheckUrl))
         {
             healthCheckUrl = "/health-status";
+        }
+
+        if (!environment.IsDevelopment() && !configuration.GetValue<bool>("App:EnableHealthUi"))
+        {
+            return;
         }
 
         var healthChecksUiBuilder = services.AddHealthChecksUI(settings =>
@@ -47,7 +60,11 @@ public static class HealthChecksBuilderExtensions
         });
     }
 
-    private static IServiceCollection ConfigureHealthCheckEndpoint(this IServiceCollection services, string path)
+    private static IServiceCollection ConfigureHealthCheckEndpoint(
+        this IServiceCollection services,
+        string path,
+        bool detailedResponse,
+        Func<HealthCheckRegistration, bool>? predicate = null)
     {
         services.Configure<AbpEndpointRouterOptions>(options =>
         {
@@ -57,8 +74,14 @@ public static class HealthChecksBuilderExtensions
                     new PathString(path.EnsureStartsWith('/')),
                     new HealthCheckOptions
                     {
-                        Predicate = _ => true,
-                        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse,
+                        Predicate = predicate ?? (_ => true),
+                        ResponseWriter = detailedResponse
+                            ? UIResponseWriter.WriteHealthCheckUIResponse
+                            : static async (context, report) =>
+                            {
+                                context.Response.ContentType = "application/json";
+                                await context.Response.WriteAsJsonAsync(new { status = report.Status.ToString() });
+                            },
                         AllowCachingResponses = false,
                     });
             });

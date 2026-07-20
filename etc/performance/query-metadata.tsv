@@ -1,0 +1,14 @@
+01-product-first-page	Product first page	52	50 Product DTOs (count + page + 50 OEM reads)
+02-product-deep-page	Product deep page	52	50 Product DTOs (count + page + 50 OEM reads)
+03-product-sku-exact	SKU exact lookup	3	1 Product DTO expected
+04-product-barcode-exact	Barcode exact lookup	3	1 Product DTO expected
+05-product-oem-exact	OEM exact lookup	52	Up to 50 alternative Product DTOs on the application page
+06-product-text-search	Product text search	52	50 Product DTOs on a full page
+07-pos-product-search	POS product search	42-62	20 Product DTOs plus batched OEM rows; 2-3 rate reads per product
+08-document-list	Document list	3	50 Document DTOs plus one partner batch
+09-account-transaction-history	Account transaction history	2	Up to 100 transaction DTOs
+10-stock-movement-history	Stock movement history	3	Up to 100 movement DTOs plus one product batch
+11-dashboard-summary	Dashboard summary	13	One summary DTO plus bounded trend/top/recent/due rows
+12-critical-stock	Critical stock query	52	50 Product DTOs on a full page
+13-due-documents	Due/overdue documents	3	Up to 100 document DTOs plus one partner batch
+14-report-snapshot-envelope	Sales/purchase report snapshot	8 + foreign-currency product count	All products, partners and accounts plus period documents/transactions/movements/items

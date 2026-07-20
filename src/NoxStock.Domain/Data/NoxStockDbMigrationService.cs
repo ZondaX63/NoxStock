@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Identity;
@@ -24,17 +26,20 @@ public class NoxStockDbMigrationService : ITransientDependency
     private readonly IEnumerable<INoxStockDbSchemaMigrator> _dbSchemaMigrators;
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
+    private readonly string _adminPassword;
 
     public NoxStockDbMigrationService(
         IDataSeeder dataSeeder,
         ITenantRepository tenantRepository,
         ICurrentTenant currentTenant,
-        IEnumerable<INoxStockDbSchemaMigrator> dbSchemaMigrators)
+        IEnumerable<INoxStockDbSchemaMigrator> dbSchemaMigrators,
+        IConfiguration configuration)
     {
         _dataSeeder = dataSeeder;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _dbSchemaMigrators = dbSchemaMigrators;
+        _adminPassword = ResolveAdminPassword(configuration);
 
         Logger = NullLogger<NoxStockDbMigrationService>.Instance;
     }
@@ -109,8 +114,33 @@ public class NoxStockDbMigrationService : ITransientDependency
             .WithProperty(IdentityDataSeedContributor.AdminEmailPropertyName,
                 NoxStockConsts.AdminEmailDefaultValue)
             .WithProperty(IdentityDataSeedContributor.AdminPasswordPropertyName,
-                NoxStockConsts.AdminPasswordDefaultValue)
+                _adminPassword)
         );
+    }
+
+    private static string ResolveAdminPassword(IConfiguration configuration)
+    {
+        var environmentName = configuration["DOTNET_ENVIRONMENT"] ??
+                              configuration["ASPNETCORE_ENVIRONMENT"];
+        var isProduction = string.Equals(
+            environmentName,
+            Environments.Production,
+            StringComparison.OrdinalIgnoreCase);
+        var configuredPassword = configuration["Identity:AdminPassword"];
+        if (!string.IsNullOrWhiteSpace(configuredPassword) &&
+            (!isProduction ||
+             !configuredPassword.Contains("Local-Admin", StringComparison.OrdinalIgnoreCase)))
+        {
+            return configuredPassword;
+        }
+
+        if (isProduction)
+        {
+            throw new InvalidOperationException(
+                "Identity:AdminPassword must be supplied from a production secret source.");
+        }
+
+        return NoxStockConsts.LocalDevelopmentAdminPassword;
     }
 
     private bool AddInitialMigrationIfNotExist()

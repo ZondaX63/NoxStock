@@ -1,10 +1,13 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace NoxStock.Sales;
 
 public class PosProductLookupInputDto
 {
     public string? Filter { get; set; }
+    [StringLength(3)]
+    public string? Currency { get; set; }
     public int MaxResultCount { get; set; } = 30;
 }
 

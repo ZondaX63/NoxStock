@@ -1,5 +1,71 @@
 # Progress
 
+## 2026-07-20 - Customer Sales History
+
+- Added the tenant-scoped `ICustomerSalesHistoryAppService` and `/Customers/{customerId}/SalesHistory` Razor Page. The module joins sales documents, document items, products, brands and categories through projections; no schema or migration change was needed.
+- Added period presets/custom bounded date ranges, document/product/SKU/barcode/brand/category/currency filters, deterministic newest-first offset paging, currency-safe summary cards, customer credit snapshot, grouped sales ledger and document print/detail links.
+- Added entry points from Customer Detail and Customer list row actions. The page has TR/EN localization keys, responsive horizontal movement-table scrolling and dark-mode styles.
+- Added five focused EF integration tests, including tenant A/B and host rejection plus a 110-document query-bound test (25 rows, <=16 SQL commands). The Playwright private-beta suite now covers customer detail to sales history, period change and invoice link discovery.
+- Verified: build 0 errors; Domain 2/2, EntityFrameworkCore 41/41 and Web 46/46 tests pass; EF has no pending model changes; localization JSON parses; `git diff --check` is clean. Playwright runtime execution remains pending the isolated Docker test environment and runtime-only E2E credentials.
+
+## 2026-07-18 - Private Beta B3-B5 Review Cleanup
+
+- Reconciled the partially completed private-beta release work from the follow-up agent.
+- Confirmed existing evidence for the critical browser smoke run: tenant provisioning, tenant login/logout, product/OEM search, POS sale/cancel, invoice approval, collection/payment, dashboard, TR/EN/theme, tenant A/B isolation and inactive tenant denial all passed.
+- Confirmed current local .NET validation: build passes with 0 errors; Domain 2/2, EntityFrameworkCore 36/36 and Web 46/46 pass when VSTest is run outside the sandbox.
+- Rewrote `docs/release/PRIVATE_BETA_RELEASE.md` for NoxStock with runtime env vars without values, deployment, health, backup/restore, browser smoke, release gate, onboarding, feedback, rollback and known-limitations sections.
+- Added the README private-beta scope and runbook reference.
+- Updated `privateBetaRelease.md` so B3, B4 and B5 no longer appear as not started.
+- Target-host secret rotation, target backup/restore rehearsal and target Compose restart recovery remain required before opening real pilot users.
+
+## 2026-07-17 - Private Beta B1 Release Configuration Complete
+
+- Added fail-closed Production environment enforcement for Web and DbMigrator, trusted-proxy forwarded-header configuration, HTTPS redirection, and separate live/ready health endpoints.
+- Added a production TLS proxy validation overlay and runtime-only secret/certificate workflow. PostgreSQL has no published host port; PostgreSQL, Web, and proxy use `unless-stopped`.
+- Runtime verification passed in `noxstock-release-validation`: Production environment, DbMigrator exit 0, Web/database readiness healthy, HTTPS proxy healthy, direct HTTP redirected, Swagger unavailable, and health output status-only.
+- Expanded Web release configuration coverage; the complete Web suite passes 46/46.
+- No secret value was committed. All credentials and certificates used for validation were generated outside the repository.
+
+## 2026-07-17 - Private Beta B2 Backup/Restore Complete
+
+- Added encrypted, checksummed, retained PostgreSQL backup automation using runtime-only passphrase files.
+- Restored the real encrypted dump into a clean isolated PostgreSQL volume, ran current host/tenant migrations, executed commercial/tenant integrity checks, and started the current Web image.
+- Restore evidence: 2 tenants, 10 products, 3 invoices, 6 stock movements, 6 business partners, zero tenant-relation mismatches, and healthy readiness/database checks.
+- No source database record was modified and no secret value was committed or written to the Memory Bank.
+
+## 2026-07-17 - Scale, Security and Reliability P1.0 Complete
+
+- Added an isolated `noxstock-performance` Docker Compose environment using `NoxStockPerformance`, loopback ports 5440/8081, and separate volumes; development/production data was not used.
+- Added deterministic, idempotent, cleanable Small/Medium/Target seed profiles. Target was executed twice with exact final counts for two tenants: 100k products, 300k OEM rows, 10k partners, 50k documents, 200k document items, 200k stock movements, and 100k account transactions per tenant.
+- Enabled performance-only `pg_stat_statements`, I/O timing, configurable slow-query logging and timeout/pool budgets. Added connection, lock/deadlock, table/index I/O, top-query, health, row-count, and tenant-integrity capture.
+- Captured all 14 required `EXPLAIN (ANALYZE, BUFFERS, SETTINGS)` JSON plans and a top-20 pg_stat_statements snapshot. Every required plan contains TenantId filtering; all parent-child tenant mismatch checks are zero.
+- Measured priorities for P1.1: product/OEM N+1, repeated POS rate/OEM reads and expensive substring search, deep offset spill, SKU/barcode sequential scans, report over-materialization, and dashboard/document query shape. No optimization was implemented in P1.0.
+- Target data volume is proven on a local 12-CPU/30-GiB machine; target concurrency, endpoint p95/p99, production resource requirements, and 100-300-user readiness remain unproven.
+- No application query, index, cache, cursor contract, migration, or existing seed was changed.
+- Verification: build 0 warnings/0 errors; Domain 2/2, EntityFrameworkCore 36/36, Web 41/41; no pending EF model changes; PostgreSQL healthy, Web/DB health `Healthy`, pg_stat_statements visible, Compose/shell/JSON/diff validation passed.
+
+## 2026-07-17 - Scale, Security and Reliability Gate P0.1 Complete
+
+- Closed anonymous access to commercial conventional APIs with explicit NoxStock permissions and real API 401/403 responses.
+- Added host/tenant/inactive-tenant boundary enforcement and anonymous HTTP coverage for 15 commercial read endpoints; Web tests pass 41/41 on isolated rerun.
+- Kept global read-only USD/EUR rates public by design; refresh remains host-only.
+- Disabled PII/security-artifact logging by default and added bounded redaction for logs, diagnostics and ABP audit payloads.
+- Removed operational secrets from base configuration and legacy documentation/scripts. Added fail-closed Production configuration, required secret/certificate injection and a secret rotation/rollback runbook.
+- Removed Swagger/ABP Studio runtime chains, pinned Scriban 7.2.5 and added a CI high/critical advisory gate. Web and DbMigrator package scans report no vulnerabilities.
+- Verification: build succeeds with 0 errors and 127 existing nullable/Mapperly warnings; Domain 2/2, EntityFrameworkCore 36/36 and Web 41/41 pass. EF reports no pending model change. Initial broad EF and expanded Web runs each encountered the known intermittent SQLite disposal race during host seeding; both isolated reruns passed completely.
+- Docker verification with the normal one-command development flow succeeds without deleting data: PostgreSQL healthy, DbMigrator exit 0, Web on port 8080, health 200, anonymous Dashboard/Product 401, Swagger 404, exchange-rate read 200.
+- No migration or production database change was made. Production deployment remains blocked until real secrets/certificates are rotated and trusted HTTPS proxy behavior is verified.
+
+## 2026-07-17 - Scale, Security and Reliability Phase P0 Complete
+
+- Audited product/OEM, stock, document/item, current-account, account-transaction, dashboard, report, tenant and audit paths for pagination, unbounded loads, N+1 behavior, projection, search and indexing.
+- Audited authentication/authorization, tenant routing, cookies, proxy/TLS headers, rate limiting, secrets, PII/audit logging, dependency advisories, health/Swagger exposure, Docker hardening and production operations.
+- Confirmed anonymous HTTP 200 access to tenant Dashboard and Product data. This is the immediate release-blocking defect.
+- Captured a small functional baseline only; no target-scale load result exists, so NoxStock is not yet declared scalable for 100k products or 100-300 concurrent users.
+- Added the detailed 20 performance + 20 security/operations register, measurable success criteria and P0.1/P1-P5 plan in `scaleSecurityReliability.md`.
+- Build passed with 0 warnings/errors. Domain 2/2, EntityFrameworkCore 36/36 on rerun and Web 16/16 tests pass; one initial SQLite initialization failure was intermittent. Dependency scanning found high-severity transitive advisories.
+- No application code or migration changed during P0.
+
 ## 2026-07-16 NoxStock Product Rename
 
 - Renamed all active backend, frontend, ABP, test, solution, project, localization, permission, setting, proxy, and Docker identifiers to NoxStock.
@@ -204,7 +270,7 @@ Last updated: 2026-07-16
 - Historical migration designer files still contain Book/Author snapshots, which is expected for migration history.
 - Existing Mapperly warnings for audit/base properties are noisy but not blocking.
 - A forced clean rebuild currently reports 153 nullable/Mapperly diagnostics even though the normal incremental build is clean; warning reduction remains explicit technical debt.
-- A fresh Docker restore reports known dependency advisories for transitive `MessagePack`, `Microsoft.OpenApi`, and `Scriban` packages. Dependency update and compatibility verification is a production-priority maintenance task before expanding the live invoice surface.
+- Gate P0.1 removed the MessagePack and Microsoft.OpenApi runtime chains, pinned patched Scriban 7.2.5, and added CI scanning. Current Web and DbMigrator transitive scans report no advisories.
 
 ## Decision History
 

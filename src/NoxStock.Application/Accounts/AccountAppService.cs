@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using NoxStock.Permissions;
 using NoxStock.MultiTenancy;
 using Volo.Abp.Application.Dtos;
@@ -9,6 +10,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace NoxStock.Accounts;
 
+[Authorize(NoxStockPermissions.Accounts.Default)]
 public class AccountAppService :
     CrudAppService<
         Account,
@@ -64,6 +66,7 @@ public class AccountAppService :
         return await MapToGetOutputDtoAsync(account);
     }
 
+    [Authorize(NoxStockPermissions.Accounts.Transfer)]
     public async Task TransferAsync(TransferDto input)
     {
         var tenantId = CurrentTenant.RequireTenantId();

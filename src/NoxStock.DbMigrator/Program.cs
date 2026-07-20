@@ -2,8 +2,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Events;
+using System;
 
 namespace NoxStock.DbMigrator;
 
@@ -34,6 +36,33 @@ class Program
             .ConfigureLogging((context, logging) => logging.ClearProviders())
             .ConfigureServices((hostContext, services) =>
             {
+                if (hostContext.Configuration.GetValue<bool>("App:RequireProductionEnvironment") &&
+                    !hostContext.HostingEnvironment.IsProduction())
+                {
+                    throw new InvalidOperationException(
+                        "This deployment requires DOTNET_ENVIRONMENT=Production.");
+                }
+
+                if (hostContext.HostingEnvironment.IsProduction())
+                {
+                    var connectionString = hostContext.Configuration.GetConnectionString("Default");
+                    if (string.IsNullOrWhiteSpace(connectionString) ||
+                        connectionString.Contains("local-dev", StringComparison.OrdinalIgnoreCase) ||
+                        connectionString.Contains("development-only", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            "ConnectionStrings:Default must be supplied from a production secret source.");
+                    }
+
+                    var adminPassword = hostContext.Configuration["Identity:AdminPassword"];
+                    if (string.IsNullOrWhiteSpace(adminPassword) ||
+                        adminPassword.Contains("Local-Admin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            "Identity:AdminPassword must be supplied from a production secret source.");
+                    }
+                }
+
                 services.AddHostedService<DbMigratorHostedService>();
             });
 }

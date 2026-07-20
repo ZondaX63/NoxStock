@@ -2,6 +2,7 @@ using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,9 +13,7 @@ using NoxStock.MultiTenancy;
 using NoxStock.Permissions;
 using NoxStock.Web.Menus;
 using NoxStock.Web.HealthChecks;
-using Microsoft.OpenApi;
 using Volo.Abp;
-using Volo.Abp.Studio;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.Localization;
 using Volo.Abp.AspNetCore.Mvc.UI;
@@ -37,6 +36,7 @@ using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
 using Volo.Abp.TenantManagement.Web;
 using System;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -47,15 +47,14 @@ using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared.Toolbars;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Identity;
-using Volo.Abp.Swashbuckle;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.SettingManagement.Web;
-using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Threading;
 using NoxStock.Web.ExchangeRates;
 using NoxStock.Web.Diagnostics;
 using NoxStock.Web.MultiTenancy;
+using Volo.Abp.Auditing;
 
 namespace NoxStock.Web;
 
@@ -64,13 +63,11 @@ namespace NoxStock.Web;
     typeof(NoxStockApplicationModule),
     typeof(NoxStockEntityFrameworkCoreModule),
     typeof(AbpAutofacModule),
-    typeof(AbpStudioClientAspNetCoreModule),
     typeof(AbpIdentityWebModule),
     typeof(AbpAspNetCoreMvcUiLeptonXLiteThemeModule),
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpTenantManagementWebModule),
     typeof(AbpFeatureManagementWebModule),
-    typeof(AbpSwashbuckleModule),
     typeof(AbpAspNetCoreSerilogModule)
 )]
 public class NoxStockWebModule : AbpModule
@@ -79,6 +76,7 @@ public class NoxStockWebModule : AbpModule
     {
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
+        ProductionSecurityConfigurationValidator.Validate(configuration, hostingEnvironment);
 
         context.Services.PreConfigure<AbpMvcDataAnnotationsLocalizationOptions>(options =>
         {
@@ -122,13 +120,38 @@ public class NoxStockWebModule : AbpModule
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
 
-        if (!configuration.GetValue<bool>("App:DisablePII"))
-        {
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.LogCompleteSecurityArtifact = true;
-        }
+        var enablePii = hostingEnvironment.IsDevelopment() &&
+                        !configuration.GetValue("App:DisablePII", true);
+        Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = enablePii;
+        Microsoft.IdentityModel.Logging.IdentityModelEventSource.LogCompleteSecurityArtifact = false;
 
-        if (!configuration.GetValue<bool>("AuthServer:RequireHttpsMetadata"))
+        Configure<AbpAuditingOptions>(options =>
+        {
+            options.DisableLogActionInfo = true;
+            options.IsEnabledForAnonymousUsers = false;
+            options.Contributors.Add(new SensitiveDataAuditLogContributor());
+        });
+
+        if (configuration.GetValue<bool>("Proxy:Enabled"))
+        {
+            Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.ForwardLimit = configuration.GetValue("Proxy:ForwardLimit", 1);
+
+                foreach (var value in (configuration["Proxy:KnownProxies"] ?? string.Empty)
+                             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (!IPAddress.TryParse(value, out var address))
+                    {
+                        throw new InvalidOperationException($"Proxy:KnownProxies contains an invalid IP address: {value}");
+                    }
+
+                    options.KnownProxies.Add(address);
+                }
+            });
+        }
+        else if (hostingEnvironment.IsDevelopment() && !configuration.GetValue<bool>("AuthServer:RequireHttpsMetadata"))
         {
             Configure<OpenIddictServerAspNetCoreOptions>(options =>
             {
@@ -149,7 +172,6 @@ public class NoxStockWebModule : AbpModule
                 .AddRazorRuntimeCompilation();
         }
 
-        ConfigureStudio(hostingEnvironment);
         context.Services.AddHostedService<ExchangeRateRefreshHostedService>();
         ConfigureBundles(hostingEnvironment);
         ConfigureUrls(configuration);
@@ -158,17 +180,26 @@ public class NoxStockWebModule : AbpModule
         ConfigureVirtualFileSystem(hostingEnvironment);
         ConfigureNavigationServices();
         ConfigureAutoApiControllers();
-        ConfigureSwaggerServices(context.Services);
 
         Configure<PermissionManagementOptions>(options =>
         {
             options.IsDynamicPermissionStoreEnabled = true;
         });
 
+        if (hostingEnvironment.IsProduction())
+        {
+            Configure<Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionOptions>(options =>
+            {
+                options.HttpsPort = 443;
+            });
+        }
+
         Configure<Volo.Abp.AspNetCore.Mvc.AntiForgery.AbpAntiForgeryOptions>(options =>
         {
             options.TokenCookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
-            options.TokenCookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+            options.TokenCookie.SecurePolicy = hostingEnvironment.IsProduction()
+                ? Microsoft.AspNetCore.Http.CookieSecurePolicy.Always
+                : Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
         });
         
         Configure<Volo.Abp.MultiTenancy.AbpTenantResolveOptions>(options =>
@@ -189,6 +220,7 @@ public class NoxStockWebModule : AbpModule
             options.Conventions.AuthorizeFolder("/Customers", NoxStockPermissions.BusinessPartners.Default);
             options.Conventions.AuthorizeFolder("/Suppliers", NoxStockPermissions.BusinessPartners.Default);
             options.Conventions.AuthorizePage("/CustomerDetail/Index", NoxStockPermissions.BusinessPartners.Default);
+            options.Conventions.AuthorizePage("/Customers/SalesHistory", NoxStockPermissions.BusinessPartners.Default);
             options.Conventions.AuthorizePage("/Accounts/Index", NoxStockPermissions.Accounts.Default);
             options.Conventions.AuthorizePage("/Invoices/Index", NoxStockPermissions.Documents.Default);
             options.Conventions.AuthorizePage("/Offers/Index", NoxStockPermissions.Offers.Default);
@@ -205,17 +237,6 @@ public class NoxStockWebModule : AbpModule
     private void ConfigureHealthChecks(ServiceConfigurationContext context)
     {
         context.Services.AddNoxStockHealthChecks();
-    }
-
-    private void ConfigureStudio(IHostEnvironment hostingEnvironment)
-    {
-        if (hostingEnvironment.IsProduction())
-        {
-            Configure<AbpStudioClientOptions>(options =>
-            {
-                options.IsLinkEnabled = false;
-            });
-        }
     }
 
     private void ConfigureBundles(IHostEnvironment hostingEnvironment)
@@ -259,11 +280,48 @@ public class NoxStockWebModule : AbpModule
         context.Services.ForwardIdentityAuthenticationForBearer(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
         context.Services.PostConfigure<CookieAuthenticationOptions>(
             IdentityConstants.ApplicationScheme,
-            options => options.Cookie.Path = "/");
+            options =>
+            {
+                options.Cookie.Path = "/";
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SameSite = SameSiteMode.Lax;
+                options.Cookie.SecurePolicy = context.Services.GetHostingEnvironment().IsProduction()
+                    ? CookieSecurePolicy.Always
+                    : CookieSecurePolicy.SameAsRequest;
+                var previousLoginRedirect = options.Events.OnRedirectToLogin;
+                var previousAccessDeniedRedirect = options.Events.OnRedirectToAccessDenied;
+
+                options.Events.OnRedirectToLogin = redirectContext =>
+                {
+                    if (IsApiRequest(redirectContext.Request))
+                    {
+                        redirectContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        return System.Threading.Tasks.Task.CompletedTask;
+                    }
+
+                    return previousLoginRedirect(redirectContext);
+                };
+
+                options.Events.OnRedirectToAccessDenied = redirectContext =>
+                {
+                    if (IsApiRequest(redirectContext.Request))
+                    {
+                        redirectContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        return System.Threading.Tasks.Task.CompletedTask;
+                    }
+
+                    return previousAccessDeniedRedirect(redirectContext);
+                };
+            });
         context.Services.Configure<AbpClaimsPrincipalFactoryOptions>(options =>
         {
             options.IsDynamicClaimsEnabled = true;
         });
+    }
+
+    private static bool IsApiRequest(Microsoft.AspNetCore.Http.HttpRequest request)
+    {
+        return request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ConfigureVirtualFileSystem(IWebHostEnvironment hostingEnvironment)
@@ -330,18 +388,6 @@ public class NoxStockWebModule : AbpModule
         });
     }
 
-    private void ConfigureSwaggerServices(IServiceCollection services)
-    {
-        services.AddAbpSwaggerGen(
-            options =>
-            {
-                options.SwaggerDoc("v1", new OpenApiInfo { Title = "NoxStock API", Version = "v1" });
-                options.DocInclusionPredicate((docName, description) => true);
-                options.CustomSchemaIds(type => type.FullName);
-            }
-        );
-    }
-
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
     {
         var app = context.GetApplicationBuilder();
@@ -357,11 +403,13 @@ public class NoxStockWebModule : AbpModule
         }
 
         app.UseAbpRequestLocalization();
+        app.UseMiddleware<ApiAuthorizationResponseMiddleware>();
 
         if (!env.IsDevelopment())
         {
             app.UseErrorPage();
             app.UseHsts();
+            app.UseHttpsRedirection();
         }
 
         app.UseCorrelationId();
@@ -369,7 +417,6 @@ public class NoxStockWebModule : AbpModule
         app.UseMiddleware<NoxStockExceptionHandlingMiddleware>();
         app.UseRouting();
         app.MapAbpStaticAssets();
-        app.UseAbpStudioLink();
         app.UseAbpSecurityHeaders();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
@@ -385,11 +432,6 @@ public class NoxStockWebModule : AbpModule
         app.UseDynamicClaims();
         app.UseAuthorization();
 
-        app.UseSwagger();
-        app.UseAbpSwaggerUI(options =>
-        {
-            options.SwaggerEndpoint("/swagger/v1/swagger.json", "NoxStock API");
-        });
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();

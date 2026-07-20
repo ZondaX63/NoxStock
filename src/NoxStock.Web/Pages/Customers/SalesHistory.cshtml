@@ -1,0 +1,315 @@
+@page "/Customers/{customerId:guid}/SalesHistory"
+@using Microsoft.AspNetCore.Mvc.Localization
+@using NoxStock.CustomerSalesHistory
+@using NoxStock.Localization
+@model NoxStock.Web.Pages.Customers.SalesHistoryModel
+@inject IHtmlLocalizer<NoxStockResource> L
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = L["CustomerSalesHistory:Title"].Value;
+}
+
+<nav class="mb-5 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400" aria-label="Breadcrumb">
+    <a href="~/Customers" class="hover:text-indigo-600 dark:hover:text-indigo-400">@L["Menu:Customers"]</a>
+    <span class="material-icons-round text-base">chevron_right</span>
+    <a href="~/CustomerDetail?id=@Model.CustomerId" class="max-w-48 truncate hover:text-indigo-600 dark:hover:text-indigo-400">@Model.History.Customer.Name</a>
+    <span class="material-icons-round text-base">chevron_right</span>
+    <span class="font-medium text-slate-700 dark:text-slate-200">@L["CustomerSalesHistory:Title"]</span>
+</nav>
+
+<div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 class="truncate text-2xl font-bold text-slate-800 dark:text-white sm:text-3xl">@Model.History.Customer.Name</h2>
+            @if (!string.IsNullOrWhiteSpace(Model.History.Customer.CustomerCode))
+            {
+                <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">@L["CustomerSalesHistory:CustomerCode"]: @Model.History.Customer.CustomerCode</span>
+            }
+        </div>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">@L["CustomerSalesHistory:Description"]</p>
+        <div class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
+            @if (!string.IsNullOrWhiteSpace(Model.History.Customer.Phone))
+            {
+                <span class="flex items-center gap-1.5"><span class="material-icons-round text-base text-slate-400">phone</span>@Model.History.Customer.Phone</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.History.Customer.Email))
+            {
+                <span class="flex min-w-0 items-center gap-1.5"><span class="material-icons-round text-base text-slate-400">mail</span><span class="truncate">@Model.History.Customer.Email</span></span>
+            }
+        </div>
+    </div>
+    <div class="flex shrink-0 flex-wrap gap-2">
+        <a href="~/CustomerDetail?id=@Model.CustomerId" class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+            <span class="material-icons-round text-base">person</span>@L["CustomerSalesHistory:CustomerDetail"]
+        </a>
+        <a href="~/CustomerDetail?id=@Model.CustomerId" class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700">
+            <span class="material-icons-round text-base">receipt_long</span>@L["CustomerSalesHistory:CurrentAccountMovements"]
+        </a>
+    </div>
+</div>
+
+<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section class="card p-5">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">@L["CustomerSalesHistory:PeriodSales"]</p>
+        @if (Model.History.Summary.NetSales.Count == 0)
+        {
+            <p class="mt-2 text-xl font-bold text-slate-400">-</p>
+        }
+        else
+        {
+            <div class="mt-2 space-y-1">
+                @foreach (var total in Model.History.Summary.NetSales)
+                {
+                    <p class="text-xl font-bold text-slate-800 dark:text-white">@Model.FormatAmount(total.Amount, total.Currency)</p>
+                }
+            </div>
+        }
+    </section>
+    <section class="card p-5">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">@L["CustomerSalesHistory:TotalQuantity"]</p>
+        <p class="mt-2 text-xl font-bold text-slate-800 dark:text-white">@Model.FormatQuantity(Model.History.Summary.TotalQuantity)</p>
+        <p class="mt-1 text-xs text-slate-500">@L["CustomerSalesHistory:UnitsAcrossLines"]</p>
+    </section>
+    <section class="card p-5">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">@L["CustomerSalesHistory:TransactionCount"]</p>
+        <p class="mt-2 text-xl font-bold text-slate-800 dark:text-white">@Model.History.Summary.DocumentCount</p>
+        @if (Model.History.Summary.AverageDocumentAmount.Count > 0)
+        {
+            <p class="mt-1 text-xs text-slate-500">@L["CustomerSalesHistory:AverageDocument"]: @string.Join(" | ", Model.History.Summary.AverageDocumentAmount.Select(item => Model.FormatAmount(item.Amount, item.Currency)))</p>
+        }
+    </section>
+    <section class="card p-5">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">@L["CustomerSalesHistory:TopProduct"]</p>
+        <p class="mt-2 truncate text-xl font-bold text-slate-800 dark:text-white">@(Model.History.Summary.TopProductName ?? "-")</p>
+        @if (!string.IsNullOrWhiteSpace(Model.History.Summary.TopProductSku))
+        {
+            <p class="mt-1 truncate text-xs text-slate-500">@Model.History.Summary.TopProductSku · @Model.FormatQuantity(Model.History.Summary.TopProductQuantity)</p>
+        }
+    </section>
+</div>
+
+<div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <section class="card p-5 lg:col-span-2">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h3 class="text-base font-bold text-slate-800 dark:text-white">@L["CustomerSalesHistory:PurchaseTrend"]</h3>
+                <p class="mt-1 text-xs text-slate-500">@L["CustomerSalesHistory:PurchaseTrendDescription"]</p>
+            </div>
+            <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">@(Model.Currency?.ToUpperInvariant() ?? Model.History.Customer.Currency)</span>
+        </div>
+        @if (Model.History.Chart.Count == 0)
+        {
+            <div class="flex h-48 flex-col items-center justify-center text-slate-400">
+                <span class="material-icons-round text-4xl">bar_chart</span>
+                <p class="mt-2 text-sm">@L["CustomerSalesHistory:NoSales"]</p>
+            </div>
+        }
+        else
+        {
+            <div class="mt-5 h-48 overflow-x-auto">
+                <div class="flex h-full min-w-max items-end gap-3 px-1">
+                    @foreach (var point in Model.History.Chart)
+                    {
+                        <div class="flex h-full w-12 flex-col justify-end text-center">
+                            <span class="mb-1 truncate text-[10px] font-medium text-slate-500" title="@Model.FormatChartTotals(point)">@Model.FormatChartTotals(point)</span>
+                            <div class="w-full rounded-t bg-indigo-500 transition-all dark:bg-indigo-400" style="height: @Model.GetChartHeight(point)" title="@Model.FormatDateRange(point.StartDate, point.EndDate): @Model.FormatChartTotals(point)"></div>
+                            <span class="mt-2 text-[10px] text-slate-500">@point.StartDate.ToString("dd MMM")</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </section>
+    <section class="card p-5">
+        <h3 class="text-base font-bold text-slate-800 dark:text-white">@L["CustomerSalesHistory:AccountSnapshot"]</h3>
+        <dl class="mt-5 space-y-4 text-sm">
+            <div class="flex items-center justify-between gap-4">
+                <dt class="text-slate-500">@L["CustomerSalesHistory:OpenBalance"]</dt>
+                <dd class="font-bold text-slate-800 dark:text-white">@Model.FormatAmount(Model.History.Customer.Balance, Model.History.Customer.Currency)</dd>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+                <dt class="text-slate-500">@L["CustomerSalesHistory:CreditLimit"]</dt>
+                <dd class="font-semibold text-slate-800 dark:text-white">@(Model.History.Customer.CreditLimit > 0 ? Model.FormatAmount(Model.History.Customer.CreditLimit, Model.History.Customer.Currency) : "-")</dd>
+            </div>
+            <div class="flex items-center justify-between gap-4 border-t border-slate-100 pt-4 dark:border-slate-700">
+                <dt class="font-medium text-slate-600 dark:text-slate-300">@L["CustomerSalesHistory:AvailableLimit"]</dt>
+                <dd class="font-bold text-emerald-600 dark:text-emerald-400">@(Model.History.Customer.CreditLimit > 0 ? Model.FormatAmount(Model.History.Customer.AvailableCredit, Model.History.Customer.Currency) : "-")</dd>
+            </div>
+        </dl>
+    </section>
+</div>
+
+<form method="get" class="card mb-6 p-5">
+    <input type="hidden" asp-for="CustomerId" />
+    <input type="hidden" name="skipCount" value="0" />
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:Period"]
+            <select asp-for="PeriodPreset" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                <option value="@CustomerSalesHistoryPeriodPreset.ThisWeek">@L["CustomerSalesHistory:ThisWeek"]</option>
+                <option value="@CustomerSalesHistoryPeriodPreset.LastWeek">@L["CustomerSalesHistory:LastWeek"]</option>
+                <option value="@CustomerSalesHistoryPeriodPreset.ThisMonth">@L["CustomerSalesHistory:ThisMonth"]</option>
+                <option value="@CustomerSalesHistoryPeriodPreset.LastMonth">@L["CustomerSalesHistory:LastMonth"]</option>
+                <option value="@CustomerSalesHistoryPeriodPreset.LastThreeMonths">@L["CustomerSalesHistory:LastThreeMonths"]</option>
+                <option value="@CustomerSalesHistoryPeriodPreset.ThisYear">@L["CustomerSalesHistory:ThisYear"]</option>
+                <option value="@CustomerSalesHistoryPeriodPreset.Custom">@L["CustomerSalesHistory:Custom"]</option>
+            </select>
+        </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:StartDate"]
+            <input asp-for="StartDate" type="date" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+        </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:EndDate"]
+            <input asp-for="EndDate" type="date" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+        </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:TransactionType"]
+            <select asp-for="DocumentType" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                <option value="@CustomerSalesHistoryDocumentType.All">@L["CustomerSalesHistory:All"]</option>
+                <option value="@CustomerSalesHistoryDocumentType.SaleInvoice">@L["CustomerSalesHistory:SaleInvoice"]</option>
+                <option value="@CustomerSalesHistoryDocumentType.PosSale">@L["CustomerSalesHistory:PosSale"]</option>
+                <option value="@CustomerSalesHistoryDocumentType.Return">@L["CustomerSalesHistory:Return"]</option>
+            </select>
+        </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:ProductSearch"]
+            <input asp-for="ProductSearch" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+        </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:DocumentNumber"]
+            <input asp-for="DocumentNumber" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+        </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:Brand"]
+            <select asp-for="BrandId" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                <option value="">@L["CustomerSalesHistory:AllBrands"]</option>
+                @foreach (var brand in Model.Brands)
+                {
+                    <option value="@brand.Id">@brand.Name</option>
+                }
+            </select>
+        </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:Category"]
+            <select asp-for="CategoryId" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                <option value="">@L["CustomerSalesHistory:AllCategories"]</option>
+                @foreach (var category in Model.Categories)
+                {
+                    <option value="@category.Id">@category.Name</option>
+                }
+            </select>
+        </label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            @L["CustomerSalesHistory:Currency"]
+            <select asp-for="Currency" class="mt-1.5 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+                <option value="">@L["CustomerSalesHistory:AllCurrencies"]</option>
+                <option value="TRY">TRY</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+            </select>
+        </label>
+        <label class="flex items-end gap-2 pb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <input asp-for="OnlyReturns" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            @L["CustomerSalesHistory:OnlyReturns"]
+        </label>
+        <div class="flex items-end gap-2 xl:col-span-2">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700">
+                <span class="material-icons-round text-base">filter_alt</span>@L["CustomerSalesHistory:ApplyFilters"]
+            </button>
+            <a href="~/Customers/@Model.CustomerId/SalesHistory" class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                @L["CustomerSalesHistory:ClearFilters"]
+            </a>
+        </div>
+    </div>
+</form>
+
+<section class="card overflow-hidden">
+    <div class="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
+        <div>
+            <h3 class="text-base font-bold text-slate-800 dark:text-white">@L["CustomerSalesHistory:MovementLedger"]</h3>
+            <p class="mt-1 text-xs text-slate-500">@Model.History.TotalCount @L["CustomerSalesHistory:LineCount"] · @Model.FormatDateRange(Model.History.StartDate, Model.History.EndDate)</p>
+        </div>
+        <span class="text-xs text-slate-500">@L["CustomerSalesHistory:NewestFirst"]</span>
+    </div>
+    @if (Model.History.Groups.Count == 0)
+    {
+        <div class="flex min-h-64 flex-col items-center justify-center px-5 py-12 text-center text-slate-400">
+            <span class="material-icons-round text-4xl">receipt_long</span>
+            <p class="mt-3 text-sm">@L["CustomerSalesHistory:NoSales"]</p>
+        </div>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            @foreach (var group in Model.History.Groups)
+            {
+                <div class="flex min-w-300 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-y border-slate-100 bg-slate-50 px-5 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">@Model.FormatDateRange(group.StartDate, group.EndDate)</h4>
+                        <p class="mt-0.5 text-xs text-slate-500">@group.TransactionCount @L["CustomerSalesHistory:Transactions"] · @Model.FormatQuantity(group.Quantity) @L["CustomerSalesHistory:UnitsAcrossLines"]</p>
+                    </div>
+                    <div class="text-right text-sm font-bold text-slate-700 dark:text-slate-200">@string.Join(" | ", group.Totals.Select(total => Model.FormatAmount(total.Amount, total.Currency)))</div>
+                </div>
+                <table class="w-full min-w-300 text-left text-sm">
+                    <thead class="bg-white text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900/30">
+                        <tr>
+                            <th class="px-5 py-3 font-semibold">@L["CustomerSalesHistory:Date"]</th>
+                            <th class="px-4 py-3 font-semibold">@L["CustomerSalesHistory:TransactionType"]</th>
+                            <th class="px-4 py-3 font-semibold">@L["CustomerSalesHistory:DocumentNumber"]</th>
+                            <th class="px-4 py-3 font-semibold">@L["CustomerSalesHistory:Product"]</th>
+                            <th class="px-4 py-3 text-right font-semibold">@L["CustomerSalesHistory:Quantity"]</th>
+                            <th class="px-4 py-3 text-right font-semibold">@L["CustomerSalesHistory:UnitPrice"]</th>
+                            <th class="px-4 py-3 text-right font-semibold">@L["CustomerSalesHistory:Discount"]</th>
+                            <th class="px-4 py-3 text-right font-semibold">@L["CustomerSalesHistory:Vat"]</th>
+                            <th class="px-4 py-3 text-right font-semibold">@L["CustomerSalesHistory:LineTotal"]</th>
+                            <th class="px-5 py-3 text-center font-semibold"><span class="sr-only">@L["CustomerSalesHistory:DocumentDetail"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                        @foreach (var row in group.Rows)
+                        {
+                            <tr class="bg-white transition-colors hover:bg-slate-50 dark:bg-transparent dark:hover:bg-slate-800/40">
+                                <td class="whitespace-nowrap px-5 py-3 text-slate-600 dark:text-slate-300">@row.Date.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td class="whitespace-nowrap px-4 py-3">
+                                    <span class="rounded-md px-2 py-1 text-xs font-semibold @(row.TransactionType == CustomerSalesHistoryDocumentType.PosSale ? "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300" : "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300")">@(row.TransactionType == CustomerSalesHistoryDocumentType.PosSale ? L["CustomerSalesHistory:PosSale"] : L["CustomerSalesHistory:SaleInvoice"])</span>
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">@row.DocumentNumber</td>
+                                <td class="min-w-64 px-4 py-3">
+                                    <p class="font-semibold text-slate-800 dark:text-white">@row.ProductName</p>
+                                    <p class="mt-0.5 text-xs text-slate-500">@row.Sku @if (!string.IsNullOrWhiteSpace(row.Barcode)) { <span>· @row.Barcode</span> } @if (!string.IsNullOrWhiteSpace(row.BrandName)) { <span>· @row.BrandName</span> }</p>
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right text-slate-700 dark:text-slate-200">@Model.FormatQuantity(row.Quantity) @row.Unit</td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right text-slate-700 dark:text-slate-200">@Model.FormatAmount(row.UnitPrice, row.Currency)</td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right text-slate-500">%@Model.FormatQuantity(row.DiscountRate)</td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right text-slate-500">%@Model.FormatQuantity(row.VatRate)</td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right font-bold text-slate-800 dark:text-white">@Model.FormatAmount(row.Total, row.Currency)</td>
+                                <td class="px-5 py-3 text-center">
+                                    <a href="~/Invoices/Print?id=@row.DocumentId" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10" title="@L["CustomerSalesHistory:DocumentDetail"]">
+                                        <span class="material-icons-round text-lg">open_in_new</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+    @if (Model.History.TotalCount > Model.History.MaxResultCount)
+    {
+        <div class="flex items-center justify-between border-t border-slate-100 px-5 py-4 dark:border-slate-700">
+            <span class="text-sm text-slate-500">@L["CustomerSalesHistory:ShowingRows", Math.Min(Model.History.SkipCount + 1, Model.History.TotalCount), Math.Min(Model.History.SkipCount + Model.History.MaxResultCount, Model.History.TotalCount), Model.History.TotalCount]</span>
+            <div class="flex gap-2">
+                @if (Model.History.SkipCount > 0)
+                {
+                    <a href="@Url.Page("/Customers/SalesHistory", new { customerId = Model.CustomerId, periodPreset = Model.PeriodPreset, startDate = Model.StartDate?.ToString("yyyy-MM-dd"), endDate = Model.EndDate?.ToString("yyyy-MM-dd"), documentType = Model.DocumentType, productSearch = Model.ProductSearch, documentNumber = Model.DocumentNumber, brandId = Model.BrandId, categoryId = Model.CategoryId, currency = Model.Currency, onlyReturns = Model.OnlyReturns, skipCount = Math.Max(0, Model.History.SkipCount - Model.History.MaxResultCount) })" class="rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">@L["CustomerSalesHistory:Previous"]</a>
+                }
+                @if (Model.History.HasNextPage)
+                {
+                    <a href="@Url.Page("/Customers/SalesHistory", new { customerId = Model.CustomerId, periodPreset = Model.PeriodPreset, startDate = Model.StartDate?.ToString("yyyy-MM-dd"), endDate = Model.EndDate?.ToString("yyyy-MM-dd"), documentType = Model.DocumentType, productSearch = Model.ProductSearch, documentNumber = Model.DocumentNumber, brandId = Model.BrandId, categoryId = Model.CategoryId, currency = Model.Currency, onlyReturns = Model.OnlyReturns, skipCount = Model.History.SkipCount + Model.History.MaxResultCount })" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">@L["CustomerSalesHistory:Next"]</a>
+                }
+            </div>
+        </div>
+    }
+</section>

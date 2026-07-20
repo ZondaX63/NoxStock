@@ -6,10 +6,12 @@ using Volo.Abp.Data;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
 using NoxStock.MultiTenancy;
+using Volo.Abp.Auditing;
 
 namespace NoxStock.Tenants;
 
 [AllowAnonymous]
+[DisableAuditing]
 public class TenantRegistrationAppService : NoxStockAppService, ITenantRegistrationAppService
 {
     private readonly ITenantManager _tenantManager;

@@ -4,11 +4,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
+using Volo.Abp.Auditing;
+using NoxStock.Web.Diagnostics;
 
 namespace NoxStock.Web.Controllers;
 
 [ApiController]
 [Authorize]
+[DisableAuditing]
 [IgnoreAntiforgeryToken]
 [Route("api/diagnostics/client-errors")]
 public sealed class ClientErrorsController : ControllerBase
@@ -37,19 +40,12 @@ public sealed class ClientErrorsController : ControllerBase
             HttpContext.TraceIdentifier,
             _currentTenant.Id,
             _currentUser.Id,
-            Trim(input.Source),
-            Trim(input.Url),
-            Trim(input.Message),
-            Trim(input.Stack));
+            SensitiveDataSanitizer.Sanitize(input.Source, MaxFieldLength),
+            SensitiveDataSanitizer.SanitizeUrl(input.Url),
+            SensitiveDataSanitizer.Sanitize(input.Message, MaxFieldLength),
+            SensitiveDataSanitizer.Sanitize(input.Stack, MaxFieldLength));
 
         return Accepted(new { traceId = HttpContext.TraceIdentifier });
-    }
-
-    private static string? Trim(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? null
-            : value.Length <= MaxFieldLength ? value : value[..MaxFieldLength];
     }
 
     public sealed class ClientErrorInput

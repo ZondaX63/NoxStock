@@ -4,10 +4,11 @@ using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using NoxStock.MultiTenancy;
+using NoxStock.Permissions;
 
 namespace NoxStock.Products;
 
-[Authorize]
+[Authorize(NoxStockPermissions.Products.Default)]
 public class ProductPricingAppService : ApplicationService, IProductPricingAppService
 {
     private readonly IRepository<Product, Guid> _productRepository;

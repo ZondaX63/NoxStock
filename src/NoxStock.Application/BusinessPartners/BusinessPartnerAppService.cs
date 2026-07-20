@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -9,6 +10,7 @@ using NoxStock.MultiTenancy;
 
 namespace NoxStock.BusinessPartners;
 
+[Authorize(NoxStockPermissions.BusinessPartners.Default)]
 public class BusinessPartnerAppService :
     CrudAppService<
         BusinessPartner,

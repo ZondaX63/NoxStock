@@ -15,6 +15,8 @@
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+!docs/release/
+!docs/release/**
 x64/
 x86/
 bld/
@@ -283,3 +285,23 @@ src/NoxStock.Blazor.Server.Tiered/Logs/*
 # IdentityServer temp files
 tempkey.rsa
 tempkey.jwk
+
+# Local environment and runtime secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+
+# Browser/e2e test artifacts
+**/test-results/
+**/playwright-report/
+**/.playwright/
+*.trace.zip
+*.webm
+
+# Release validation scratch output
+release.env
+restore-test.env

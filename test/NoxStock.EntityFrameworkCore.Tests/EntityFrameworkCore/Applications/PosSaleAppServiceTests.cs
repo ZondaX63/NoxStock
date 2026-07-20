@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NoxStock.Accounts;
 using NoxStock.BusinessPartners;
+using NoxStock.ExchangeRates;
 using NoxStock.Products;
 using NoxStock.Sales;
 using NoxStock.StockMovements;
@@ -156,6 +157,71 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         posResults.Select(product => product.Id).ShouldContain(fourU.Id);
         posResults.Select(product => product.Id).ShouldContain(bmwGroup.Id);
         posResults.Single(product => product.Id == delphi.Id).OemCodes.ShouldBe(oemCode);
+    }
+
+    [Fact]
+    public async Task Should_Sell_Foreign_Currency_Product_In_Try_At_Current_Rate()
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var exchangeRateRepository = ServiceProvider.GetRequiredService<IRepository<ExchangeRate, Guid>>();
+            var usdRate = await exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == "USD");
+            if (usdRate is null)
+            {
+                await exchangeRateRepository.InsertAsync(new ExchangeRate(Guid.NewGuid(), "USD", 40m, DateTime.UtcNow));
+            }
+            else
+            {
+                usdRate.Rate = 40m;
+                usdRate.RateDate = DateTime.UtcNow;
+                await exchangeRateRepository.UpdateAsync(usdRate);
+            }
+        });
+
+        var product = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "USD POS Product",
+            Sku = "POS-USD-001",
+            Barcode = "869000000099",
+            Description = string.Empty,
+            Unit = "Adet",
+            ShelfLocation = "POS",
+            PurchasePrice = 20,
+            SalePrice = 30,
+            Quantity = 5,
+            CriticalStockLevel = 1,
+            TrackStock = true,
+            Currency = "USD",
+            PurchaseCurrency = "USD",
+            SaleCurrency = "USD"
+        });
+        var cashAccount = await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+        {
+            Name = "TRY POS Cash",
+            Type = AccountType.Cash,
+            Currency = "TRY",
+            IsActive = true
+        });
+
+        var lookup = await _posSaleAppService.GetProductsAsync(new PosProductLookupInputDto
+        {
+            Filter = product.Barcode,
+            Currency = "TRY"
+        });
+        lookup.Single().Currency.ShouldBe("TRY");
+        lookup.Single().SalePrice.ShouldBe(1200m);
+
+        var sale = await _posSaleAppService.CreateAsync(new CreatePosSaleDto
+        {
+            OperationKey = "pos-try-currency-001",
+            Currency = "TRY",
+            PaymentMethod = PosPaymentMethod.Cash,
+            AccountId = cashAccount.Id,
+            Items = { new CreatePosSaleItemDto { ProductId = product.Id, Quantity = 1 } }
+        });
+
+        sale.Currency.ShouldBe("TRY");
+        sale.GrandTotal.ShouldBe(1200m);
     }
 
     private async Task<ProductDto> CreateProductAsync(string sku, string barcode, decimal quantity, decimal salePrice, string? oemCodes = null)

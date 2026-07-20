@@ -7,7 +7,15 @@ namespace NoxStock.Web.MultiTenancy;
 
 public sealed class PlatformAdministrationMiddleware
 {
-    private static readonly string[] HostOnlyPrefixes = ["/AuditLogs", "/Identity"];
+    private static readonly string[] HostOnlyPrefixes =
+    [
+        "/AuditLogs",
+        "/Identity",
+        "/TenantManagement",
+        "/api/identity",
+        "/api/tenant-management",
+        "/api/app/audit-log"
+    ];
     private readonly RequestDelegate _next;
 
     public PlatformAdministrationMiddleware(RequestDelegate next)

@@ -6,6 +6,11 @@
 }
 
 <div class="space-y-6">
+    @if (TempData["TenantStatusMessage"] is string tenantStatusMessage)
+    {
+        <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">@tenantStatusMessage</div>
+    }
+
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Şirketler</h1>
@@ -52,10 +57,19 @@
                                 </td>
                                 <td class="px-6 py-4 text-slate-600 dark:text-slate-300">@tenant.CreationTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                                 <td class="px-6 py-4 text-right">
-                                    <a href="/t/@tenant.Name/Account/Login" class="inline-flex items-center gap-1.5 font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200">
-                                        Giriş sayfası
-                                        <span class="material-icons-round text-base">open_in_new</span>
-                                    </a>
+                                    <div class="flex items-center justify-end gap-3">
+                                        <form method="post" asp-page-handler="SetActive">
+                                            <input type="hidden" name="tenantId" value="@tenant.Id" />
+                                            <input type="hidden" name="isActive" value="@(!isActive ? "true" : "false")" />
+                                            <button type="submit" class="font-semibold @(isActive ? "text-rose-600 hover:text-rose-800" : "text-emerald-600 hover:text-emerald-800")" data-tenant-name="@tenant.Name" data-tenant-action="@(isActive ? "deactivate" : "activate")">
+                                                @(isActive ? "Pasife al" : "Etkinleştir")
+                                            </button>
+                                        </form>
+                                        <a href="/TenantManagement/Tenants?handler=SwitchToTenant&tenantName=@tenant.Name" class="inline-flex items-center gap-1.5 font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200">
+                                            Giriş sayfası
+                                            <span class="material-icons-round text-base">open_in_new</span>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         }

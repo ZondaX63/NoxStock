@@ -28,8 +28,7 @@ public class Program
                 {
                     loggerConfiguration
                         .ReadFrom.Configuration(context.Configuration)
-                        .ReadFrom.Services(services)
-                        .WriteTo.Async(c => c.AbpStudio(services));
+                        .ReadFrom.Services(services);
                 });
             await builder.AddApplicationAsync<NoxStockWebModule>();
             var app = builder.Build();
