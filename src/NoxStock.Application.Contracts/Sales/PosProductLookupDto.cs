@@ -28,6 +28,10 @@ public class PosProductLookupDto
     public bool UsesCurrentExchangeRate { get; set; }
     public decimal ProfitMarkupPercent { get; set; }
     public decimal ExchangeRate { get; set; } = 1;
+    public string? LastPurchaseCostCurrencyCode { get; set; }
+    public decimal? LastPurchaseCostCurrencyAmount { get; set; }
+    public decimal? LastPurchaseCostTryAmount { get; set; }
+    public Guid? ProductCostHistoryId { get; set; }
     public decimal Quantity { get; set; }
     public bool TrackStock { get; set; }
 }

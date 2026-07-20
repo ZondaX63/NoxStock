@@ -235,6 +235,7 @@
     "CustomerSalesHistory:DocumentDetail": "Open document detail",
     "CustomerSalesHistory:ShowingRows": "Showing rows {0}-{1} of {2}",
     "CustomerSalesHistory:Previous": "Previous",
-    "CustomerSalesHistory:Next": "Next"
+    "CustomerSalesHistory:Next": "Next",
+    "DocumentExchangeRateSnapshotUnavailable": "The document exchange-rate snapshot for {0} is unavailable. Approval could not be completed safely."
   }
 }

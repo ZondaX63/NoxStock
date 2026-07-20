@@ -271,6 +271,7 @@
     "CustomerSalesHistory:DocumentDetail": "Belge detayını aç",
     "CustomerSalesHistory:ShowingRows": "{0}-{1} / {2} satır gösteriliyor",
     "CustomerSalesHistory:Previous": "Önceki",
-    "CustomerSalesHistory:Next": "Sonraki"
+    "CustomerSalesHistory:Next": "Sonraki",
+    "DocumentExchangeRateSnapshotUnavailable": "Belgeye ait {0} döviz kuru snapshot'ı bulunamadı. Onay işlemi güvenli biçimde tamamlanamadı."
   }
 }

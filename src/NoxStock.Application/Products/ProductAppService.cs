@@ -9,6 +9,8 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Linq;
 using NoxStock.Brands;
 using NoxStock.Categories;
+using NoxStock.BusinessPartners;
+using NoxStock.Documents;
 using NoxStock.MultiTenancy;
 using NoxStock.Permissions;
 using Volo.Abp;
@@ -28,17 +30,23 @@ public class ProductAppService :
     private readonly IRepository<Brand, Guid> _brandRepository;
     private readonly IRepository<Category, Guid> _categoryRepository;
     private readonly IRepository<ProductOEMCode, Guid> _productOemCodeRepository;
+    private readonly IRepository<Document, Guid> _documentRepository;
+    private readonly IRepository<BusinessPartner, Guid> _businessPartnerRepository;
 
     public ProductAppService(
         IRepository<Product, Guid> repository,
         IRepository<Brand, Guid> brandRepository,
         IRepository<Category, Guid> categoryRepository,
-        IRepository<ProductOEMCode, Guid> productOemCodeRepository)
+        IRepository<ProductOEMCode, Guid> productOemCodeRepository,
+        IRepository<Document, Guid> documentRepository,
+        IRepository<BusinessPartner, Guid> businessPartnerRepository)
         : base(repository)
     {
         _brandRepository = brandRepository;
         _categoryRepository = categoryRepository;
         _productOemCodeRepository = productOemCodeRepository;
+        _documentRepository = documentRepository;
+        _businessPartnerRepository = businessPartnerRepository;
 
         GetPolicyName = NoxStockPermissions.Products.Default;
         GetListPolicyName = NoxStockPermissions.Products.Default;
@@ -50,6 +58,7 @@ public class ProductAppService :
     public override async Task<ProductDto> CreateAsync(CreateUpdateProductDto input)
     {
         CurrentTenant.RequireTenantId();
+        NormalizePricingConfiguration(input);
         await ValidateRelationsAsync(input);
         var result = await base.CreateAsync(input);
         await ReplaceOemCodesAsync(result.Id, input.OemCodes);
@@ -60,6 +69,7 @@ public class ProductAppService :
     public override async Task<ProductDto> UpdateAsync(Guid id, CreateUpdateProductDto input)
     {
         CurrentTenant.RequireTenantId();
+        NormalizePricingConfiguration(input);
         await ValidateRelationsAsync(input);
         var result = await base.UpdateAsync(id, input);
         await ReplaceOemCodesAsync(id, input.OemCodes);
@@ -88,9 +98,10 @@ public class ProductAppService :
         }
 
         var productDto = ObjectMapper.Map<Product, ProductDto>(result.product);
-        productDto.BrandName = result.brand?.Name;
-        productDto.CategoryName = result.category?.Name;
+        productDto.BrandName = result.brand?.Name ?? string.Empty;
+        productDto.CategoryName = result.category?.Name ?? string.Empty;
         productDto.OemCodes = await GetOemCodesAsync(id);
+        await PopulateLastPurchaseContextAsync(productDto);
 
         return productDto;
     }
@@ -140,9 +151,10 @@ public class ProductAppService :
         foreach (var x in queryResult)
         {
             var dto = ObjectMapper.Map<Product, ProductDto>(x.product);
-            dto.BrandName = x.brand?.Name;
-            dto.CategoryName = x.category?.Name;
+            dto.BrandName = x.brand?.Name ?? string.Empty;
+            dto.CategoryName = x.category?.Name ?? string.Empty;
             dto.OemCodes = await GetOemCodesAsync(x.product.Id);
+            await PopulateLastPurchaseContextAsync(dto);
             productDtos.Add(dto);
         }
 
@@ -185,11 +197,52 @@ public class ProductAppService :
         }
     }
 
+    private static void NormalizePricingConfiguration(CreateUpdateProductDto input)
+    {
+        input.PricingCurrencyCode = NormalizeCurrency(string.IsNullOrWhiteSpace(input.PricingCurrencyCode)
+            ? input.SaleCurrency
+            : input.PricingCurrencyCode);
+        input.PurchaseCurrency = NormalizeCurrency(input.PurchaseCurrency);
+        input.SaleCurrency = NormalizeCurrency(input.SaleCurrency);
+        input.Currency = NormalizeCurrency(input.Currency);
+
+        if (input.UseCurrentExchangeRateForSale)
+        {
+            input.PricingMode = ProductPricingMode.DynamicCurrencyMarkup;
+        }
+
+        input.UseCurrentExchangeRateForSale = input.PricingMode == ProductPricingMode.DynamicCurrencyMarkup;
+    }
+
+    private static string NormalizeCurrency(string? currency)
+    {
+        var normalized = currency?.Trim().ToUpperInvariant();
+        if (normalized is not ("TRY" or "USD" or "EUR"))
+        {
+            throw new BusinessException("NoxStock:UnsupportedCurrency").WithData("Currency", currency);
+        }
+
+        return normalized;
+    }
+
     private async Task<string?> GetOemCodesAsync(Guid productId)
     {
         var queryable = await _productOemCodeRepository.GetQueryableAsync();
         var codes = await AsyncExecuter.ToListAsync(queryable.Where(x => x.ProductId == productId));
         return string.Join(", ", codes.Select(x => x.OemCode));
+    }
+
+    private async Task PopulateLastPurchaseContextAsync(ProductDto product)
+    {
+        if (product.LastPurchaseDocumentId.HasValue)
+        {
+            product.LastPurchaseDocumentNumber = (await _documentRepository.FindAsync(product.LastPurchaseDocumentId.Value))?.DocNumber ?? string.Empty;
+        }
+
+        if (product.LastPurchaseSupplierId.HasValue)
+        {
+            product.LastPurchaseSupplierName = (await _businessPartnerRepository.FindAsync(product.LastPurchaseSupplierId.Value))?.Name ?? string.Empty;
+        }
     }
 
     private static string? NormalizeOemCodes(string? oemCodes)

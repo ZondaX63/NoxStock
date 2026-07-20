@@ -41,7 +41,13 @@ public class ProductPricingAppService : ApplicationService, IProductPricingAppSe
             PurchasePrice = product.PurchasePrice,
             PurchaseCurrency = product.PurchaseCurrency,
             SalePrice = product.SalePrice,
-            SaleCurrency = product.SaleCurrency
+            SaleCurrency = product.SaleCurrency,
+            LastPurchaseCostCurrencyCode = product.LastPurchaseCostCurrencyCode,
+            LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
+            LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
+            PricingCurrencyExchangeRate = calculation.PricingCurrencyExchangeRate,
+            ProductCostHistoryId = calculation.ProductCostHistoryId,
+            PricingMode = product.PricingMode
         };
     }
 }

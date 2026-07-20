@@ -22,4 +22,10 @@ public class ProductPriceQuoteDto
     public string PurchaseCurrency { get; set; } = "TRY";
     public decimal SalePrice { get; set; }
     public string SaleCurrency { get; set; } = "TRY";
+    public string? LastPurchaseCostCurrencyCode { get; set; }
+    public decimal? LastPurchaseCostCurrencyAmount { get; set; }
+    public decimal? LastPurchaseCostTryAmount { get; set; }
+    public decimal? PricingCurrencyExchangeRate { get; set; }
+    public Guid? ProductCostHistoryId { get; set; }
+    public ProductPricingMode PricingMode { get; set; }
 }

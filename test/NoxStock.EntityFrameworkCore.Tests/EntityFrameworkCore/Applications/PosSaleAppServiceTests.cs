@@ -224,6 +224,37 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         sale.GrandTotal.ShouldBe(1200m);
     }
 
+    [Fact]
+    public async Task Should_Preserve_Manual_Pos_Unit_Price_Override()
+    {
+        var product = await CreateProductAsync("POS-MANUAL-001", "869000000199", 3, 125);
+        var cashAccount = await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+        {
+            Name = "Manual POS Cash",
+            Type = AccountType.Cash,
+            Currency = "TRY",
+            IsActive = true
+        });
+
+        var sale = await _posSaleAppService.CreateAsync(new CreatePosSaleDto
+        {
+            PaymentMethod = PosPaymentMethod.Cash,
+            AccountId = cashAccount.Id,
+            Items =
+            {
+                new CreatePosSaleItemDto
+                {
+                    ProductId = product.Id,
+                    Quantity = 1,
+                    UnitPrice = 99m,
+                    IsUnitPriceOverridden = true
+                }
+            }
+        });
+
+        sale.GrandTotal.ShouldBe(99m);
+    }
+
     private async Task<ProductDto> CreateProductAsync(string sku, string barcode, decimal quantity, decimal salePrice, string? oemCodes = null)
     {
         return await _productAppService.CreateAsync(new CreateUpdateProductDto

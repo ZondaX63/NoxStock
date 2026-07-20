@@ -107,6 +107,10 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 UsesCurrentExchangeRate = calculation.UsesCurrentExchangeRate,
                 ProfitMarkupPercent = product.ProfitMarkupPercent,
                 ExchangeRate = calculation.ExchangeRate,
+                LastPurchaseCostCurrencyCode = product.LastPurchaseCostCurrencyCode,
+                LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
+                LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
+                ProductCostHistoryId = calculation.ProductCostHistoryId,
                 Quantity = product.Quantity,
                 TrackStock = product.TrackStock
             });
@@ -184,7 +188,9 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             .Select(group => new CreatePosSaleItemDto
             {
                 ProductId = group.Key,
-                Quantity = group.Sum(x => x.Quantity)
+                Quantity = group.Sum(x => x.Quantity),
+                UnitPrice = group.Last().UnitPrice,
+                IsUnitPriceOverridden = group.Any(x => x.IsUnitPriceOverridden)
             })
             .ToList();
 
@@ -211,6 +217,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             var product = await _productRepository.GetAsync(cartItem.ProductId);
             var productCurrency = targetCurrency ?? (string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency);
             var calculation = await _priceCalculator.CalculateAsync(product, productCurrency);
+            var usesManualPrice = cartItem.IsUnitPriceOverridden && cartItem.UnitPrice is > 0;
+            var unitPrice = usesManualPrice ? cartItem.UnitPrice!.Value : calculation.UnitPrice;
             if (document.Items.Count == 0)
             {
                 document.Currency = calculation.Currency;
@@ -232,10 +240,15 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             {
                 ProductId = product.Id,
                 Quantity = cartItem.Quantity,
-                UnitPrice = calculation.UnitPrice,
+                UnitPrice = unitPrice,
                 VatRate = 0,
                 DiscountRate = 0,
-                Total = calculation.UnitPrice * cartItem.Quantity
+                Total = unitPrice * cartItem.Quantity,
+                IsUnitPriceOverridden = usesManualPrice,
+                PriceCurrencyCode = calculation.Currency,
+                PriceExchangeRate = calculation.ExchangeRate,
+                ProductCostHistoryId = calculation.ProductCostHistoryId ?? product.LastPurchaseCostHistoryId,
+                PricingMode = usesManualPrice ? ProductPricingMode.Manual : product.PricingMode
             });
         }
 

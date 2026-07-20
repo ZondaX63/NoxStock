@@ -39,11 +39,13 @@ public class NoxStockDbContext :
     public DbSet<Category> Categories { get; set; }
     public DbSet<Product> Products { get; set; }
     public DbSet<ProductOEMCode> ProductOEMCodes { get; set; }
+    public DbSet<ProductCostHistory> ProductCostHistories { get; set; }
     public DbSet<ExchangeRate> ExchangeRates { get; set; }
 
     public DbSet<BusinessPartner> BusinessPartners { get; set; }
     public DbSet<Document> Documents { get; set; }
     public DbSet<DocumentItem> DocumentItems { get; set; }
+    public DbSet<DocumentExchangeRateSnapshot> DocumentExchangeRateSnapshots { get; set; }
     public DbSet<Account> Accounts { get; set; }
     public DbSet<AccountTransaction> AccountTransactions { get; set; }
     public DbSet<StockMovement> StockMovements { get; set; }
@@ -129,6 +131,12 @@ public class NoxStockDbContext :
             b.Property(x => x.SalePrice).HasColumnType("decimal(15,4)");
             b.Property(x => x.ProfitMarkupPercent).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
             b.Property(x => x.UseCurrentExchangeRateForSale).HasDefaultValue(false);
+            b.Property(x => x.PricingCurrencyCode).IsRequired().HasMaxLength(3).HasDefaultValue("TRY");
+            b.Property(x => x.PricingMode).HasDefaultValue(ProductPricingMode.Manual);
+            b.Property(x => x.LastPurchaseCostCurrencyCode).HasMaxLength(3);
+            b.Property(x => x.LastPurchaseCostCurrencyAmount).HasColumnType("decimal(18,6)");
+            b.Property(x => x.LastPurchaseCostTryAmount).HasColumnType("decimal(18,6)");
+            b.Property(x => x.LastPurchaseExchangeRate).HasColumnType("decimal(18,6)");
             b.Property(x => x.Quantity).HasColumnType("decimal(15,4)");
             b.Property(x => x.CriticalStockLevel).HasColumnType("decimal(15,4)");
             b.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("TRY");
@@ -147,6 +155,24 @@ public class NoxStockDbContext :
             b.Property(x => x.SearchCode).IsRequired().HasMaxLength(150);
             b.HasIndex(x => new { x.TenantId, x.SearchCode });
             b.HasOne<Product>().WithMany(p => p.OemCodes).HasForeignKey(x => x.ProductId).IsRequired();
+        });
+
+        builder.Entity<ProductCostHistory>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "ProductCostHistories", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.SourceCurrencyCode).IsRequired().HasMaxLength(3);
+            b.Property(x => x.SourceNetUnitCost).HasColumnType("decimal(18,6)");
+            b.Property(x => x.SourceExchangeRate).HasColumnType("decimal(18,6)");
+            b.Property(x => x.TryEquivalentNetUnitCost).HasColumnType("decimal(18,6)");
+            b.Property(x => x.PricingCurrencyCode).IsRequired().HasMaxLength(3);
+            b.Property(x => x.PricingCurrencyEquivalentCost).HasColumnType("decimal(18,6)");
+            b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
+            b.HasOne<Document>().WithMany().HasForeignKey(x => x.SourceDocumentId).IsRequired();
+            b.HasOne<DocumentItem>().WithMany().HasForeignKey(x => x.SourceDocumentItemId).IsRequired();
+            b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.SupplierId).IsRequired(false);
+            b.HasIndex(x => new { x.TenantId, x.ProductId, x.CostDate });
+            b.HasIndex(x => new { x.TenantId, x.SourceDocumentItemId, x.ChangeType }).IsUnique();
         });
 
         builder.Entity<BusinessPartner>(b =>
@@ -185,6 +211,18 @@ public class NoxStockDbContext :
                 .HasFilter("\"OperationKey\" IS NOT NULL AND \"IsDeleted\" = FALSE");
         });
 
+        builder.Entity<DocumentExchangeRateSnapshot>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "DocumentExchangeRateSnapshots", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.CurrencyCode).IsRequired().HasMaxLength(3);
+            b.Property(x => x.RateToTry).HasColumnType("decimal(18,6)");
+            b.HasOne<Document>().WithMany(d => d.ExchangeRateSnapshots).HasForeignKey(x => x.DocumentId).IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.DocumentId, x.CurrencyCode })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
         builder.Entity<DocumentItem>(b =>
         {
             b.ToTable(NoxStockConsts.DbTablePrefix + "DocumentItems", NoxStockConsts.DbSchema);
@@ -194,8 +232,11 @@ public class NoxStockDbContext :
             b.Property(x => x.VatRate).HasColumnType("decimal(5,2)");
             b.Property(x => x.DiscountRate).HasColumnType("decimal(5,2)");
             b.Property(x => x.Total).HasColumnType("decimal(18,4)");
+            b.Property(x => x.PriceCurrencyCode).HasMaxLength(3);
+            b.Property(x => x.PriceExchangeRate).HasColumnType("decimal(18,6)");
             b.HasOne<Document>().WithMany(d => d.Items).HasForeignKey(x => x.DocumentId).IsRequired();
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
+            b.HasOne<ProductCostHistory>().WithMany().HasForeignKey(x => x.ProductCostHistoryId).IsRequired(false);
         });
 
         builder.Entity<ExchangeRate>(b =>

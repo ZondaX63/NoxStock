@@ -17,6 +17,18 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     public decimal SalePrice { get; set; }
     public decimal ProfitMarkupPercent { get; set; }
     public bool UseCurrentExchangeRateForSale { get; set; }
+    public string PricingCurrencyCode { get; set; } = "TRY";
+    public ProductPricingMode PricingMode { get; set; }
+    public string? LastPurchaseCostCurrencyCode { get; set; }
+    public decimal? LastPurchaseCostCurrencyAmount { get; set; }
+    public decimal? LastPurchaseCostTryAmount { get; set; }
+    public decimal? LastPurchaseExchangeRate { get; set; }
+    public DateTime? LastPurchaseDate { get; set; }
+    public Guid? LastPurchaseDocumentId { get; set; }
+    public Guid? LastPurchaseDocumentItemId { get; set; }
+    public Guid? LastPurchaseCostHistoryId { get; set; }
+    public Guid? LastPurchaseSupplierId { get; set; }
+    public DateTime? LastCostUpdatedAt { get; set; }
     public decimal Quantity { get; set; }
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; }
@@ -28,4 +40,6 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     // Derived properties for UI
     public string BrandName { get; set; }
     public string CategoryName { get; set; }
+    public string? LastPurchaseDocumentNumber { get; set; }
+    public string? LastPurchaseSupplierName { get; set; }
 }

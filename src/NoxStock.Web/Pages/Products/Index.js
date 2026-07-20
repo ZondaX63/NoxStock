@@ -38,16 +38,30 @@ $(function () {
             return renderPrice(row.salePrice, row.saleCurrency || 'TRY');
         }
 
-        var purchaseCurrency = row.purchaseCurrency || 'TRY';
+        var purchaseCurrency = row.lastPurchaseCostCurrencyCode || row.pricingCurrencyCode || row.purchaseCurrency || 'TRY';
         var saleCurrency = row.saleCurrency || 'TRY';
+        var purchasePrice = row.lastPurchaseCostCurrencyAmount || row.purchasePrice || 0;
         var purchaseRate = purchaseCurrency === 'TRY' ? 1 : Number(rates[purchaseCurrency] && rates[purchaseCurrency].rate);
         var saleRate = saleCurrency === 'TRY' ? 1 : Number(rates[saleCurrency] && rates[saleCurrency].rate);
         if (!purchaseRate || !saleRate) {
             return formatMoney(row.salePrice, saleCurrency);
         }
 
-        var currentPrice = Number(row.purchasePrice || 0) * purchaseRate * (1 + Number(row.profitMarkupPercent || 0) / 100) / saleRate;
+        var currentPrice = Number(purchasePrice) * purchaseRate * (1 + Number(row.profitMarkupPercent || 0) / 100) / saleRate;
         return renderPrice(currentPrice, saleCurrency);
+    }
+
+    function renderLastPurchaseCost(row) {
+        if (!row.lastPurchaseCostCurrencyAmount) {
+            return '<span class="text-xs text-slate-400">Onaylı alış yok</span>';
+        }
+
+        var currency = row.lastPurchaseCostCurrencyCode || row.pricingCurrencyCode || 'TRY';
+        var date = row.lastPurchaseDate ? luxon.DateTime.fromISO(row.lastPurchaseDate).toFormat('dd.MM.yyyy') : '';
+        var source = [row.lastPurchaseSupplierName, row.lastPurchaseDocumentNumber].filter(Boolean).join(' | ');
+        return '<span class="font-semibold">' + renderPrice(row.lastPurchaseCostCurrencyAmount, currency) + '</span>' +
+            '<div class="mt-1 text-xs text-slate-500">' + date + (row.lastPurchaseExchangeRate ? ' | alış kuru: ' + Number(row.lastPurchaseExchangeRate).toFixed(4) : '') + '</div>' +
+            (source ? '<div class="mt-1 text-xs text-slate-500">' + source + '</div>' : '');
     }
 
     function refreshTablePrices() {
@@ -208,6 +222,13 @@ $(function () {
                     return '<span class="product-sale-price font-semibold" data-price="' + Number(data || 0).toFixed(2) + '" data-currency="' + (row.saleCurrency || 'TRY') + '">' +
                         renderProductSalePrice(row) +
                         '</span>';
+                }
+            },
+            {
+                title: 'Son alış maliyeti',
+                data: 'lastPurchaseCostCurrencyAmount',
+                render: function (data, type, row) {
+                    return renderLastPurchaseCost(row);
                 }
             }
         ]

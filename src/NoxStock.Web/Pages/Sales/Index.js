@@ -68,7 +68,10 @@ $(function () {
             $items.append('<div class="p-10 text-center text-slate-400"><span class="material-icons-round text-5xl opacity-40">remove_shopping_cart</span><p class="mt-3 text-sm">Sepet boş.</p></div>');
         } else {
             cart.forEach(function (item) {
-                $items.append('<div class="p-4 flex items-center gap-3"><div class="min-w-0 flex-1"><p class="truncate font-semibold text-sm text-slate-800 dark:text-white">' + escapeHtml(item.name) + '</p><p class="text-xs text-indigo-600 dark:text-indigo-400 mt-1">Satış: ' + formatMoney(item.salePrice, item.currency) + '</p><p class="text-xs text-slate-500 mt-1">Alış: ' + formatMoney(item.purchasePrice, item.purchaseCurrency) + ' | Kart satış: ' + formatMoney(item.originalSalePrice, item.saleCurrency) + '</p></div><div class="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg"><button type="button" class="pos-cart-decrease w-8 h-8 flex items-center justify-center text-slate-600 dark:text-slate-300" data-product-id="' + item.id + '" title="Azalt"><span class="material-icons-round text-base">remove</span></button><span class="w-8 text-center text-sm font-bold text-slate-800 dark:text-white">' + item.quantity + '</span><button type="button" class="pos-cart-increase w-8 h-8 flex items-center justify-center text-slate-600 dark:text-slate-300" data-product-id="' + item.id + '" title="Artır"><span class="material-icons-round text-base">add</span></button></div></div>');
+                var costText = item.lastPurchaseCostCurrencyAmount
+                    ? 'Son alış: ' + formatMoney(item.lastPurchaseCostCurrencyAmount, item.lastPurchaseCostCurrencyCode || item.purchaseCurrency)
+                    : 'Kart alış: ' + formatMoney(item.purchasePrice, item.purchaseCurrency);
+                $items.append('<div class="p-4 flex items-center gap-3"><div class="min-w-0 flex-1"><p class="truncate font-semibold text-sm text-slate-800 dark:text-white">' + escapeHtml(item.name) + '</p><p class="text-xs text-slate-500 mt-1">' + costText + ' | Kart satış: ' + formatMoney(item.originalSalePrice, item.saleCurrency) + '</p><label class="mt-2 block text-xs text-slate-500">Satış fiyatı<input type="number" min="0" step="0.0001" class="pos-cart-price mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-product-id="' + item.id + '" value="' + Number(item.salePrice).toFixed(4) + '"></label></div><div class="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg"><button type="button" class="pos-cart-decrease w-8 h-8 flex items-center justify-center text-slate-600 dark:text-slate-300" data-product-id="' + item.id + '" title="Azalt"><span class="material-icons-round text-base">remove</span></button><span class="w-8 text-center text-sm font-bold text-slate-800 dark:text-white">' + item.quantity + '</span><button type="button" class="pos-cart-increase w-8 h-8 flex items-center justify-center text-slate-600 dark:text-slate-300" data-product-id="' + item.id + '" title="Artır"><span class="material-icons-round text-base">add</span></button></div></div>');
             });
         }
         var count = cart.reduce(function (total, item) { return total + item.quantity; }, 0);
@@ -118,7 +121,7 @@ $(function () {
             }
             item.quantity += posQuantityStep;
         } else {
-            cart.push($.extend({}, product, { quantity: 1 }));
+            cart.push($.extend({}, product, { quantity: 1, isUnitPriceOverridden: false }));
         }
         renderCart();
         renderCheckoutOptions();
@@ -203,6 +206,15 @@ $(function () {
     });
     $('#PosCartItems').on('click', '.pos-cart-increase', function () { updateCartQuantity($(this).data('product-id'), 1); });
     $('#PosCartItems').on('click', '.pos-cart-decrease', function () { updateCartQuantity($(this).data('product-id'), -1); });
+    $('#PosCartItems').on('input', '.pos-cart-price', function () {
+        var item = cart.find(function (cartItem) { return cartItem.id === $(this).data('product-id'); }.bind(this));
+        var price = Number($(this).val());
+        if (item && price >= 0) {
+            item.salePrice = price;
+            item.isUnitPriceOverridden = true;
+            $('#PosSubtotal, #PosTotal').text(formatMoney(cartTotal(), cartCurrency()));
+        }
+    });
     $('#PosSaleCurrency').change(function () {
         if (cart.length) {
             cart = [];
@@ -245,7 +257,14 @@ $(function () {
             accountId: accountId,
             businessPartnerId: businessPartnerId,
             note: $('#PosNote').val() || null,
-            items: cart.map(function (item) { return { productId: item.id, quantity: item.quantity }; })
+            items: cart.map(function (item) {
+                return {
+                    productId: item.id,
+                    quantity: item.quantity,
+                    unitPrice: item.salePrice,
+                    isUnitPriceOverridden: item.isUnitPriceOverridden === true
+                };
+            })
         }).then(function (sale) {
             abp.notify.success(sale.receiptNumber + ' numaralı POS satışı tamamlandı.');
             cart = [];

@@ -28,10 +28,12 @@ public class Document : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public string? OperationKey { get; set; }
 
     public ICollection<DocumentItem> Items { get; set; }
+    public ICollection<DocumentExchangeRateSnapshot> ExchangeRateSnapshots { get; set; }
 
     public Document()
     {
         Items = new List<DocumentItem>();
+        ExchangeRateSnapshots = new List<DocumentExchangeRateSnapshot>();
         DocNumber = string.Empty;
         Currency = "TRY";
         ExchangeRate = 1;
@@ -44,6 +46,7 @@ public class Document : FullAuditedAggregateRoot<Guid>, IMultiTenant
         TenantId = tenantId;
         DocNumber = string.Empty;
         Items = new List<DocumentItem>();
+        ExchangeRateSnapshots = new List<DocumentExchangeRateSnapshot>();
         Currency = "TRY";
         ExchangeRate = 1;
         Date = DateTime.UtcNow;

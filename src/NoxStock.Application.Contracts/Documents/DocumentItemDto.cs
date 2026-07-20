@@ -1,4 +1,5 @@
 using System;
+using NoxStock.Products;
 using Volo.Abp.Application.Dtos;
 
 namespace NoxStock.Documents;
@@ -13,4 +14,9 @@ public class DocumentItemDto : FullAuditedEntityDto<Guid>
     public decimal VatRate { get; set; }
     public decimal DiscountRate { get; set; }
     public decimal Total { get; set; }
+    public bool IsUnitPriceOverridden { get; set; }
+    public string? PriceCurrencyCode { get; set; }
+    public decimal? PriceExchangeRate { get; set; }
+    public Guid? ProductCostHistoryId { get; set; }
+    public ProductPricingMode? PricingMode { get; set; }
 }

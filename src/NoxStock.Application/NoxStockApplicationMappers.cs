@@ -65,11 +65,15 @@ public partial class NoxStockProductToProductDtoMapper : MapperBase<NoxStock.Pro
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.BrandName))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CategoryName))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.OemCodes))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.LastPurchaseDocumentNumber))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.LastPurchaseSupplierName))]
     public override partial NoxStock.Products.ProductDto Map(NoxStock.Products.Product source);
     
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.BrandName))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CategoryName))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.OemCodes))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.LastPurchaseDocumentNumber))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.LastPurchaseSupplierName))]
     public override partial void Map(NoxStock.Products.Product source, NoxStock.Products.ProductDto destination);
 }
 
@@ -77,8 +81,28 @@ public partial class NoxStockProductToProductDtoMapper : MapperBase<NoxStock.Pro
 public partial class NoxStockCreateUpdateProductDtoToProductMapper : MapperBase<NoxStock.Products.CreateUpdateProductDto, NoxStock.Products.Product>
 {
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.OemCodes))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyCode))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyAmount))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostTryAmount))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseExchangeRate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDocumentId))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDocumentItemId))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostHistoryId))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseSupplierId))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastCostUpdatedAt))]
     public override partial NoxStock.Products.Product Map(NoxStock.Products.CreateUpdateProductDto source);
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.OemCodes))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyCode))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyAmount))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostTryAmount))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseExchangeRate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDocumentId))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDocumentItemId))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostHistoryId))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseSupplierId))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastCostUpdatedAt))]
     public override partial void Map(NoxStock.Products.CreateUpdateProductDto source, NoxStock.Products.Product destination);
 }
 
@@ -129,8 +153,18 @@ public partial class NoxStockDocumentItemToDocumentItemDtoMapper : MapperBase<Do
 public partial class NoxStockCreateUpdateDocumentItemDtoToDocumentItemMapper : MapperBase<CreateUpdateDocumentItemDto, DocumentItem>
 {
     [MapperIgnoreSource(nameof(CreateUpdateDocumentItemDto.IsUnitPriceOverridden))]
+    [MapperIgnoreTarget(nameof(DocumentItem.IsUnitPriceOverridden))]
+    [MapperIgnoreTarget(nameof(DocumentItem.PriceCurrencyCode))]
+    [MapperIgnoreTarget(nameof(DocumentItem.PriceExchangeRate))]
+    [MapperIgnoreTarget(nameof(DocumentItem.ProductCostHistoryId))]
+    [MapperIgnoreTarget(nameof(DocumentItem.PricingMode))]
     public override partial DocumentItem Map(CreateUpdateDocumentItemDto source);
 
     [MapperIgnoreSource(nameof(CreateUpdateDocumentItemDto.IsUnitPriceOverridden))]
+    [MapperIgnoreTarget(nameof(DocumentItem.IsUnitPriceOverridden))]
+    [MapperIgnoreTarget(nameof(DocumentItem.PriceCurrencyCode))]
+    [MapperIgnoreTarget(nameof(DocumentItem.PriceExchangeRate))]
+    [MapperIgnoreTarget(nameof(DocumentItem.ProductCostHistoryId))]
+    [MapperIgnoreTarget(nameof(DocumentItem.PricingMode))]
     public override partial void Map(CreateUpdateDocumentItemDto source, DocumentItem destination);
 }

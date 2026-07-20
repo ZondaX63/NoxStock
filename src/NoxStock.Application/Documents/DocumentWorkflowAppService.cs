@@ -23,6 +23,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
     private readonly IRepository<Account, Guid> _accountRepository;
     private readonly IRepository<AccountTransaction, Guid> _accountTransactionRepository;
     private readonly IRepository<StockMovement, Guid> _stockMovementRepository;
+    private readonly IProductCostProfileService _productCostProfileService;
 
     public DocumentWorkflowAppService(
         IRepository<Document, Guid> documentRepository,
@@ -30,7 +31,8 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
         IRepository<Account, Guid> accountRepository,
         IRepository<AccountTransaction, Guid> accountTransactionRepository,
-        IRepository<StockMovement, Guid> stockMovementRepository)
+        IRepository<StockMovement, Guid> stockMovementRepository,
+        IProductCostProfileService productCostProfileService)
     {
         _documentRepository = documentRepository;
         _productRepository = productRepository;
@@ -38,6 +40,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         _accountRepository = accountRepository;
         _accountTransactionRepository = accountTransactionRepository;
         _stockMovementRepository = stockMovementRepository;
+        _productCostProfileService = productCostProfileService;
     }
 
     [Authorize(NoxStockPermissions.Documents.Approve)]
@@ -76,6 +79,11 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         if (document.Type is DocumentType.SaleInvoice or DocumentType.PurchaseInvoice)
         {
             await ApplyStockAsync(document);
+        }
+
+        if (document.Type == DocumentType.PurchaseInvoice)
+        {
+            await _productCostProfileService.ApplyApprovedPurchaseAsync(document);
         }
 
         await ApplyBusinessPartnerBalanceAsync(document, paymentAmount);
@@ -171,6 +179,10 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         }
 
         await ReverseStockAsync(document);
+        if (document.Type == DocumentType.PurchaseInvoice)
+        {
+            await _productCostProfileService.ReverseApprovedPurchaseAsync(document);
+        }
         await ReverseBusinessPartnerBalanceAsync(document);
         await ReversePaymentsAsync(document);
 
@@ -182,7 +194,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
     private async Task<Document> GetDocumentWithItemsAsync(Guid id)
     {
-        var queryable = await _documentRepository.WithDetailsAsync(x => x.Items);
+        var queryable = await _documentRepository.WithDetailsAsync(x => x.Items, x => x.ExchangeRateSnapshots);
         var document = await AsyncExecuter.FirstOrDefaultAsync(queryable.Where(x => x.Id == id));
 
         if (document is null)

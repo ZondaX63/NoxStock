@@ -32,6 +32,9 @@ public class CreateUpdateProductDto
     [Range(0, 10000)]
     public decimal ProfitMarkupPercent { get; set; }
     public bool UseCurrentExchangeRateForSale { get; set; }
+    [StringLength(3)]
+    public string PricingCurrencyCode { get; set; } = "TRY";
+    public ProductPricingMode PricingMode { get; set; }
     public decimal Quantity { get; set; }
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; } = true;

@@ -1,4 +1,5 @@
 using System;
+using NoxStock.Products;
 using Volo.Abp.Domain.Entities.Auditing;
 using Volo.Abp.MultiTenancy;
 
@@ -15,6 +16,11 @@ public class DocumentItem : FullAuditedEntity<Guid>, IMultiTenant
     public decimal VatRate { get; set; }
     public decimal DiscountRate { get; set; }
     public decimal Total { get; set; }
+    public bool IsUnitPriceOverridden { get; set; }
+    public string? PriceCurrencyCode { get; set; }
+    public decimal? PriceExchangeRate { get; set; }
+    public Guid? ProductCostHistoryId { get; set; }
+    public ProductPricingMode? PricingMode { get; set; }
 
     public DocumentItem()
     {

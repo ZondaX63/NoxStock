@@ -3,8 +3,7 @@
     "argv": [
       "/usr/bin/node",
       "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/node_modules/.bin/playwright",
-      "test",
-      "--list"
+      "test"
     ],
     "configFile": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/playwright.config.js",
     "rootDir": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests",
@@ -17,14 +16,18 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {},
+    "metadata": {
+      "actualWorkers": 1
+    },
     "preserveOutput": "always",
     "projects": [
       {
         "outputDir": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "chromium",
         "name": "chromium",
         "testDir": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests",
@@ -69,7 +72,7 @@
       "specs": [
         {
           "title": "private beta critical commercial paths preserve business state and tenant isolation",
-          "ok": true,
+          "ok": false,
           "tags": [],
           "tests": [
             {
@@ -78,8 +81,90 @@
               "expectedStatus": "passed",
               "projectId": "chromium",
               "projectName": "chromium",
-              "results": [],
-              "status": "skipped"
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "timedOut",
+                  "duration": 180051,
+                  "error": {
+                    "message": "\u001b[31mTest timeout of 180000ms exceeded.\u001b[39m",
+                    "stack": "\u001b[31mTest timeout of 180000ms exceeded.\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "message": "\u001b[31mTest timeout of 180000ms exceeded.\u001b[39m"
+                    },
+                    {
+                      "location": {
+                        "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js",
+                        "column": 46,
+                        "line": 308
+                      },
+                      "message": "Error: locator.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('#Invoice_DocNumber')\u001b[22m\n\n\n  306 |   await test.step('create and approve a sale invoice through UI', async () => {\n  307 |     await page.goto(`/t/${atlas.name}/Invoices/Create?type=1`);\n> 308 |     await page.locator('#Invoice_DocNumber').fill(invoiceNumber);\n      |                                              ^\n  309 |     await page.locator('#Invoice_BusinessPartnerId').selectOption(customer.id);\n  310 |     await page.locator('.product-select').selectOption(product.id);\n  311 |     await expect.poll(async () => Number(await page.locator('.price-input').inputValue())).toBeGreaterThan(0);\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:308:46\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:306:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "steps": [
+                    {
+                      "title": "provision active A/B and inactive pilot tenants through host UI",
+                      "duration": 9279
+                    },
+                    {
+                      "title": "tenant URL login, logout redirect, and login again",
+                      "duration": 1456
+                    },
+                    {
+                      "title": "prepare isolated cash account and customer using authenticated application contracts",
+                      "duration": 166
+                    },
+                    {
+                      "title": "add a foreign-cost product and find it by OEM through the UI",
+                      "duration": 1337
+                    },
+                    {
+                      "title": "complete and cancel POS sale; verify stock, account, document, and reversal movements",
+                      "duration": 1339
+                    },
+                    {
+                      "title": "create and approve a sale invoice through UI",
+                      "duration": 166260,
+                      "error": {
+                        "message": "Error: locator.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('#Invoice_DocNumber')\u001b[22m\n",
+                        "stack": "Error: locator.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('#Invoice_DocNumber')\u001b[22m\n\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:308:46\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:306:3",
+                        "location": {
+                          "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js",
+                          "column": 46,
+                          "line": 308
+                        },
+                        "snippet": "  306 |   await test.step('create and approve a sale invoice through UI', async () => {\n  307 |     await page.goto(`/t/${atlas.name}/Invoices/Create?type=1`);\n> 308 |     await page.locator('#Invoice_DocNumber').fill(invoiceNumber);\n      |                                              ^\n  309 |     await page.locator('#Invoice_BusinessPartnerId').selectOption(customer.id);\n  310 |     await page.locator('.product-select').selectOption(product.id);\n  311 |     await expect.poll(async () => Number(await page.locator('.price-input').inputValue())).toBeGreaterThan(0);"
+                      }
+                    }
+                  ],
+                  "startTime": "2026-07-20T14:39:34.072Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/trace.zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
             }
           ],
           "id": "57ab227373b2c4b90c39-987ffc885b1db9734bbc",
@@ -92,11 +177,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-20T12:16:43.082Z",
-    "duration": 22.541000000000054,
+    "startTime": "2026-07-20T14:39:33.538Z",
+    "duration": 181040.035,
     "expected": 0,
-    "skipped": 1,
-    "unexpected": 0,
+    "skipped": 0,
+    "unexpected": 1,
     "flaky": 0
   }
 }
