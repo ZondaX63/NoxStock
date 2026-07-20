@@ -19,6 +19,9 @@ public class CreateModel : NoxStockPageModel
     [BindProperty(SupportsGet = true)]
     public DocumentType Type { get; set; } = DocumentType.SaleInvoice;
 
+    [BindProperty(SupportsGet = true)]
+    public Guid? Id { get; set; }
+
     [BindProperty]
     public CreateUpdateDocumentDto Invoice { get; set; } = new();
 
@@ -26,6 +29,7 @@ public class CreateModel : NoxStockPageModel
     public List<SelectListItem> Products { get; set; } = new();
     public decimal DefaultVatRate { get; private set; } = 20;
     public bool UsesSalesPricing => Type is DocumentType.SaleInvoice or DocumentType.Offer or DocumentType.SaleOrder;
+    public bool IsEditing => Id.HasValue;
 
     private readonly IBusinessPartnerAppService _businessPartnerAppService;
     private readonly IDocumentAppService _documentAppService;
@@ -48,6 +52,42 @@ public class CreateModel : NoxStockPageModel
     {
         var settings = await _companySettingsAppService.GetAsync();
         DefaultVatRate = settings.DefaultVatRate;
+
+        if (Id.HasValue)
+        {
+            var document = await _documentAppService.GetAsync(Id.Value);
+            if (document.Status != DocumentStatus.Draft)
+            {
+                throw new Volo.Abp.UserFriendlyException("Yalnızca taslak faturalar düzenlenebilir.");
+            }
+
+            Type = document.Type;
+            Invoice = new CreateUpdateDocumentDto
+            {
+                BusinessPartnerId = document.BusinessPartnerId,
+                DocNumber = document.DocNumber,
+                Type = document.Type,
+                Currency = document.Currency,
+                ExchangeRate = document.ExchangeRate,
+                Date = document.Date,
+                DueDate = document.DueDate,
+                Description = document.Description,
+                Items = document.Items.Select(item => new CreateUpdateDocumentItemDto
+                {
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    IsUnitPriceOverridden = true,
+                    VatRate = item.VatRate,
+                    DiscountRate = item.DiscountRate,
+                    Total = item.Total
+                }).ToList()
+            };
+
+            await LoadLookupsAsync(Type);
+            return;
+        }
+
         Invoice = new CreateUpdateDocumentDto
         {
             DocNumber = await _documentAppService.GetSuggestedNumberAsync(Type),
@@ -63,6 +103,7 @@ public class CreateModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        NormalizeInvoiceItemNumbers();
         NormalizeInvoiceDates();
         Type = Invoice.Type;
         DefaultVatRate = (await _companySettingsAppService.GetAsync()).DefaultVatRate;
@@ -91,7 +132,14 @@ public class CreateModel : NoxStockPageModel
             }
         }
 
-        var document = await _documentAppService.CreateAsync(Invoice);
+        if (IsEditing)
+        {
+            await _documentAppService.UpdateAsync(Id!.Value, Invoice);
+        }
+        else
+        {
+            await _documentAppService.CreateAsync(Invoice);
+        }
 
         return RedirectToPage(GetRedirectPage(Invoice.Type));
     }
@@ -100,6 +148,47 @@ public class CreateModel : NoxStockPageModel
     {
         NormalizeDateInput("Invoice.Date", required: true, value => Invoice.Date = value);
         NormalizeDateInput("Invoice.DueDate", required: false, value => Invoice.DueDate = value);
+    }
+
+    private void NormalizeInvoiceItemNumbers()
+    {
+        if (!Request.HasFormContentType || Invoice.Items is null || Invoice.Items.Count == 0)
+        {
+            return;
+        }
+
+        var itemIndexes = Request.Form["Invoice.Items.Index"].ToArray();
+        if (itemIndexes.Length == 0)
+        {
+            itemIndexes = Enumerable.Range(0, Invoice.Items.Count)
+                .Select(index => index.ToString(CultureInfo.InvariantCulture))
+                .ToArray();
+        }
+
+        for (var itemPosition = 0; itemPosition < Invoice.Items.Count && itemPosition < itemIndexes.Length; itemPosition++)
+        {
+            var item = Invoice.Items[itemPosition];
+            var itemPrefix = $"Invoice.Items[{itemIndexes[itemPosition]}]";
+
+            NormalizeDecimalInput($"{itemPrefix}.Quantity", value => item.Quantity = value);
+            NormalizeDecimalInput($"{itemPrefix}.UnitPrice", value => item.UnitPrice = value);
+            NormalizeDecimalInput($"{itemPrefix}.DiscountRate", value => item.DiscountRate = value);
+            NormalizeDecimalInput($"{itemPrefix}.VatRate", value => item.VatRate = value);
+        }
+    }
+
+    private void NormalizeDecimalInput(string key, Action<decimal> assign)
+    {
+        var rawValue = Request.Form[key].ToString();
+        ModelState.Remove(key);
+
+        if (decimal.TryParse(rawValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
+        {
+            assign(value);
+            return;
+        }
+
+        ModelState.AddModelError(key, "Lütfen geçerli bir sayısal değer girin.");
     }
 
     private void NormalizeDateInput(string key, bool required, Action<DateTime> assign)
@@ -164,6 +253,11 @@ public class CreateModel : NoxStockPageModel
 
     public string GetDocumentTitle()
     {
+        if (IsEditing)
+        {
+            return "Taslak Faturayı Düzenle";
+        }
+
         return Type switch
         {
             DocumentType.SaleInvoice => "Yeni Satış Faturası",

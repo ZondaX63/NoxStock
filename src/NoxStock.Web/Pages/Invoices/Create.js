@@ -24,13 +24,19 @@ $(function () {
             return;
         }
 
+        var quoteRequestId = Number($row.data('quoteRequestId') || 0) + 1;
+        $row.data('quoteRequestId', quoteRequestId);
+        $row.find('.price-overridden-input').val('false');
+
         var url = abp.appPath + 'api/app/product-pricing/quote?productId=' + encodeURIComponent(productId) + '&currency=' + encodeURIComponent(currency);
         fetch(url, { credentials: 'same-origin' })
             .then(function (response) { return response.ok ? response.json() : Promise.reject(); })
             .then(function (quote) {
-                if (useProductPricing) {
+                var isLatestQuote = Number($row.data('quoteRequestId')) === quoteRequestId;
+                var hasManualPrice = $row.find('.price-overridden-input').val() === 'true';
+                if (isLatestQuote && !hasManualPrice && useProductPricing) {
                     $row.find('.price-input').val(Number(quote.unitPrice || 0).toFixed(4));
-                } else {
+                } else if (isLatestQuote && !hasManualPrice) {
                     $row.find('.price-input').val(Number(quote.purchasePrice || 0).toFixed(4));
                 }
 
@@ -92,6 +98,9 @@ $(function () {
     });
 
     $tbody.on('input', '.calc-input', function () {
+        if ($(this).hasClass('price-input')) {
+            $(this).closest('.item-row').find('.price-overridden-input').val('true');
+        }
         calculateTotals();
     });
 

@@ -1,4 +1,4 @@
-@page
+@page "{id?}"
 @using NoxStock.Documents
 @model NoxStock.Web.Pages.Invoices.CreateModel
 @{
@@ -20,6 +20,7 @@
 </div>
 
 <form method="post" id="InvoiceForm" data-currency="@Model.Invoice.Currency" data-default-vat-rate="@Model.DefaultVatRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-use-product-pricing="@Model.UsesSalesPricing.ToString().ToLowerInvariant()">
+    <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="Invoice.Type" />
     <input type="hidden" asp-for="Invoice.Currency" />
     <input type="hidden" asp-for="Invoice.ExchangeRate" />
@@ -84,7 +85,38 @@
                     </tr>
                 </thead>
                 <tbody id="ItemsTbody">
-                    <!-- Satırlar JS ile eklenecek -->
+                    @for (var index = 0; index < Model.Invoice.Items.Count; index++)
+                    {
+                        var item = Model.Invoice.Items[index];
+                        <tr class="item-row border-b border-slate-100 dark:border-slate-700">
+                            <td>
+                                <input type="hidden" name="Invoice.Items.Index" value="@index" />
+                                <select name="Invoice.Items[@index].ProductId" class="product-select invoice-product-select w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required>
+                                    @foreach (var opt in Model.Products)
+                                    {
+                                        if (opt.Value == item.ProductId.ToString())
+                                        {
+                                            <option value="@opt.Value" selected>@opt.Text</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@opt.Value">@opt.Text</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td><input type="number" name="Invoice.Items[@index].Quantity" class="calc-input quantity-input invoice-number-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0.01" step="any" required /></td>
+                            <td>
+                                <input type="hidden" name="Invoice.Items[@index].IsUnitPriceOverridden" class="price-overridden-input" value="true" />
+                                <input type="number" name="Invoice.Items[@index].UnitPrice" class="calc-input price-input invoice-price-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" step="any" required />
+                                <p class="price-source mt-1 text-xs text-slate-500">Bu satırın kaydedilmiş fiyatı.</p>
+                            </td>
+                            <td><input type="number" name="Invoice.Items[@index].DiscountRate" class="calc-input discount-input invoice-rate-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.DiscountRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" /></td>
+                            <td><input type="number" name="Invoice.Items[@index].VatRate" class="calc-input vat-input invoice-rate-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.VatRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" /></td>
+                            <td class="text-right font-semibold text-slate-800 dark:text-white row-total">0.00</td>
+                            <td class="text-center"><button type="button" class="remove-row-btn text-slate-400 hover:text-red-500 transition-colors"><span class="material-icons-round text-lg">delete</span></button></td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -115,7 +147,7 @@
             <div class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-md shadow-indigo-500/30 flex justify-center items-center">
                     <span class="material-icons-round mr-2 text-sm">save</span>
-                    Belgeyi Kaydet
+                    @(Model.IsEditing ? "Değişiklikleri Kaydet" : "Belgeyi Kaydet")
                 </button>
             </div>
         </div>
@@ -138,6 +170,7 @@
             <input type="number" name="Invoice.Items[{id}].Quantity" class="calc-input quantity-input invoice-number-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="1" min="0.01" step="any" required />
         </td>
         <td>
+            <input type="hidden" name="Invoice.Items[{id}].IsUnitPriceOverridden" class="price-overridden-input" value="false" />
             <input type="number" name="Invoice.Items[{id}].UnitPrice" class="calc-input price-input invoice-price-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="0" min="0" step="any" required />
             <p class="price-source mt-1 text-xs text-slate-500"></p>
         </td>

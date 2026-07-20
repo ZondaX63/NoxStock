@@ -97,4 +97,60 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         document.Items.Single().UnitPrice.ShouldBe(1715m);
         document.GrandTotal.ShouldBe(2058m);
     }
+
+    [Fact]
+    public async Task Should_Preserve_Manually_Overridden_Sales_Price_On_Document()
+    {
+        await _exchangeRateRepository.InsertAsync(new ExchangeRate(Guid.NewGuid(), "USD", 32m, DateTime.UtcNow));
+
+        var product = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Override USD Product",
+            Sku = "OVERRIDE-USD-001",
+            Barcode = "869000000304",
+            Description = string.Empty,
+            Unit = "Adet",
+            ShelfLocation = "D2",
+            PurchasePrice = 25m,
+            PurchaseCurrency = "USD",
+            SalePrice = 1m,
+            SaleCurrency = "TRY",
+            ProfitMarkupPercent = 40m,
+            UseCurrentExchangeRateForSale = true,
+            Quantity = 10m,
+            CriticalStockLevel = 1m,
+            TrackStock = true,
+            Currency = "TRY"
+        });
+        var customer = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
+        {
+            Name = "Override Price Customer",
+            Type = BusinessPartnerType.Customer,
+            Currency = "TRY"
+        });
+
+        var document = await _documentAppService.CreateAsync(new CreateUpdateDocumentDto
+        {
+            BusinessPartnerId = customer.Id,
+            DocNumber = "OVERRIDE-SALE-001",
+            Type = DocumentType.SaleInvoice,
+            Currency = "TRY",
+            Date = DateTime.UtcNow,
+            Items =
+            {
+                new CreateUpdateDocumentItemDto
+                {
+                    ProductId = product.Id,
+                    Quantity = 1m,
+                    UnitPrice = 999m,
+                    IsUnitPriceOverridden = true,
+                    VatRate = 20m,
+                    DiscountRate = 0m
+                }
+            }
+        });
+
+        document.Items.Single().UnitPrice.ShouldBe(999m);
+        document.GrandTotal.ShouldBe(1198.8m);
+    }
 }

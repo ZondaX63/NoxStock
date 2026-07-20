@@ -33,6 +33,16 @@ $(function () {
                                 }
                             },
                             {
+                                text: 'Düzenle',
+                                visible: function (data) {
+                                    var record = recordOf(data);
+                                    return record && record.status === 1;
+                                },
+                                action: function (data) {
+                                    window.location.href = abp.appPath + 'Invoices/Create/' + encodeURIComponent(recordOf(data).id);
+                                }
+                            },
+                            {
                                 text: 'Onayla',
                                 visible: function (data) {
                                     var record = recordOf(data);

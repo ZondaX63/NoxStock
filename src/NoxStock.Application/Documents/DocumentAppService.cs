@@ -271,7 +271,7 @@ public class DocumentAppService :
             }
 
             var unitPrice = inputItem.UnitPrice;
-            if (IsSalesDocument(document.Type))
+            if (IsSalesDocument(document.Type) && !inputItem.IsUnitPriceOverridden)
             {
                 if (product.UseCurrentExchangeRateForSale)
                 {

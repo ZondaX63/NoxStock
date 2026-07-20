@@ -128,6 +128,9 @@ public partial class NoxStockDocumentItemToDocumentItemDtoMapper : MapperBase<Do
 [Mapper]
 public partial class NoxStockCreateUpdateDocumentItemDtoToDocumentItemMapper : MapperBase<CreateUpdateDocumentItemDto, DocumentItem>
 {
+    [MapperIgnoreSource(nameof(CreateUpdateDocumentItemDto.IsUnitPriceOverridden))]
     public override partial DocumentItem Map(CreateUpdateDocumentItemDto source);
+
+    [MapperIgnoreSource(nameof(CreateUpdateDocumentItemDto.IsUnitPriceOverridden))]
     public override partial void Map(CreateUpdateDocumentItemDto source, DocumentItem destination);
 }

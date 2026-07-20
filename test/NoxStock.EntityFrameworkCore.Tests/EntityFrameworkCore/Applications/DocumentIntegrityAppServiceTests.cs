@@ -86,6 +86,41 @@ public class DocumentIntegrityAppServiceTests : NoxStockEntityFrameworkCoreTestB
         await Should.ThrowAsync<BusinessException>(() => _documentAppService.CreateAsync(dueDateInPast));
     }
 
+    [Fact]
+    public async Task Should_Update_Draft_Document_Items_And_Recalculate_Totals()
+    {
+        var customer = await CreatePartnerAsync("Draft Edit Customer", BusinessPartnerType.Customer);
+        var product = await CreateProductAsync("DRAFT-EDIT-001");
+        var document = await _documentAppService.CreateAsync(CreateInvoice(customer.Id, product.Id, "DRAFT-EDIT-001", DateTime.UtcNow.Date));
+
+        var updated = await _documentAppService.UpdateAsync(document.Id, new CreateUpdateDocumentDto
+        {
+            BusinessPartnerId = customer.Id,
+            DocNumber = document.DocNumber,
+            Type = DocumentType.SaleInvoice,
+            Currency = "TRY",
+            Date = DateTime.UtcNow.Date,
+            DueDate = DateTime.UtcNow.Date.AddDays(7),
+            Items =
+            {
+                new CreateUpdateDocumentItemDto
+                {
+                    ProductId = product.Id,
+                    Quantity = 3,
+                    UnitPrice = 80,
+                    IsUnitPriceOverridden = true,
+                    VatRate = 20,
+                    DiscountRate = 0
+                }
+            }
+        });
+
+        updated.Status.ShouldBe(DocumentStatus.Draft);
+        updated.Items.Count.ShouldBe(1);
+        updated.Items.Single().UnitPrice.ShouldBe(80m);
+        updated.GrandTotal.ShouldBe(288m);
+    }
+
     private static CreateUpdateDocumentDto CreateInvoice(Guid partnerId, Guid productId, string number, DateTime date)
     {
         return new CreateUpdateDocumentDto
