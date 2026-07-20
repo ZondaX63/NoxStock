@@ -121,6 +121,19 @@ public class DocumentIntegrityAppServiceTests : NoxStockEntityFrameworkCoreTestB
         updated.GrandTotal.ShouldBe(288m);
     }
 
+    [Fact]
+    public async Task Should_Reserve_Document_Numbers_Of_Soft_Deleted_Drafts()
+    {
+        var customer = await CreatePartnerAsync("Deleted Draft Customer", BusinessPartnerType.Customer);
+        var product = await CreateProductAsync("DELETED-DRAFT-001");
+        var document = await _documentAppService.CreateAsync(CreateInvoice(customer.Id, product.Id, "DELETED-DRAFT-001", DateTime.UtcNow.Date));
+
+        await _documentAppService.DeleteAsync(document.Id);
+
+        await Should.ThrowAsync<BusinessException>(() =>
+            _documentAppService.CreateAsync(CreateInvoice(customer.Id, product.Id, "DELETED-DRAFT-001", DateTime.UtcNow.Date)));
+    }
+
     private static CreateUpdateDocumentDto CreateInvoice(Guid partnerId, Guid productId, string number, DateTime date)
     {
         return new CreateUpdateDocumentDto

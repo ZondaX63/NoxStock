@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using NoxStock.Settings;
+using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Settings;
@@ -13,21 +16,28 @@ public class DocumentNumberGenerator : IDocumentNumberGenerator, ITransientDepen
 {
     private readonly IRepository<Document, Guid> _documentRepository;
     private readonly ISettingProvider _settingProvider;
+    private readonly IDataFilter _dataFilter;
 
     public DocumentNumberGenerator(
         IRepository<Document, Guid> documentRepository,
-        ISettingProvider settingProvider)
+        ISettingProvider settingProvider,
+        IDataFilter dataFilter)
     {
         _documentRepository = documentRepository;
         _settingProvider = settingProvider;
+        _dataFilter = dataFilter;
     }
 
     public async Task<string> GetNextAsync(DocumentType type)
     {
         var prefix = await GetPrefixAsync(type);
         var documentPrefix = $"{prefix}-{DateTime.UtcNow:yyyy}-";
-        var documents = await _documentRepository.GetListAsync(x =>
-            x.Type == type && x.DocNumber.StartsWith(documentPrefix));
+        List<Document> documents;
+        using (_dataFilter.Disable<ISoftDelete>())
+        {
+            documents = await _documentRepository.GetListAsync(x =>
+                x.Type == type && x.DocNumber.StartsWith(documentPrefix));
+        }
 
         var lastSequence = documents
             .Select(x => TryGetSequence(x.DocNumber, documentPrefix))

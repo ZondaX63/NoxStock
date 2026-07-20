@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using NoxStock.BusinessPartners;
 using NoxStock.Permissions;
@@ -29,6 +30,7 @@ public class DocumentAppService :
     private readonly IRepository<DocumentItem, Guid> _documentItemRepository;
     private readonly IProductPriceCalculator _priceCalculator;
     private readonly IDocumentNumberGenerator _documentNumberGenerator;
+    private readonly IDataFilter _dataFilter;
 
     public DocumentAppService(
         IRepository<Document, Guid> repository,
@@ -36,7 +38,8 @@ public class DocumentAppService :
         IRepository<Product, Guid> productRepository,
         IRepository<DocumentItem, Guid> documentItemRepository,
         IProductPriceCalculator priceCalculator,
-        IDocumentNumberGenerator documentNumberGenerator)
+        IDocumentNumberGenerator documentNumberGenerator,
+        IDataFilter dataFilter)
         : base(repository)
     {
         _businessPartnerRepository = businessPartnerRepository;
@@ -44,6 +47,7 @@ public class DocumentAppService :
         _documentItemRepository = documentItemRepository;
         _priceCalculator = priceCalculator;
         _documentNumberGenerator = documentNumberGenerator;
+        _dataFilter = dataFilter;
 
         GetPolicyName = NoxStockPermissions.Documents.Default;
         GetListPolicyName = NoxStockPermissions.Documents.Default;
@@ -328,8 +332,12 @@ public class DocumentAppService :
         var number = string.IsNullOrWhiteSpace(requestedNumber)
             ? await _documentNumberGenerator.GetNextAsync(document.Type)
             : requestedNumber.Trim().ToUpperInvariant();
-        var existing = await Repository.FindAsync(x =>
-            x.Id != document.Id && x.Type == document.Type && x.DocNumber == number);
+        Document? existing;
+        using (_dataFilter.Disable<ISoftDelete>())
+        {
+            existing = await Repository.FindAsync(x =>
+                x.Id != document.Id && x.Type == document.Type && x.DocNumber == number);
+        }
 
         if (existing is not null)
         {
