@@ -31,6 +31,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     private readonly IRepository<Account, Guid> _accountRepository;
     private readonly IRepository<AccountTransaction, Guid> _accountTransactionRepository;
     private readonly IRepository<StockMovement, Guid> _stockMovementRepository;
+    private readonly IRepository<ProductCostHistory, Guid> _costHistoryRepository;
     private readonly ISettingProvider _settingProvider;
     private readonly IProductPriceCalculator _priceCalculator;
 
@@ -42,6 +43,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         IRepository<Account, Guid> accountRepository,
         IRepository<AccountTransaction, Guid> accountTransactionRepository,
         IRepository<StockMovement, Guid> stockMovementRepository,
+        IRepository<ProductCostHistory, Guid> costHistoryRepository,
         ISettingProvider settingProvider,
         IProductPriceCalculator priceCalculator)
     {
@@ -52,6 +54,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         _accountRepository = accountRepository;
         _accountTransactionRepository = accountTransactionRepository;
         _stockMovementRepository = stockMovementRepository;
+        _costHistoryRepository = costHistoryRepository;
         _settingProvider = settingProvider;
         _priceCalculator = priceCalculator;
     }
@@ -90,6 +93,9 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         {
             var currency = targetCurrency ?? (string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency);
             var calculation = await _priceCalculator.CalculateAsync(product, currency);
+            var costHistory = product.LastPurchaseCostHistoryId.HasValue
+                ? await _costHistoryRepository.FindAsync(product.LastPurchaseCostHistoryId.Value)
+                : null;
             result.Add(new PosProductLookupDto
             {
                 Id = product.Id,
@@ -99,6 +105,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 OemCodes = oemCodesByProduct.GetValueOrDefault(product.Id),
                 Unit = product.Unit,
                 SalePrice = calculation.UnitPrice,
+                IsPriceAvailable = calculation.IsAvailable,
+                PriceUnavailableReason = calculation.UnavailableReason,
                 Currency = calculation.Currency,
                 OriginalSalePrice = product.SalePrice,
                 SaleCurrency = product.SaleCurrency,
@@ -110,6 +118,13 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 LastPurchaseCostCurrencyCode = product.LastPurchaseCostCurrencyCode,
                 LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
                 LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
+                LastPurchaseSourceCurrencyCode = costHistory?.SourceCurrencyCode,
+                LastPurchaseSourceNetUnitCost = costHistory?.SourceNetUnitCost,
+                LastPurchaseSourceExchangeRate = costHistory?.SourceExchangeRate,
+                PricingCurrencyCode = product.PricingCurrencyCode,
+                PricingCurrencyExchangeRate = calculation.PricingCurrencyExchangeRate,
+                PricingCurrencyRateDate = calculation.PricingCurrencyRateDate,
+                ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice,
                 ProductCostHistoryId = calculation.ProductCostHistoryId,
                 Quantity = product.Quantity,
                 TrackStock = product.TrackStock
@@ -217,6 +232,11 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             var product = await _productRepository.GetAsync(cartItem.ProductId);
             var productCurrency = targetCurrency ?? (string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency);
             var calculation = await _priceCalculator.CalculateAsync(product, productCurrency);
+            if (!calculation.IsAvailable)
+            {
+                throw new BusinessException(calculation.UnavailableReason ?? "NoxStock:ProductApprovedPurchaseCostUnavailable")
+                    .WithData("ProductName", product.Name);
+            }
             var usesManualPrice = cartItem.IsUnitPriceOverridden && cartItem.UnitPrice is > 0;
             var unitPrice = usesManualPrice ? cartItem.UnitPrice!.Value : calculation.UnitPrice;
             if (document.Items.Count == 0)
@@ -247,8 +267,18 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 IsUnitPriceOverridden = usesManualPrice,
                 PriceCurrencyCode = calculation.Currency,
                 PriceExchangeRate = calculation.ExchangeRate,
+                PriceRateDate = calculation.PricingCurrencyRateDate ?? calculation.RateDate,
+                UnitPriceTry = RoundMoney(unitPrice * calculation.ExchangeRate),
                 ProductCostHistoryId = calculation.ProductCostHistoryId ?? product.LastPurchaseCostHistoryId,
-                PricingMode = usesManualPrice ? ProductPricingMode.Manual : product.PricingMode
+                PricingMode = usesManualPrice ? ProductPricingMode.Manual : product.PricingMode,
+                CostCurrencyCode = product.LastPurchaseCostCurrencyCode,
+                CostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
+                CostTryAmount = product.LastPurchaseCostTryAmount,
+                AppliedMarkupPercent = calculation.MarkupPercent,
+                ReferenceSaleCurrencyCode = calculation.PricingCurrencyCode,
+                ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice,
+                ReferenceSaleExchangeRate = calculation.PricingCurrencyExchangeRate,
+                PricingSnapshotDate = saleDate
             });
         }
 
@@ -463,6 +493,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
         return normalized;
     }
+
+    private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
 
     private static string? NormalizePosCurrency(string? currency)
     {

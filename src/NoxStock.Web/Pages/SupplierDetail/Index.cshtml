@@ -1,0 +1,54 @@
+@page
+@model NoxStock.Web.Pages.SupplierDetail.IndexModel
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = "Tedarikçi Detayı";
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Tedarikçi Detayı</h2>
+        <p class="mt-1 text-sm text-slate-500">Tedarikçi bilgilerini, alış faturalarını ve cari hareketlerini inceleyin.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="~/Suppliers/@Model.Id/PurchaseHistory" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white shadow-md shadow-indigo-500/30 transition-all hover:bg-indigo-700">
+            <span class="material-icons-round text-sm">history</span>Alış Geçmişi
+        </a>
+        <button id="NewPaymentBtn" type="button" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 font-medium text-white shadow-md shadow-red-500/30 transition-all hover:bg-red-700">
+            <span class="material-icons-round text-sm">remove</span>Ödeme Yap
+        </button>
+        <button id="PrintStatementButton" type="button" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span class="material-icons-round text-sm">print</span>Yazdır
+        </button>
+    </div>
+</div>
+
+<input type="hidden" id="BusinessPartnerId" value="@Model.Id" />
+<input type="hidden" id="BusinessPartnerKind" value="supplier" />
+
+<div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="card p-6 shadow-lg shadow-slate-200/50 dark:shadow-none lg:col-span-1">
+        <div class="mb-6 flex items-center space-x-4">
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-xl font-bold text-amber-600 dark:bg-amber-900/50 dark:text-amber-400"><span class="material-icons-round">local_shipping</span></div>
+            <div><h3 id="BpName" class="text-xl font-bold text-slate-800 dark:text-white">--</h3><p id="BpType" class="text-sm text-slate-500">Tedarikçi</p></div>
+        </div>
+        <div class="space-y-4 text-sm">
+            <div class="flex justify-between border-b border-slate-100 pb-2 dark:border-slate-700"><span class="text-slate-500">Telefon:</span><span id="BpPhone" class="font-medium text-slate-800 dark:text-white">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2 dark:border-slate-700"><span class="text-slate-500">E-Posta:</span><span id="BpEmail" class="font-medium text-slate-800 dark:text-white">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2 dark:border-slate-700"><span class="text-slate-500">TCKN / VKN:</span><span id="BpTaxNumber" class="font-medium text-slate-800 dark:text-white">--</span></div>
+        </div>
+    </div>
+    <div class="card flex flex-col justify-center p-6 shadow-lg shadow-slate-200/50 dark:shadow-none lg:col-span-2">
+        <h3 class="mb-6 text-lg font-bold text-slate-800 dark:text-white">Cari Bakiye Özeti</h3>
+        <div class="rounded-xl border border-amber-100 bg-amber-50 p-4 dark:border-amber-800/30 dark:bg-amber-900/20"><p class="mb-1 text-sm font-medium text-amber-700 dark:text-amber-300">Tedarikçiye borç</p><p id="BpBalance" class="text-2xl font-black text-amber-800 dark:text-amber-200">0.00</p></div>
+    </div>
+</div>
+
+<div class="card mb-6 overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-none">
+    <div class="border-b border-slate-100 p-6 dark:border-slate-700"><h3 class="text-lg font-bold text-slate-800 dark:text-white">Ödeme Geçmişi</h3><p class="mt-1 text-sm text-slate-500">Tedarikçiye yapılan kasa ve banka ödemeleri.</p></div>
+    <div class="overflow-x-auto"><table class="w-full whitespace-nowrap text-left"><thead class="bg-slate-50/50 dark:bg-slate-800/50"><tr><th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Tarih</th><th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Makbuz</th><th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Kasa / Banka</th><th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">İşlem</th><th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Tutar</th><th class="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Açıklama</th></tr></thead><tbody id="BpPaymentHistoryBody" class="divide-y divide-slate-100 text-sm dark:divide-slate-700"></tbody></table></div>
+</div>
+
+<div class="card overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-none"><div class="border-b border-slate-100 p-6 dark:border-slate-700"><h3 class="text-lg font-bold text-slate-800 dark:text-white">Alış Faturaları ve Belgeler</h3></div><div class="overflow-x-auto"><table id="BpDocumentsTable" class="table w-full whitespace-nowrap text-left"><thead class="bg-slate-50/50 dark:bg-slate-800/50"><tr><th>Belge No</th><th>Tarih</th><th>Vade</th><th>Tip</th><th class="text-right">Tutar</th><th class="text-right">Ödenen</th><th class="text-right">Kalan</th><th class="text-center">Durum</th></tr></thead><tbody class="text-sm"></tbody></table></div></div>
+
+@section Scripts { <abp-script src="/Pages/CustomerDetail/Index.js" /> }

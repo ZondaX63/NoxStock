@@ -22,25 +22,38 @@ public class EditModalModel : NoxStockPageModel
 
     public List<SelectListItem> Brands { get; set; } = new();
     public List<SelectListItem> Categories { get; set; } = new();
+    public ProductDto? ProductSnapshot { get; private set; }
+    public ProductPriceQuoteDto? PricingQuote { get; private set; }
+    public List<ProductCostHistoryDto> CostHistory { get; private set; } = new();
 
     private readonly IProductAppService _productAppService;
     private readonly IBrandAppService _brandAppService;
     private readonly ICategoryAppService _categoryAppService;
+    private readonly IProductPricingAppService _productPricingAppService;
 
     public EditModalModel(
         IProductAppService productAppService,
         IBrandAppService brandAppService,
-        ICategoryAppService categoryAppService)
+        ICategoryAppService categoryAppService,
+        IProductPricingAppService productPricingAppService)
     {
         _productAppService = productAppService;
         _brandAppService = brandAppService;
         _categoryAppService = categoryAppService;
+        _productPricingAppService = productPricingAppService;
     }
 
     public async Task OnGetAsync()
     {
         var productDto = await _productAppService.GetAsync(Id);
+        ProductSnapshot = productDto;
         Product = ObjectMapper.Map<ProductDto, CreateUpdateProductDto>(productDto);
+        if (Product.ProfitMarkupPercent <= 0)
+        {
+            Product.ProfitMarkupPercent = 30m;
+        }
+        PricingQuote = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto { ProductId = Id, Currency = "TRY" });
+        CostHistory = await _productPricingAppService.GetCostHistoryAsync(Id);
 
         var brandLookup = await _brandAppService.GetListAsync(new PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
         Brands = brandLookup.Items.Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToList();

@@ -19,12 +19,12 @@ $(function () {
 
     $('#NewCollectionBtn').click(function(e) {
         e.preventDefault();
-        createPaymentModal.open({ type: 'Collection' });
+        createPaymentModal.open({ type: 'Collection', businessPartnerId: businessPartnerId });
     });
 
     $('#NewPaymentBtn').click(function(e) {
         e.preventDefault();
-        createPaymentModal.open({ type: 'Payment' });
+        createPaymentModal.open({ type: 'Payment', businessPartnerId: businessPartnerId });
     });
 
     $('#PrintStatementButton').click(function () {

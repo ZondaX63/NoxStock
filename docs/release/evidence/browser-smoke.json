@@ -86,7 +86,7 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "timedOut",
-                  "duration": 180051,
+                  "duration": 180033,
                   "error": {
                     "message": "\u001b[31mTest timeout of 180000ms exceeded.\u001b[39m",
                     "stack": "\u001b[31mTest timeout of 180000ms exceeded.\u001b[39m"
@@ -98,10 +98,10 @@
                     {
                       "location": {
                         "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js",
-                        "column": 46,
-                        "line": 308
+                        "column": 61,
+                        "line": 370
                       },
-                      "message": "Error: locator.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('#Invoice_DocNumber')\u001b[22m\n\n\n  306 |   await test.step('create and approve a sale invoice through UI', async () => {\n  307 |     await page.goto(`/t/${atlas.name}/Invoices/Create?type=1`);\n> 308 |     await page.locator('#Invoice_DocNumber').fill(invoiceNumber);\n      |                                              ^\n  309 |     await page.locator('#Invoice_BusinessPartnerId').selectOption(customer.id);\n  310 |     await page.locator('.product-select').selectOption(product.id);\n  311 |     await expect.poll(async () => Number(await page.locator('.price-input').inputValue())).toBeGreaterThan(0);\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:308:46\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:306:3"
+                      "message": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Satış Geçmişi' })\u001b[22m\n\n\n  368 |   await test.step('open customer sales history, change the period, and follow the invoice detail link', async () => {\n  369 |     await page.goto(`/t/${atlas.name}/CustomerDetail?id=${customer.id}`);\n> 370 |     await page.getByRole('link', { name: 'Satış Geçmişi' }).click();\n      |                                                             ^\n  371 |     await expect(page).toHaveURL(new RegExp(`/t/${atlas.name}/Customers/${customer.id}/SalesHistory`));\n  372 |     await expect(page.getByRole('heading', { name: customer.name })).toBeVisible();\n  373 |     await expect(page.locator('tbody tr').filter({ hasText: invoiceNumber })).toBeVisible();\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:370:61\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:368:3"
                     }
                   ],
                   "stdout": [],
@@ -110,46 +110,59 @@
                   "steps": [
                     {
                       "title": "provision active A/B and inactive pilot tenants through host UI",
-                      "duration": 9279
+                      "duration": 1663
                     },
                     {
                       "title": "tenant URL login, logout redirect, and login again",
-                      "duration": 1456
+                      "duration": 1421
                     },
                     {
                       "title": "prepare isolated cash account and customer using authenticated application contracts",
-                      "duration": 166
+                      "duration": 84
                     },
                     {
                       "title": "add a foreign-cost product and find it by OEM through the UI",
-                      "duration": 1337
+                      "duration": 1001
                     },
                     {
                       "title": "complete and cancel POS sale; verify stock, account, document, and reversal movements",
-                      "duration": 1339
+                      "duration": 1211
                     },
                     {
                       "title": "create and approve a sale invoice through UI",
-                      "duration": 166260,
+                      "duration": 1177
+                    },
+                    {
+                      "title": "record collection and verify current-account and cash history",
+                      "duration": 953
+                    },
+                    {
+                      "title": "open customer sales history, change the period, and follow the invoice detail link",
+                      "duration": 172688,
                       "error": {
-                        "message": "Error: locator.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('#Invoice_DocNumber')\u001b[22m\n",
-                        "stack": "Error: locator.fill: Test ended.\nCall log:\n\u001b[2m  - waiting for locator('#Invoice_DocNumber')\u001b[22m\n\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:308:46\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:306:3",
+                        "message": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Satış Geçmişi' })\u001b[22m\n",
+                        "stack": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Satış Geçmişi' })\u001b[22m\n\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:370:61\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:368:3",
                         "location": {
                           "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js",
-                          "column": 46,
-                          "line": 308
+                          "column": 61,
+                          "line": 370
                         },
-                        "snippet": "  306 |   await test.step('create and approve a sale invoice through UI', async () => {\n  307 |     await page.goto(`/t/${atlas.name}/Invoices/Create?type=1`);\n> 308 |     await page.locator('#Invoice_DocNumber').fill(invoiceNumber);\n      |                                              ^\n  309 |     await page.locator('#Invoice_BusinessPartnerId').selectOption(customer.id);\n  310 |     await page.locator('.product-select').selectOption(product.id);\n  311 |     await expect.poll(async () => Number(await page.locator('.price-input').inputValue())).toBeGreaterThan(0);"
+                        "snippet": "  368 |   await test.step('open customer sales history, change the period, and follow the invoice detail link', async () => {\n  369 |     await page.goto(`/t/${atlas.name}/CustomerDetail?id=${customer.id}`);\n> 370 |     await page.getByRole('link', { name: 'Satış Geçmişi' }).click();\n      |                                                             ^\n  371 |     await expect(page).toHaveURL(new RegExp(`/t/${atlas.name}/Customers/${customer.id}/SalesHistory`));\n  372 |     await expect(page.getByRole('heading', { name: customer.name })).toBeVisible();\n  373 |     await expect(page.locator('tbody tr').filter({ hasText: invoiceNumber })).toBeVisible();"
                       }
                     }
                   ],
-                  "startTime": "2026-07-20T14:39:34.072Z",
+                  "startTime": "2026-07-20T19:52:23.303Z",
                   "annotations": [],
                   "attachments": [
                     {
                       "name": "screenshot",
                       "contentType": "image/png",
                       "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/test-failed-1.png"
+                    },
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/test-failed-2.png"
                     },
                     {
                       "name": "error-context",
@@ -177,8 +190,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-20T14:39:33.538Z",
-    "duration": 181040.035,
+    "startTime": "2026-07-20T19:52:22.952Z",
+    "duration": 181065.085,
     "expected": 0,
     "skipped": 0,
     "unexpected": 1,

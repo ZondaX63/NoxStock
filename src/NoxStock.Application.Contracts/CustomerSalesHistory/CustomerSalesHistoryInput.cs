@@ -6,6 +6,7 @@ namespace NoxStock.CustomerSalesHistory;
 public class CustomerSalesHistoryInput : PagedAndSortedResultRequestDto
 {
     public Guid CustomerId { get; set; }
+    public bool IncludePurchases { get; set; }
     public CustomerSalesHistoryPeriodPreset PeriodPreset { get; set; } = CustomerSalesHistoryPeriodPreset.ThisMonth;
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }

@@ -31,6 +31,15 @@ public class PosProductLookupDto
     public string? LastPurchaseCostCurrencyCode { get; set; }
     public decimal? LastPurchaseCostCurrencyAmount { get; set; }
     public decimal? LastPurchaseCostTryAmount { get; set; }
+    public string? LastPurchaseSourceCurrencyCode { get; set; }
+    public decimal? LastPurchaseSourceNetUnitCost { get; set; }
+    public decimal? LastPurchaseSourceExchangeRate { get; set; }
+    public string PricingCurrencyCode { get; set; } = "TRY";
+    public decimal? PricingCurrencyExchangeRate { get; set; }
+    public DateTime? PricingCurrencyRateDate { get; set; }
+    public decimal? ReferenceSaleUnitPrice { get; set; }
+    public bool IsPriceAvailable { get; set; } = true;
+    public string? PriceUnavailableReason { get; set; }
     public Guid? ProductCostHistoryId { get; set; }
     public decimal Quantity { get; set; }
     public bool TrackStock { get; set; }

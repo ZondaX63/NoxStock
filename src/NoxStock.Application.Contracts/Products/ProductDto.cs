@@ -22,6 +22,9 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     public string? LastPurchaseCostCurrencyCode { get; set; }
     public decimal? LastPurchaseCostCurrencyAmount { get; set; }
     public decimal? LastPurchaseCostTryAmount { get; set; }
+    public string? LastPurchaseSourceCurrencyCode { get; set; }
+    public decimal? LastPurchaseSourceNetUnitCost { get; set; }
+    public decimal? LastPurchaseSourceExchangeRate { get; set; }
     public decimal? LastPurchaseExchangeRate { get; set; }
     public DateTime? LastPurchaseDate { get; set; }
     public Guid? LastPurchaseDocumentId { get; set; }
@@ -42,4 +45,16 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     public string CategoryName { get; set; }
     public string? LastPurchaseDocumentNumber { get; set; }
     public string? LastPurchaseSupplierName { get; set; }
+
+    // Server-calculated list preview. A list must never recalculate dynamic prices in the browser.
+    public bool IsSuggestedSaleAvailable { get; set; } = true;
+    public string? SuggestedSaleUnavailableReason { get; set; }
+    public string SuggestedSaleCurrency { get; set; } = "TRY";
+    public decimal? SuggestedSaleUnitPrice { get; set; }
+    public decimal? SuggestedSalePriceInTry { get; set; }
+    public decimal? SuggestedSaleExchangeRate { get; set; }
+    public DateTime? SuggestedSaleRateDate { get; set; }
+    public decimal? CurrentPricingCurrencyExchangeRate { get; set; }
+    public DateTime? CurrentPricingCurrencyRateDate { get; set; }
+    public decimal? ReferenceSaleUnitPrice { get; set; }
 }

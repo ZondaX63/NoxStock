@@ -25,6 +25,18 @@ $(function () {
                     items:
                         [
                             {
+                                text: 'Tedarikçi Detayı',
+                                action: function (data) {
+                                    window.location.href = abp.appPath + 'SupplierDetail?id=' + encodeURIComponent(data.record.id);
+                                }
+                            },
+                            {
+                                text: 'Alış Geçmişi',
+                                action: function (data) {
+                                    window.location.href = abp.appPath + 'Suppliers/' + encodeURIComponent(data.record.id) + '/PurchaseHistory';
+                                }
+                            },
+                            {
                                 text: 'Ödeme Yap',
                                 action: function (data) {
                                     paymentModal.open({ businessPartnerId: data.record.id, isCollection: false });
@@ -82,5 +94,16 @@ $(function () {
     $('#NewSupplierButton').click(function (e) {
         e.preventDefault();
         createModal.open();
+    });
+
+    $('#SuppliersTable tbody').on('click', 'tr', function (event) {
+        if ($(event.target).closest('a, button, .dropdown-menu, .dropdown-toggle').length) {
+            return;
+        }
+
+        var row = dataTable.row(this).data();
+        if (row && row.id) {
+            window.location.href = abp.appPath + 'SupplierDetail?id=' + encodeURIComponent(row.id);
+        }
     });
 });

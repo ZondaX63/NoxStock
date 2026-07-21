@@ -30,7 +30,7 @@ public class CreateUpdateProductDto
     public decimal PurchasePrice { get; set; }
     public decimal SalePrice { get; set; }
     [Range(0, 10000)]
-    public decimal ProfitMarkupPercent { get; set; }
+    public decimal ProfitMarkupPercent { get; set; } = 30m;
     public bool UseCurrentExchangeRateForSale { get; set; }
     [StringLength(3)]
     public string PricingCurrencyCode { get; set; } = "TRY";

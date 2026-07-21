@@ -599,6 +599,19 @@ namespace NoxStock.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("AppliedMarkupPercent")
+                        .HasColumnType("decimal(9,4)");
+
+                    b.Property<decimal?>("CostCurrencyAmount")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("CostCurrencyCode")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal?>("CostTryAmount")
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("CreationTime");
@@ -645,8 +658,14 @@ namespace NoxStock.Migrations
                     b.Property<decimal?>("PriceExchangeRate")
                         .HasColumnType("decimal(18,6)");
 
+                    b.Property<DateTime?>("PriceRateDate")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<int?>("PricingMode")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PricingSnapshotDate")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("ProductCostHistoryId")
                         .HasColumnType("uuid");
@@ -657,6 +676,16 @@ namespace NoxStock.Migrations
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("ReferenceSaleCurrencyCode")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal?>("ReferenceSaleExchangeRate")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("ReferenceSaleUnitPrice")
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("TenantId");
@@ -666,6 +695,9 @@ namespace NoxStock.Migrations
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("UnitPriceTry")
+                        .HasColumnType("decimal(18,6)");
 
                     b.Property<decimal>("VatRate")
                         .HasColumnType("decimal(5,2)");

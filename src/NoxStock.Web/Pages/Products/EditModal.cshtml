@@ -1,16 +1,19 @@
 @page
+@using System.Globalization
+@using NoxStock.Products
 @using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
 @model NoxStock.Web.Pages.Products.EditModalModel
 @{
     Layout = null;
 }
 
-<form asp-page="/Products/EditModal">
+<form id="ProductEditForm" method="post" asp-page="/Products/EditModal">
     <abp-modal size="ExtraLarge">
         <abp-modal-header title="Ürün Düzenle"></abp-modal-header>
         <abp-modal-body>
-            <input asp-for="Id" type="hidden" />
-            <div class="row g-4">
+            <div class="product-edit-shell">
+                <input asp-for="Id" type="hidden" />
+                <div class="row g-4">
                 @* Kart Bilgileri *@
                 <div class="col-12">
                     <h6 class="fw-semibold text-muted mb-3 border-bottom pb-2">Kart Bilgileri</h6>
@@ -50,45 +53,130 @@
                 <div class="col-12 mt-2">
                     <h6 class="fw-semibold text-muted mb-3 border-bottom pb-2">Fiyatlandırma</h6>
                 </div>
-                <div class="col-md-6">
-                    <label asp-for="Product.PurchasePrice" class="form-label">Kart Alış Varsayılanı</label>
+                <div class="col-12">
+                    <div id="ProductPricingDashboard"
+                         class="product-pricing-dashboard"
+                         data-source-cost="@(Model.ProductSnapshot?.LastPurchaseSourceNetUnitCost?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+                         data-source-currency="@(Model.ProductSnapshot?.LastPurchaseSourceCurrencyCode ?? Model.ProductSnapshot?.PurchaseCurrency ?? "TRY")"
+                         data-source-rate="@(Model.ProductSnapshot?.LastPurchaseSourceExchangeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+                         data-try-cost="@(Model.ProductSnapshot?.LastPurchaseCostTryAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+                         data-reference-cost="@(Model.ProductSnapshot?.LastPurchaseCostCurrencyAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+                         data-reference-currency="@(Model.ProductSnapshot?.LastPurchaseCostCurrencyCode ?? Model.ProductSnapshot?.PricingCurrencyCode ?? "TRY")"
+                         data-reference-rate="@(Model.ProductSnapshot?.LastPurchaseExchangeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+                         data-document-number="@(Model.ProductSnapshot?.LastPurchaseDocumentNumber ?? "")"
+                         data-supplier-name="@(Model.ProductSnapshot?.LastPurchaseSupplierName ?? "")"
+                         data-purchase-date="@(Model.ProductSnapshot?.LastPurchaseDate?.ToString("dd.MM.yyyy") ?? "")">
+                        <div class="product-pricing-dashboard-header">
+                            <div><span class="product-pricing-kicker">DÖVİZDEN KORUMALI FİYATLANDIRMA</span><h5>Alış maliyeti → güncel satış önerisi</h5><p>Ürün TL ile alınmış olsa bile referans maliyet dövizde korunur; satış anındaki güncel kur ve markup kullanılır.</p></div>
+                            <span class="product-pricing-lock"><span class="material-icons-round" aria-hidden="true">lock</span>Onayda fiyat ve kur kilitlenir</span>
+                        </div>
+                        <div class="product-pricing-flow-grid">
+                            <div class="product-pricing-flow-card product-pricing-source"><span>Maliyet kaynağı</span><strong id="EditSourcePurchaseCost">Maliyet bilgisi yok</strong><small id="EditSourcePurchaseMeta">Onaylı alış faturası bekleniyor.</small><dl class="product-pricing-facts"><div><dt>Fatura</dt><dd id="EditSourceDocument">-</dd></div><div><dt>Tedarikçi</dt><dd id="EditSourceSupplier">-</dd></div><div><dt>Fatura kuru</dt><dd id="EditSourceRate">-</dd></div><div><dt>Maliyet tarihi</dt><dd id="EditSourceDate">-</dd></div></dl></div>
+                            <span class="material-icons-round product-pricing-flow-arrow" aria-hidden="true">east</span>
+                            <div class="product-pricing-flow-card product-pricing-reference"><span>Döviz bazlı maliyet</span><strong id="EditReferenceCost">Maliyet bilgisi yok</strong><small id="EditReferenceMeta">TL maliyet, fatura günündeki kurla referans dövizinde kilitlenir.</small></div>
+                            <span class="material-icons-round product-pricing-flow-arrow" aria-hidden="true">east</span>
+                            <div class="product-pricing-flow-card product-pricing-result"><span>Müşteriye gösterilecek fiyat</span><strong id="EditSuggestedSale">Hesaplanıyor...</strong><small id="EditSuggestedSaleMeta">Ekran para birimini aşağıdan seçin.</small><dl class="product-pricing-facts"><div><dt>Referans satış</dt><dd id="EditReferenceSale">-</dd></div><div><dt>Güncel kur</dt><dd id="EditCurrentRate">-</dd></div></dl></div>
+                        </div>
+                        <div id="EditPricingWarning" class="product-pricing-warning" hidden></div>
+                        <div class="product-pricing-actions" role="group" aria-label="Fiyatlandırma işlemleri">
+                            <button id="EditEnableDynamicPricing" type="button" class="product-pricing-action product-pricing-action-primary"><span class="material-icons-round" aria-hidden="true">bolt</span>Döviz bazlı dinamiği etkinleştir</button>
+                            <button id="EditRefreshPricing" type="button" class="product-pricing-action"><span class="material-icons-round" aria-hidden="true">refresh</span>Kuru ve öneriyi yenile</button>
+                        </div>
+                        <p class="product-pricing-footnote"><span class="material-icons-round" aria-hidden="true">info</span>Bu fiyat canlı önizlemedir. POS veya fatura onaylandığında kullanılan satış fiyatı, kur ve maliyet snapshot olarak belgeye yazılır.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 product-pricing-context-field" data-pricing-manual-field="purchase">
+                    <label asp-for="Product.PurchasePrice" class="form-label">Manuel kart alış bilgisi</label>
                     <div class="input-group">
-                        <input asp-for="Product.PurchasePrice" type="number" step="0.01" min="0" class="form-control" />
+                        <input id="Product_PurchasePrice" name="Product.PurchasePrice" value="@Model.Product.PurchasePrice.ToString("0.####", CultureInfo.InvariantCulture)" type="number" step="any" min="0" class="form-control" />
                         <select asp-for="Product.PurchaseCurrency" class="form-select" style="max-width:90px">
                             <option>TRY</option>
                             <option>USD</option>
                             <option>EUR</option>
                         </select>
                     </div>
+                    <small class="product-pricing-context-help">Yalnızca manuel fiyatlı eski kartlar için bilgi alanıdır; dinamik maliyet hesabına katılmaz.</small>
                 </div>
-                <div class="col-md-6">
-                    <label asp-for="Product.SalePrice" class="form-label">Satış Fiyatı</label>
+                <div class="col-md-6 product-pricing-context-field" data-pricing-manual-field="sale-price">
+                    <label asp-for="Product.SalePrice" class="form-label">Manuel satış fiyatı</label>
                     <div class="input-group">
-                        <input asp-for="Product.SalePrice" type="number" step="0.01" min="0" class="form-control" />
-                        <select asp-for="Product.SaleCurrency" class="form-select" style="max-width:90px">
-                            <option>TRY</option>
-                            <option>USD</option>
-                            <option>EUR</option>
-                        </select>
+                        <input id="Product_SalePrice" name="Product.SalePrice" value="@Model.Product.SalePrice.ToString("0.####", CultureInfo.InvariantCulture)" type="number" step="any" min="0" class="form-control" />
+                    </div>
+                    <small class="product-pricing-context-help">Manuel modda satışta kullanılan kart fiyatıdır.</small>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Product.PricingMode" class="form-label">Fiyatlandırma modu</label>
+                    <div class="product-pricing-mode-picker" data-pricing-mode-picker>
+                        <button type="button" class="product-pricing-mode-option" data-pricing-mode="0"><span class="material-icons-round" aria-hidden="true">sell</span><span><strong>Manuel fiyat</strong><small>Satış fiyatını siz belirlersiniz.</small></span></button>
+                        <button type="button" class="product-pricing-mode-option" data-pricing-mode="1"><span class="material-icons-round" aria-hidden="true">currency_exchange</span><span><strong>Döviz bazlı dinamik</strong><small>Son maliyet, güncel kur ve markup kullanılır.</small></span></button>
+                    </div>
+                    <select asp-for="Product.PricingMode" class="product-pricing-mode-select" aria-hidden="true" tabindex="-1">
+                        <option value="0">Manuel fiyat</option>
+                        <option value="1">Döviz bazlı dinamik fiyat</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Product.ProfitMarkupPercent" class="form-label">Maliyet üzeri kâr oranı (Markup %)</label>
+                    <input id="Product_ProfitMarkupPercent" name="Product.ProfitMarkupPercent" value="@Model.Product.ProfitMarkupPercent.ToString("0", CultureInfo.InvariantCulture)" type="number" step="1" min="0" class="form-control" />
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="product-pricing-mode-status-wrap mb-2">
+                        <span id="EditPricingModeStatus" class="product-pricing-mode-pill"></span>
+                        <span id="EditPricingModeHint" class="product-pricing-mode-hint"></span>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Product.ProfitMarkupPercent" class="form-label">Kâr Marjı (%)</label>
-                    <input asp-for="Product.ProfitMarkupPercent" type="number" step="0.01" min="0" class="form-control" />
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <div class="form-check mb-2">
-                        <input asp-for="Product.UseCurrentExchangeRateForSale" class="form-check-input" />
-                        <label asp-for="Product.UseCurrentExchangeRateForSale" class="form-check-label">Güncel kurla maliyet + marj kullan</label>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Product.PricingCurrencyCode" class="form-label">Maliyet fiyatlama para birimi</label>
-                    <select asp-for="Product.PricingCurrencyCode" class="form-select">
+                    <label asp-for="Product.PricingCurrencyCode" class="form-label">Referans para birimi</label>
+                    @if (Model.ProductSnapshot?.LastPurchaseCostHistoryId.HasValue == true)
+                    {
+                        <input name="Product.PricingCurrencyCode" value="@Model.Product.PricingCurrencyCode" type="hidden" />
+                    }
+                    <select asp-for="Product.PricingCurrencyCode" class="form-select" disabled="@(Model.ProductSnapshot?.LastPurchaseCostHistoryId.HasValue == true)">
                         <option>TRY</option>
                         <option>USD</option>
                         <option>EUR</option>
                     </select>
+                    <small class="product-pricing-context-help">Onaylı maliyet oluştuğunda kilitlenir; geçmiş maliyet yeniden çevrilmez.</small>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Product.SaleCurrency" class="form-label">Ekranda gösterilecek para birimi</label>
+                    <select asp-for="Product.SaleCurrency" class="form-select">
+                        <option>TRY</option>
+                        <option>USD</option>
+                        <option>EUR</option>
+                    </select>
+                    <small class="product-pricing-context-help">POS ve faturadaki varsayılan gösterimdir; kullanıcı işlem ekranında değiştirebilir.</small>
+                </div>
+
+                <div class="col-12 mt-2">
+                    <h6 class="fw-semibold text-muted mb-3 border-bottom pb-2">Maliyet Geçmişi</h6>
+                    <div class="table-responsive border rounded">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light"><tr><th>Tarih</th><th>Tedarikçi</th><th>Alış faturası</th><th>Net alış</th><th>İşlem kuru</th><th>TRY karşılığı</th><th>Referans karşılığı</th><th>Değişim</th></tr></thead>
+                            <tbody>
+                            @if (Model.CostHistory.Count == 0)
+                            {
+                                <tr><td colspan="8" class="text-center text-muted py-3">Henüz onaylı alış maliyeti kaydı yok.</td></tr>
+                            }
+                            else
+                            {
+                                @foreach (var history in Model.CostHistory)
+                                {
+                                    <tr>
+                                        <td>@history.CostDate.ToString("dd.MM.yyyy")</td>
+                                        <td>@(history.SupplierName ?? "-")</td>
+                                        <td>@(history.SourceDocumentNumber ?? "-")</td>
+                                        <td>@history.SourceNetUnitCost.ToString("N4") @history.SourceCurrencyCode</td>
+                                        <td>@history.SourceExchangeRate.ToString("N4")</td>
+                                        <td>@history.TryEquivalentNetUnitCost.ToString("N2") TRY</td>
+                                        <td>@history.PricingCurrencyEquivalentCost.ToString("N4") @history.PricingCurrencyCode</td>
+                                        <td>@(history.ChangeType == 0 ? "Alış onayı" : history.ChangeType == 1 ? "Alış iptali" : "Manuel düzeltme")</td>
+                                    </tr>
+                                }
+                            }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 @* Stok ve Konum *@
@@ -97,7 +185,7 @@
                 </div>
                 <div class="col-md-3">
                     <label asp-for="Product.Quantity" class="form-label">Stok Miktarı</label>
-                    <input asp-for="Product.Quantity" type="number" step="0.01" class="form-control" />
+                    <input id="Product_Quantity" name="Product.Quantity" value="@Model.Product.Quantity.ToString("0", CultureInfo.InvariantCulture)" type="number" step="1" class="form-control" />
                 </div>
                 <div class="col-md-3">
                     <label asp-for="Product.Unit" class="form-label">Birim</label>
@@ -111,7 +199,7 @@
                 </div>
                 <div class="col-md-3">
                     <label asp-for="Product.CriticalStockLevel" class="form-label">Kritik Stok Seviyesi</label>
-                    <input asp-for="Product.CriticalStockLevel" type="number" step="0.01" min="0" class="form-control" />
+                    <input id="Product_CriticalStockLevel" name="Product.CriticalStockLevel" value="@Model.Product.CriticalStockLevel.ToString("0", CultureInfo.InvariantCulture)" type="number" step="1" min="0" class="form-control" />
                 </div>
                 <div class="col-md-3">
                     <label asp-for="Product.ShelfLocation" class="form-label">Raf / Konum</label>
@@ -123,8 +211,15 @@
                         <label asp-for="Product.TrackStock" class="form-check-label">Stok takibi yap</label>
                     </div>
                 </div>
+                </div>
             </div>
         </abp-modal-body>
-        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+            <button type="submit" form="ProductEditForm" id="ProductEditSaveButton" class="btn btn-primary">
+                <span class="material-icons-round align-middle me-1" aria-hidden="true">check</span>
+                Kaydet
+            </button>
+        </div>
     </abp-modal>
 </form>

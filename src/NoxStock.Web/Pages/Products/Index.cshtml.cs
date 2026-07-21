@@ -78,6 +78,7 @@ public class IndexModel : NoxStockPageModel
             Currency = defaultCurrency,
             PurchaseCurrency = defaultCurrency,
             SaleCurrency = defaultCurrency,
+            ProfitMarkupPercent = 30m,
             TrackStock = true
         };
     }

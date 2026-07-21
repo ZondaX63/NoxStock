@@ -17,6 +17,16 @@ public class DocumentItemDto : FullAuditedEntityDto<Guid>
     public bool IsUnitPriceOverridden { get; set; }
     public string? PriceCurrencyCode { get; set; }
     public decimal? PriceExchangeRate { get; set; }
+    public DateTime? PriceRateDate { get; set; }
+    public decimal? UnitPriceTry { get; set; }
     public Guid? ProductCostHistoryId { get; set; }
     public ProductPricingMode? PricingMode { get; set; }
+    public string? CostCurrencyCode { get; set; }
+    public decimal? CostCurrencyAmount { get; set; }
+    public decimal? CostTryAmount { get; set; }
+    public decimal? AppliedMarkupPercent { get; set; }
+    public string? ReferenceSaleCurrencyCode { get; set; }
+    public decimal? ReferenceSaleUnitPrice { get; set; }
+    public decimal? ReferenceSaleExchangeRate { get; set; }
+    public DateTime? PricingSnapshotDate { get; set; }
 }

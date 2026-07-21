@@ -220,7 +220,7 @@ test('private beta critical commercial paths preserve business state and tenant 
     await page.locator('#Product_PurchaseCurrency').selectOption('USD');
     await page.locator('#Product_SaleCurrency').selectOption('TRY');
     await page.locator('#Product_ProfitMarkupPercent').fill('25');
-    await page.locator('#Product_UseCurrentExchangeRateForSale').check();
+
     await page.locator('#Product_Quantity').fill('25');
     await page.locator('#Product_CriticalStockLevel').fill('5');
     await page.locator('#Product_ShelfLocation').fill('A-1-1');
@@ -305,7 +305,7 @@ test('private beta critical commercial paths preserve business state and tenant 
   let paymentAmount;
   await test.step('create and approve a sale invoice through UI', async () => {
     await page.goto(`/t/${atlas.name}/Invoices/Create?type=1`);
-    await page.locator('#Invoice_DocNumber').fill(invoiceNumber);
+    await page.locator('#InvoiceDocNumber').fill(invoiceNumber);
     await page.locator('#Invoice_BusinessPartnerId').selectOption(customer.id);
     await page.locator('.product-select').selectOption(product.id);
     await expect.poll(async () => Number(await page.locator('.price-input').inputValue())).toBeGreaterThan(0);
@@ -367,7 +367,7 @@ test('private beta critical commercial paths preserve business state and tenant 
 
   await test.step('open customer sales history, change the period, and follow the invoice detail link', async () => {
     await page.goto(`/t/${atlas.name}/CustomerDetail?id=${customer.id}`);
-    await page.getByRole('link', { name: 'Satış Geçmişi' }).click();
+    await page.locator('a[href*="/SalesHistory"]').click();
     await expect(page).toHaveURL(new RegExp(`/t/${atlas.name}/Customers/${customer.id}/SalesHistory`));
     await expect(page.getByRole('heading', { name: customer.name })).toBeVisible();
     await expect(page.locator('tbody tr').filter({ hasText: invoiceNumber })).toBeVisible();

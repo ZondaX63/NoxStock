@@ -1,110 +1,190 @@
 @page
 @using System.Linq
+@using System.Globalization
 @model NoxStock.Web.Pages.Products.IndexModel
 @{
     Layout = "_AppLayout";
     ViewData["Title"] = "Ürünler";
 }
 
-<div class="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-    <div><h2 class="text-2xl font-bold text-slate-800 dark:text-white">Ürün Yönetimi</h2><p class="mt-1 text-sm text-slate-500">Ürün kartı, stok ve çoklu para birimli fiyatlar aynı ekranda.</p></div>
-    <div class="flex flex-wrap items-center gap-2">
-        <label for="DisplayCurrency" class="text-sm font-medium text-slate-600 dark:text-slate-300">Liste para birimi</label>
-        <select id="DisplayCurrency" class="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"><option value="TRY">TRY (TL)</option><option value="USD">USD ($)</option><option value="EUR">EUR</option></select>
-        <button id="NewProductButton" type="button" class="inline-flex h-10 items-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"><span class="material-icons-round text-base">add</span>Yeni ürün</button>
-    </div>
-</div>
-
-@if (TempData["ProductCreated"] is string productCreated)
-{
-    <div class="mb-5 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><span class="material-icons-round text-base">check_circle</span>@productCreated</div>
-}
-
-<section id="ProductEditor" class="mb-6 rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800" hidden>
-    <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700"><div><h3 class="font-semibold text-slate-800 dark:text-white">Yeni ürün kartı</h3><p class="mt-0.5 text-xs text-slate-500">Dövizli fiyatların TL karşılığı son kayıtlı USD/EUR kuru ile hesaplanır.</p></div><button id="CloseProductEditor" type="button" class="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700" title="Kapat"><span class="material-icons-round">close</span></button></div>
-    <form method="post" asp-page-handler="Create" class="p-5">
-        <div asp-validation-summary="ModelOnly" class="mb-4 text-sm text-red-600"></div>
-        <div class="grid gap-6 lg:grid-cols-12">
-            <div class="space-y-4 lg:col-span-5">
-                <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Kart bilgileri</h4>
-                <div><label asp-for="Product.Name" class="mb-1 block text-sm font-medium">Ürün adı</label><input asp-for="Product.Name" class="input-field" /><span asp-validation-for="Product.Name" class="text-xs text-red-600"></span></div>
-                <div class="grid gap-4 sm:grid-cols-2"><div><label asp-for="Product.Sku" class="mb-1 block text-sm font-medium">Stok kodu</label><input asp-for="Product.Sku" class="input-field" /></div><div><label asp-for="Product.Barcode" class="mb-1 block text-sm font-medium">Barkod</label><input asp-for="Product.Barcode" class="input-field" /></div></div>
-                <div class="grid gap-4 sm:grid-cols-2"><div><label asp-for="Product.CategoryId" class="mb-1 block text-sm font-medium">Kategori</label><select asp-for="Product.CategoryId" asp-items="Model.Categories" class="input-field"></select></div><div><label asp-for="Product.BrandId" class="mb-1 block text-sm font-medium">Marka</label><select asp-for="Product.BrandId" asp-items="Model.Brands" class="input-field"></select></div></div>
-                <div><label asp-for="Product.OemCodes" class="mb-1 block text-sm font-medium">OEM / referans kodları</label><input asp-for="Product.OemCodes" placeholder="Örnek: 34116775277, 34 11 6 775 277" class="input-field" /><p class="mt-1 text-xs text-slate-500">Virgülle ayırın. Aynı OEM kodu farklı marka ve stok kartlarında kullanılabilir.</p></div>
-                <div><label asp-for="Product.Description" class="mb-1 block text-sm font-medium">Açıklama</label><textarea asp-for="Product.Description" rows="3" class="input-field"></textarea></div>
-            </div>
-            <div class="space-y-4 lg:col-span-4">
-                <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Fiyatlandırma</h4>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div><label asp-for="Product.PurchasePrice" class="mb-1 block text-sm font-medium">Kart alış varsayılanı</label><div class="flex"><input asp-for="Product.PurchasePrice" type="number" step="0.01" min="0" class="input-field rounded-r-none" /><select asp-for="Product.PurchaseCurrency" class="w-20 rounded-r-md border border-l-0 border-slate-300 bg-slate-50 text-sm"><option>TRY</option><option>USD</option><option>EUR</option></select></div><p id="PurchaseTryEquivalent" class="mt-1 min-h-4 text-xs text-emerald-600"></p></div>
-                    <div><label asp-for="Product.SalePrice" class="mb-1 block text-sm font-medium">Satış fiyatı</label><div class="flex"><input asp-for="Product.SalePrice" type="number" step="0.01" min="0" class="input-field rounded-r-none" /><select asp-for="Product.SaleCurrency" class="w-20 rounded-r-md border border-l-0 border-slate-300 bg-slate-50 text-sm"><option>TRY</option><option>USD</option><option>EUR</option></select></div><p id="SaleTryEquivalent" class="mt-1 min-h-4 text-xs text-emerald-600"></p><p id="SaleCalculationInfo" class="min-h-4 text-xs text-slate-500"></p></div>
-                </div>
-                <div class="rounded-md border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-900/60 dark:bg-indigo-950/20"><label class="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100"><input asp-for="Product.UseCurrentExchangeRateForSale" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" /> Son alış maliyeti + güncel kur + markup kullan</label><p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Onaylanan son alış faturası maliyet kaynağıdır. Satış anında canlı kur kullanılır; oluşan belge satırı fiyatı ve kuruyla sabitlenir.</p><div class="mt-3 grid gap-3 sm:grid-cols-2"><div><label asp-for="Product.PricingCurrencyCode" class="mb-1 block text-xs font-medium">Maliyet fiyatlama para birimi</label><select asp-for="Product.PricingCurrencyCode" class="input-field"><option>TRY</option><option>USD</option><option>EUR</option></select></div><div><label asp-for="Product.ProfitMarkupPercent" class="mb-1 block text-xs font-medium">Maliyet üzeri kâr oranı (%)</label><input asp-for="Product.ProfitMarkupPercent" type="number" min="0" step="0.01" class="input-field" /></div></div><button id="CalculateSalePrice" type="button" class="mt-3 inline-flex h-9 items-center gap-1 rounded-md border border-indigo-200 bg-white px-3 text-sm font-medium text-indigo-700 hover:bg-indigo-50"><span class="material-icons-round text-base">calculate</span>Güncel fiyatı hesapla</button></div>
-            </div>
-            <div class="space-y-4 lg:col-span-3">
-                <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Stok ve konum</h4>
-                <div><label asp-for="Product.Quantity" class="mb-1 block text-sm font-medium">Açılış stoğu</label><input asp-for="Product.Quantity" type="number" step="0.01" class="input-field" /></div>
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1"><div><label asp-for="Product.Unit" class="mb-1 block text-sm font-medium">Birim</label><select asp-for="Product.Unit" class="input-field"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select></div><div><label asp-for="Product.CriticalStockLevel" class="mb-1 block text-sm font-medium">Kritik stok</label><input asp-for="Product.CriticalStockLevel" type="number" step="0.01" min="0" class="input-field" /></div><div><label asp-for="Product.ShelfLocation" class="mb-1 block text-sm font-medium">Raf / konum</label><input asp-for="Product.ShelfLocation" class="input-field" /></div></div>
-                <label class="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm"><input asp-for="Product.TrackStock" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />Stok takibi yap</label>
-                <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"><span class="material-icons-round text-base">save</span>Ürünü kaydet</button>
-            </div>
+<div class="products-workspace">
+    <header class="products-workspace-header">
+        <div>
+            <div class="products-eyebrow">STOK VE FİYATLANDIRMA</div>
+            <h2>Ürünler</h2>
+            <p>Envanteri, onaylı alış maliyetini ve satış fiyatı davranışını aynı çalışma alanından yönetin.</p>
         </div>
-    </form>
-</section>
-
-<section class="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-    <div class="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-900/40">
-        <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div class="relative w-full xl:max-w-md">
-                <span class="material-icons-round absolute left-3 top-2.5 text-base text-slate-400">search</span>
-                <input id="ProductSearch" type="search" placeholder="Ürün adı, stok kodu, barkod veya OEM ara" class="input-field pl-9" />
+        <div class="products-header-actions">
+            <div class="products-currency-control">
+                <label for="DisplayCurrency">Satış önerisi para birimi</label>
+                <select id="DisplayCurrency" aria-label="Satış önerisi para birimi">
+                    <option value="TRY">TRY (TL)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR</option>
+                </select>
+                <small id="DisplayCurrencyStatus">Güncel satış önerisini bu para biriminde gösterir.</small>
             </div>
-            <div class="text-xs text-slate-500">OEM araması boşluk ve tireleri yok sayar; eşleşen tüm marka alternatiflerini listeler.</div>
-        </div>
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <select id="ProductBrandFilter" class="input-field">
-                <option value="">Tüm markalar</option>
-                @foreach (var brand in Model.Brands.Skip(1))
-                {
-                    <option value="@brand.Value">@brand.Text</option>
-                }
-            </select>
-            <select id="ProductCategoryFilter" class="input-field">
-                <option value="">Tüm kategoriler</option>
-                @foreach (var category in Model.Categories.Skip(1))
-                {
-                    <option value="@category.Value">@category.Text</option>
-                }
-            </select>
-            <select id="ProductStockStatusFilter" class="input-field">
-                <option value="">Tüm stok durumları</option>
-                <option value="critical">Kritik altı</option>
-                <option value="zero">Sıfır stok</option>
-                <option value="normal">Normal</option>
-            </select>
-            <button id="ResetProductFilters" type="button" class="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-                <span class="material-icons-round text-base">restart_alt</span>
-                Filtreleri Sıfırla
+            <button id="NewProductButton" type="button" class="products-primary-action">
+                <span class="material-icons-round" aria-hidden="true">add</span>
+                Yeni ürün
             </button>
         </div>
-    </div>
-    <div class="overflow-x-auto">
-        <table id="ProductsTable" class="w-full text-left text-sm">
-            <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40">
-                <tr>
-                    <th class="px-4 py-3">İşlem</th>
-                    <th class="px-4 py-3">Ürün</th>
-                    <th class="px-4 py-3">Kodlar</th>
-                    <th class="px-4 py-3">Marka / kategori</th>
-                    <th class="px-4 py-3">Stok</th>
-                    <th class="px-4 py-3">Alış</th>
-                    <th class="px-4 py-3">Satış</th>
-                    <th class="px-4 py-3">Son alış maliyeti</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</section>
+    </header>
+
+    @if (TempData["ProductCreated"] is string productCreated)
+    {
+        <div class="products-feedback products-feedback-success" role="status">
+            <span class="material-icons-round" aria-hidden="true">check_circle</span>@productCreated
+        </div>
+    }
+
+    <section class="products-overview" aria-label="Ürün özeti">
+        <div class="products-overview-card products-overview-primary">
+            <span class="material-icons-round" aria-hidden="true">inventory_2</span>
+            <div><span>Bu sayfadaki ürün</span><strong id="ProductVisibleCount">-</strong></div>
+        </div>
+        <div class="products-overview-card products-overview-dynamic">
+            <span class="material-icons-round" aria-hidden="true">currency_exchange</span>
+            <div><span>Dinamik fiyatlı</span><strong id="ProductDynamicCount">-</strong></div>
+        </div>
+        <div class="products-overview-card products-overview-warning">
+            <span class="material-icons-round" aria-hidden="true">receipt_long</span>
+            <div><span>Maliyet bekleyen</span><strong id="ProductMissingCostCount">-</strong></div>
+        </div>
+        <div class="products-overview-card products-overview-danger">
+            <span class="material-icons-round" aria-hidden="true">warning_amber</span>
+            <div><span>Kritik / sıfır stok</span><strong id="ProductAttentionStockCount">-</strong></div>
+        </div>
+    </section>
+
+    <section class="products-guidance" aria-label="Fiyatlandırma akışı">
+        <div><span class="material-icons-round" aria-hidden="true">receipt_long</span><p><strong>Alış onayı</strong> son maliyet snapshot'ını günceller.</p></div>
+        <span class="material-icons-round products-guidance-arrow" aria-hidden="true">east</span>
+        <div><span class="material-icons-round" aria-hidden="true">currency_exchange</span><p><strong>Dinamik ürün</strong> güncel kur ve markup ile öneri üretir.</p></div>
+        <span class="material-icons-round products-guidance-arrow" aria-hidden="true">east</span>
+        <div><span class="material-icons-round" aria-hidden="true">lock</span><p><strong>POS / fatura onayı</strong> fiyatı ve kuru belge satırında kilitler.</p></div>
+    </section>
+
+    <section id="ProductEditor" class="product-editor-panel" hidden aria-labelledby="ProductEditorTitle">
+        <div class="product-editor-header">
+            <div>
+                <span class="products-eyebrow">YENİ KART</span>
+                <h3 id="ProductEditorTitle">Yeni ürün oluştur</h3>
+                <p>Kimlik, fiyat davranışı ve açılış stok bilgisini bir kez tanımlayın.</p>
+            </div>
+            <button id="CloseProductEditor" type="button" class="products-icon-button" title="Kapat" aria-label="Yeni ürün formunu kapat"><span class="material-icons-round" aria-hidden="true">close</span></button>
+        </div>
+        <form method="post" asp-page-handler="Create" class="product-editor-form">
+            <div asp-validation-summary="ModelOnly" class="products-validation" role="alert"></div>
+            <div class="product-editor-grid">
+                <section class="product-editor-section product-editor-identity">
+                    <div class="product-editor-section-heading"><span class="material-icons-round" aria-hidden="true">badge</span><div><h4>Kart bilgileri</h4><p>Arama ve ürünün farklı marka alternatifleri için temel kayıt.</p></div></div>
+                    <div class="product-form-grid product-form-grid-2">
+                        <div class="product-field product-field-wide"><label asp-for="Product.Name">Ürün adı</label><input asp-for="Product.Name" class="input-field" autocomplete="off" /><span asp-validation-for="Product.Name"></span></div>
+                        <div class="product-field"><label asp-for="Product.Sku">Stok kodu</label><input asp-for="Product.Sku" class="input-field" autocomplete="off" /></div>
+                        <div class="product-field"><label asp-for="Product.Barcode">Barkod</label><input asp-for="Product.Barcode" class="input-field" inputmode="numeric" autocomplete="off" /></div>
+                        <div class="product-field"><label asp-for="Product.CategoryId">Kategori</label><select asp-for="Product.CategoryId" asp-items="Model.Categories" class="input-field"></select></div>
+                        <div class="product-field"><label asp-for="Product.BrandId">Marka</label><select asp-for="Product.BrandId" asp-items="Model.Brands" class="input-field"></select></div>
+                        <div class="product-field product-field-wide"><label asp-for="Product.OemCodes">OEM / referans kodları</label><input asp-for="Product.OemCodes" placeholder="34116775277, 34 11 6 775 277" class="input-field" autocomplete="off" /><small>Virgülle ayırın. Aynı OEM kodu farklı markalardaki ürünleri birlikte bulur.</small></div>
+                        <div class="product-field product-field-wide"><label asp-for="Product.Description">Açıklama</label><textarea asp-for="Product.Description" rows="3" class="input-field"></textarea></div>
+                    </div>
+                </section>
+
+                <section class="product-editor-section product-editor-pricing">
+                    <div class="product-editor-section-heading"><span class="material-icons-round" aria-hidden="true">payments</span><div><h4>Fiyatlandırma</h4><p>Manuel fiyatı ya da maliyet bazlı dinamik satış davranışını seçin.</p></div></div>
+                    <div class="product-pricing-mode-note">
+                        <span class="material-icons-round" aria-hidden="true">info</span>
+                        <p>Dinamik modda satış fiyatı, yalnızca onaylı alış maliyeti oluştuğunda POS ve faturada güncel kurla hesaplanır.</p>
+                    </div>
+                    <div class="product-form-grid product-form-grid-2">
+                        <div class="product-field"><label asp-for="Product.PricingMode">Fiyatlandırma modu</label><div class="product-pricing-mode-picker" data-pricing-mode-picker><button type="button" class="product-pricing-mode-option" data-pricing-mode="0"><span class="material-icons-round" aria-hidden="true">sell</span><span><strong>Manuel fiyat</strong><small>Satış fiyatını siz belirlersiniz.</small></span></button><button type="button" class="product-pricing-mode-option" data-pricing-mode="1"><span class="material-icons-round" aria-hidden="true">currency_exchange</span><span><strong>Döviz bazlı dinamik</strong><small>Güncel kur ve markup ile hesaplanır.</small></span></button></div><select asp-for="Product.PricingMode" class="product-pricing-mode-select" aria-hidden="true" tabindex="-1"><option value="0">Manuel fiyat</option><option value="1">Döviz bazlı dinamik</option></select></div>
+                        <div class="product-field"><label asp-for="Product.PricingCurrencyCode">Referans para birimi</label><select asp-for="Product.PricingCurrencyCode" class="input-field"><option>TRY</option><option>USD</option><option>EUR</option></select><small>İlk onaylı alışta TL maliyet bu para biriminde kilitlenir.</small></div>
+                        <div class="product-field"><label asp-for="Product.ProfitMarkupPercent">Maliyet üzeri kâr ekleme oranı (Markup %)</label><input id="Product_ProfitMarkupPercent" name="Product.ProfitMarkupPercent" value="@Model.Product.ProfitMarkupPercent.ToString("0", CultureInfo.InvariantCulture)" type="number" min="0" step="1" class="input-field" /></div>
+                        <div class="product-field"><label asp-for="Product.SaleCurrency">Varsayılan ekran para birimi</label><select asp-for="Product.SaleCurrency" class="input-field"><option>TRY</option><option>USD</option><option>EUR</option></select><small>POS ve faturada TRY, USD veya EUR görünümüne çevrilebilir.</small></div>
+                        <div class="product-field product-pricing-context-field" data-pricing-manual-field="sale-price"><label asp-for="Product.SalePrice">Manuel satış fiyatı</label><input id="Product_SalePrice" name="Product.SalePrice" value="@Model.Product.SalePrice.ToString("0.####", CultureInfo.InvariantCulture)" type="number" step="any" min="0" class="input-field" /><small id="SaleTryEquivalent"></small><small class="product-pricing-context-help">Yalnızca manuel fiyat modunda kullanılır.</small></div>
+                        <div class="product-field product-pricing-context-field" data-pricing-manual-field="purchase"><label asp-for="Product.PurchasePrice">Manuel kart alış bilgisi</label><div class="product-money-input"><input id="Product_PurchasePrice" name="Product.PurchasePrice" value="@Model.Product.PurchasePrice.ToString("0.####", CultureInfo.InvariantCulture)" type="number" step="any" min="0" class="input-field" /><select asp-for="Product.PurchaseCurrency"><option>TRY</option><option>USD</option><option>EUR</option></select></div><small id="PurchaseTryEquivalent"></small><small class="product-pricing-context-help">Dinamik maliyet kaynağı değildir; maliyet yalnızca onaylı alış faturasından gelir.</small></div>
+                        <div class="product-field product-preview-field"><label>Yeni kart fiyat önizlemesi</label><button id="CalculateSalePrice" type="button" class="products-secondary-action"><span class="material-icons-round" aria-hidden="true">calculate</span>Hesaplamayı gör</button><small id="SaleCalculationInfo">Bu yalnızca kart oluşturma önizlemesidir; onaylı alış maliyeti oluşunca satış ekranları backend hesabını kullanır.</small></div>
+                    </div>
+                    <input asp-for="Product.UseCurrentExchangeRateForSale" type="hidden" value="false" />
+                </section>
+
+                <section class="product-editor-section product-editor-stock">
+                    <div class="product-editor-section-heading"><span class="material-icons-round" aria-hidden="true">shelves</span><div><h4>Stok ve konum</h4><p>Açılış miktarı ile kritik seviye, ürün kartının başlangıç bilgisidir.</p></div></div>
+                    <div class="product-form-grid product-form-grid-2">
+                        <div class="product-field"><label asp-for="Product.Quantity">Açılış stoğu</label><input id="Product_Quantity" name="Product.Quantity" value="@Model.Product.Quantity.ToString("0", CultureInfo.InvariantCulture)" type="number" step="1" class="input-field" /></div>
+                        <div class="product-field"><label asp-for="Product.Unit">Birim</label><select asp-for="Product.Unit" class="input-field"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select></div>
+                        <div class="product-field"><label asp-for="Product.CriticalStockLevel">Kritik stok</label><input id="Product_CriticalStockLevel" name="Product.CriticalStockLevel" value="@Model.Product.CriticalStockLevel.ToString("0", CultureInfo.InvariantCulture)" type="number" step="1" min="0" class="input-field" /></div>
+                        <div class="product-field"><label asp-for="Product.ShelfLocation">Raf / konum</label><input asp-for="Product.ShelfLocation" class="input-field" autocomplete="off" /></div>
+                    </div>
+                    <label class="product-checkbox"><input asp-for="Product.TrackStock" /> <span>Bu ürün için stok takibi yap</span></label>
+                    <button type="submit" class="products-primary-action product-editor-submit"><span class="material-icons-round" aria-hidden="true">save</span>Ürün kartını oluştur</button>
+                </section>
+            </div>
+        </form>
+    </section>
+
+    <section class="products-list-shell" aria-labelledby="ProductsListTitle">
+        <div class="products-list-heading">
+            <div><span class="products-eyebrow">ENVANTER</span><h3 id="ProductsListTitle">Ürün kataloğu</h3><p>Onaylı alış maliyeti, kilitli döviz karşılığı ve güncel satış önerisini aynı satırda izleyin.</p></div>
+        </div>
+        <div class="products-quick-filters" role="group" aria-label="Hızlı ürün filtreleri">
+            <button type="button" class="products-quick-filter is-active" data-quick-filter="all"><span class="material-icons-round" aria-hidden="true">apps</span>Tümü</button>
+            <button type="button" class="products-quick-filter" data-quick-filter="dynamic"><span class="material-icons-round" aria-hidden="true">currency_exchange</span>Dinamik fiyatlı</button>
+            <button type="button" class="products-quick-filter" data-quick-filter="manual"><span class="material-icons-round" aria-hidden="true">sell</span>Manuel fiyatlı</button>
+            <button type="button" class="products-quick-filter" data-quick-filter="missing-cost"><span class="material-icons-round" aria-hidden="true">receipt_long</span>Maliyet bekleyen</button>
+            <button type="button" class="products-quick-filter" data-quick-filter="attention-stock"><span class="material-icons-round" aria-hidden="true">warning_amber</span>Stok uyarısı</button>
+        </div>
+        <div class="products-filter-panel">
+            <div class="product-search-field"><span class="material-icons-round" aria-hidden="true">search</span><input id="ProductSearch" type="search" placeholder="Ürün adı, stok kodu, barkod veya OEM ara" autocomplete="off" /></div>
+            <select id="ProductBrandFilter" class="input-field" aria-label="Marka filtresi"><option value="">Tüm markalar</option>@foreach (var brand in Model.Brands.Skip(1)) { <option value="@brand.Value">@brand.Text</option> }</select>
+            <select id="ProductCategoryFilter" class="input-field" aria-label="Kategori filtresi"><option value="">Tüm kategoriler</option>@foreach (var category in Model.Categories.Skip(1)) { <option value="@category.Value">@category.Text</option> }</select>
+            <select id="ProductStockStatusFilter" class="input-field" aria-label="Stok durumu filtresi"><option value="">Tüm stok durumları</option><option value="attention">Kritik veya sıfır stok</option><option value="critical">Kritik stok</option><option value="zero">Sıfır stok</option><option value="normal">Normal stok</option></select>
+            <select id="ProductPricingModeFilter" class="input-field" aria-label="Fiyatlandırma modu filtresi"><option value="">Tüm fiyatlandırmalar</option><option value="dynamic">Döviz bazlı dinamik</option><option value="manual">Manuel fiyat</option></select>
+            <select id="ProductCostStatusFilter" class="input-field" aria-label="Maliyet durumu filtresi"><option value="">Tüm maliyet durumları</option><option value="available">Onaylı maliyeti olan</option><option value="missing">Maliyet bekleyen</option><option value="under-cost">Maliyetin altında satma riski</option><option value="recent">Son 30 gün maliyet değişen</option></select>
+            <button id="ResetProductFilters" type="button" class="products-reset-action"><span class="material-icons-round" aria-hidden="true">restart_alt</span><span>Temizle</span></button>
+        </div>
+        <p class="products-search-help"><span class="material-icons-round" aria-hidden="true">tips_and_updates</span>OEM araması boşluk ve tireleri yok sayar; aynı referans numaralı tüm marka alternatifleri birlikte listelenir.</p>
+        <div class="flex justify-end mb-3">
+            <div class="relative inline-block text-left" id="ColumnToggleWrapper">
+                <button type="button" id="ToggleColumnsBtn" class="products-quick-filter flex items-center gap-1 text-xs" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--nx-border);">
+                    <span class="material-icons-round text-sm">view_column</span>
+                    Kolonları Özelleştir
+                </button>
+                <div id="ColumnToggleMenu" class="products-column-menu hidden" role="menu" aria-label="Ürün kolonları">
+                    <div class="products-column-menu-heading"><strong>Kolon görünümü</strong><span>Kolonları açıp kapatın; tablo başlığının sağ kenarını sürükleyerek genişliği ayarlayın.</span></div>
+                    <div class="products-column-menu-grid">
+                        <div>
+                            <p>Temel bilgiler</p>
+                            <label><input type="checkbox" class="col-toggle" data-column="2" checked> Stok</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="3" checked> Fiyat politikası</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="4" checked> Maliyet kaynağı</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="5" checked> Referans maliyet</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="6" checked> Satış önerisi</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="7"> Marka / kategori</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="8"> Barkod</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="9"> OEM kodları</label>
+                        </div>
+                        <div>
+                            <p>Fiyat ve stok ayrıntıları</p>
+                            <label><input type="checkbox" class="col-toggle" data-column="10"> Son alış tarihi</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="11"> Alış tutarı</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="12"> Fatura kuru</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="13"> TRY maliyeti</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="14"> Referans satış (seçili)</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="15"> Raf / konum</label>
+                        </div>
+                    </div>
+                    <button type="button" id="ResetProductColumns" class="products-column-menu-reset"><span class="material-icons-round" aria-hidden="true">restart_alt</span>Görünüm ve genişlikleri sıfırla</button>
+                </div>
+            </div>
+        </div>
+        <div class="products-table-wrap">
+            <table id="ProductsTable" class="product-data-table w-full text-left text-sm">
+                <thead><tr><th>İşlem</th><th>Ürün ve kodlar</th><th>Stok</th><th>Fiyat politikası</th><th>Maliyet kaynağı</th><th>Kilitli referans maliyet</th><th>Güncel satış önerisi</th><th>Marka / kategori</th><th>Barkod</th><th>OEM kodları</th><th>Son alış tarihi</th><th>Alış tutarı</th><th>Fatura kuru</th><th>TRY maliyeti</th><th>Referans satış (seçili)</th><th>Raf / konum</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+</div>
 
 @section Scripts { <abp-script src="/Pages/Products/Index.js" /> }

@@ -21,7 +21,7 @@ public class Product : FullAuditedAggregateRoot<Guid>, IMultiTenant
     
     public decimal PurchasePrice { get; set; }
     public decimal SalePrice { get; set; }
-    public decimal ProfitMarkupPercent { get; set; }
+    public decimal ProfitMarkupPercent { get; set; } = 30m;
     public bool UseCurrentExchangeRateForSale { get; set; }
     public string PricingCurrencyCode { get; set; } = "TRY";
     public ProductPricingMode PricingMode { get; set; }

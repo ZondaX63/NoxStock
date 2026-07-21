@@ -17,6 +17,9 @@ public class CreateModalModel : NoxStockPageModel
     [BindProperty(SupportsGet = true)]
     public DocumentType Type { get; set; } = DocumentType.Collection;
 
+    [BindProperty(SupportsGet = true)]
+    public Guid? BusinessPartnerId { get; set; }
+
     [BindProperty]
     public PaymentInput Payment { get; set; } = new();
 
@@ -46,6 +49,7 @@ public class CreateModalModel : NoxStockPageModel
         {
             DocNumber = $"{(Type == DocumentType.Collection ? "THS" : "TED")}-{DateTime.Now:yyyyMMdd-HHmm}",
             Date = DateTime.Now,
+            BusinessPartnerId = BusinessPartnerId ?? Guid.Empty,
             Amount = 0
         };
 

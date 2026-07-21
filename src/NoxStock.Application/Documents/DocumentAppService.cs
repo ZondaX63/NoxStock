@@ -287,10 +287,19 @@ public class DocumentAppService :
             ProductPriceCalculation? priceCalculation = null;
             var usesDynamicPricing = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup ||
                 product.UseCurrentExchangeRateForSale;
-            if (IsSalesDocument(document.Type) && !inputItem.IsUnitPriceOverridden && usesDynamicPricing)
+            if (IsSalesDocument(document.Type))
             {
                 priceCalculation = await _priceCalculator.CalculateAsync(product, document.Currency);
-                unitPrice = priceCalculation.UnitPrice;
+                if (usesDynamicPricing && !priceCalculation.IsAvailable)
+                {
+                    throw new BusinessException(priceCalculation.UnavailableReason ?? "NoxStock:ProductApprovedPurchaseCostUnavailable")
+                        .WithData("ProductName", product.Name);
+                }
+
+                if (!inputItem.IsUnitPriceOverridden && usesDynamicPricing)
+                {
+                    unitPrice = priceCalculation.UnitPrice;
+                }
             }
 
             EnsureItemIsValid(inputItem);
@@ -300,7 +309,7 @@ public class DocumentAppService :
             var taxable = lineNet - discount;
             var vat = taxable * inputItem.VatRate / 100;
 
-            document.Items.Add(new DocumentItem(GuidGenerator.Create(), CurrentTenant.Id)
+            var documentItem = new DocumentItem(GuidGenerator.Create(), CurrentTenant.Id)
             {
                 ProductId = inputItem.ProductId,
                 Quantity = inputItem.Quantity,
@@ -317,7 +326,9 @@ public class DocumentAppService :
                     : priceCalculation is not null
                         ? product.PricingMode
                         : null
-            });
+            };
+            ApplyPricingSnapshot(documentItem, product, priceCalculation, lockDate: null);
+            document.Items.Add(documentItem);
         }
 
         if (document.Type is DocumentType.Collection or DocumentType.Payment)
@@ -425,6 +436,32 @@ public class DocumentAppService :
     }
 
     private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
+
+    private static void ApplyPricingSnapshot(
+        DocumentItem item,
+        Product product,
+        ProductPriceCalculation? calculation,
+        DateTime? lockDate)
+    {
+        if (calculation is null)
+        {
+            return;
+        }
+
+        item.PriceCurrencyCode = calculation.Currency;
+        item.PriceExchangeRate = calculation.ExchangeRate;
+        item.PriceRateDate = calculation.PricingCurrencyRateDate ?? calculation.RateDate;
+        item.UnitPriceTry = RoundMoney(item.UnitPrice * calculation.ExchangeRate);
+        item.ProductCostHistoryId = calculation.ProductCostHistoryId ?? product.LastPurchaseCostHistoryId;
+        item.CostCurrencyCode = product.LastPurchaseCostCurrencyCode;
+        item.CostCurrencyAmount = product.LastPurchaseCostCurrencyAmount;
+        item.CostTryAmount = product.LastPurchaseCostTryAmount;
+        item.AppliedMarkupPercent = calculation.MarkupPercent;
+        item.ReferenceSaleCurrencyCode = calculation.PricingCurrencyCode;
+        item.ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice;
+        item.ReferenceSaleExchangeRate = calculation.PricingCurrencyExchangeRate;
+        item.PricingSnapshotDate = lockDate;
+    }
 
     private static bool IsSalesDocument(DocumentType type)
     {

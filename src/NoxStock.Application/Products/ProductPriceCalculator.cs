@@ -15,6 +15,8 @@ public interface IProductPriceCalculator
 
 public sealed class ProductPriceCalculation
 {
+    public bool IsAvailable { get; init; } = true;
+    public string? UnavailableReason { get; init; }
     public string Currency { get; init; } = "TRY";
     public decimal UnitPrice { get; init; }
     public decimal PriceInTry { get; init; }
@@ -23,7 +25,11 @@ public sealed class ProductPriceCalculation
     public bool UsesCurrentExchangeRate { get; init; }
     public string PricingCurrencyCode { get; init; } = "TRY";
     public decimal PricingCurrencyExchangeRate { get; init; } = 1;
+    public DateTime? PricingCurrencyRateDate { get; init; }
     public decimal? LastPurchaseCostCurrencyAmount { get; init; }
+    public decimal? LastPurchaseCostTryAmount { get; init; }
+    public decimal? ReferenceSaleUnitPrice { get; init; }
+    public decimal MarkupPercent { get; init; }
     public Guid? ProductCostHistoryId { get; init; }
 }
 
@@ -45,11 +51,28 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
         var pricingCurrency = NormalizeCurrency(string.IsNullOrWhiteSpace(product.PricingCurrencyCode)
             ? product.SaleCurrency
             : product.PricingCurrencyCode);
+        var markupPercent = product.ProfitMarkupPercent > 0 ? product.ProfitMarkupPercent : 30m;
         var hasLastPurchaseCost = product.LastPurchaseCostCurrencyAmount is > 0;
         var usesCostProfile = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup && hasLastPurchaseCost;
-        var usesLegacyDynamicPrice = product.UseCurrentExchangeRateForSale && !usesCostProfile;
 
-        if (!usesCostProfile && !usesLegacyDynamicPrice)
+        if (product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup && !hasLastPurchaseCost)
+        {
+            return new ProductPriceCalculation
+            {
+                IsAvailable = false,
+                UnavailableReason = "NoxStock:ProductApprovedPurchaseCostUnavailable",
+                Currency = targetCurrency,
+                ExchangeRate = targetRate,
+                RateDate = targetRateDate,
+                UsesCurrentExchangeRate = true,
+                PricingCurrencyCode = pricingCurrency,
+                PricingCurrencyExchangeRate = await GetExchangeRateAsync(pricingCurrency),
+                PricingCurrencyRateDate = await GetRateDateAsync(pricingCurrency),
+                MarkupPercent = markupPercent
+            };
+        }
+
+        if (!usesCostProfile)
         {
             var fixedCurrency = NormalizeCurrency(string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency);
             var fixedRate = await GetExchangeRateAsync(fixedCurrency);
@@ -65,7 +88,13 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
                 UsesCurrentExchangeRate = false,
                 PricingCurrencyCode = pricingCurrency,
                 PricingCurrencyExchangeRate = await GetExchangeRateAsync(pricingCurrency),
+                PricingCurrencyRateDate = await GetRateDateAsync(pricingCurrency),
                 LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
+                LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
+                ReferenceSaleUnitPrice = product.LastPurchaseCostCurrencyAmount is > 0
+                    ? Round(product.LastPurchaseCostCurrencyAmount.Value * (1 + markupPercent / 100m))
+                    : null,
+                MarkupPercent = markupPercent,
                 ProductCostHistoryId = product.LastPurchaseCostHistoryId
             };
         }
@@ -74,7 +103,7 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
         {
             var pricingRate = await GetExchangeRateAsync(pricingCurrency);
             var dynamicPriceInTry = product.LastPurchaseCostCurrencyAmount!.Value * pricingRate *
-                (1 + product.ProfitMarkupPercent / 100m);
+                (1 + markupPercent / 100m);
 
             return new ProductPriceCalculation
             {
@@ -86,28 +115,16 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
                 UsesCurrentExchangeRate = true,
                 PricingCurrencyCode = pricingCurrency,
                 PricingCurrencyExchangeRate = pricingRate,
+                PricingCurrencyRateDate = await GetRateDateAsync(pricingCurrency),
                 LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
+                LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
+                ReferenceSaleUnitPrice = Round(product.LastPurchaseCostCurrencyAmount.Value * (1 + markupPercent / 100m)),
+                MarkupPercent = markupPercent,
                 ProductCostHistoryId = product.LastPurchaseCostHistoryId
             };
         }
 
-        var purchaseCurrency = NormalizeCurrency(string.IsNullOrWhiteSpace(product.PurchaseCurrency) ? "TRY" : product.PurchaseCurrency);
-        var purchaseRate = await GetExchangeRateAsync(purchaseCurrency);
-        var priceInTry = product.PurchasePrice * purchaseRate * (1 + product.ProfitMarkupPercent / 100m);
-
-        return new ProductPriceCalculation
-        {
-            Currency = targetCurrency,
-            UnitPrice = Round(priceInTry / targetRate),
-            PriceInTry = Round(priceInTry),
-            ExchangeRate = targetRate,
-            RateDate = targetRateDate,
-            UsesCurrentExchangeRate = true,
-            PricingCurrencyCode = purchaseCurrency,
-            PricingCurrencyExchangeRate = purchaseRate,
-            LastPurchaseCostCurrencyAmount = product.PurchasePrice,
-            ProductCostHistoryId = product.LastPurchaseCostHistoryId
-        };
+        throw new InvalidOperationException("Unsupported product pricing state.");
     }
 
     public async Task<decimal> GetExchangeRateAsync(string currency)

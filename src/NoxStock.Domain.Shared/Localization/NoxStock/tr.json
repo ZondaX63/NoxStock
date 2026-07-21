@@ -272,6 +272,22 @@
     "CustomerSalesHistory:ShowingRows": "{0}-{1} / {2} satır gösteriliyor",
     "CustomerSalesHistory:Previous": "Önceki",
     "CustomerSalesHistory:Next": "Sonraki",
-    "DocumentExchangeRateSnapshotUnavailable": "Belgeye ait {0} döviz kuru snapshot'ı bulunamadı. Onay işlemi güvenli biçimde tamamlanamadı."
+    "DocumentExchangeRateSnapshotUnavailable": "Belgeye ait {0} döviz kuru snapshot'ı bulunamadı. Onay işlemi güvenli biçimde tamamlanamadı.",
+    "Pricing:Mode": "Fiyatlandırma modu",
+    "Pricing:Manual": "Manuel fiyat",
+    "Pricing:Dynamic": "Döviz bazlı dinamik fiyat",
+    "Pricing:ReferenceCurrency": "Referans para birimi",
+    "Pricing:Markup": "Maliyet üzeri kâr oranı (Markup %)",
+    "Pricing:ActiveCostSnapshot": "Aktif maliyet snapshot'ı",
+    "Pricing:NoCost": "Maliyet bilgisi yok",
+    "Pricing:RecommendedSale": "Bugünkü önerilen satış",
+    "Pricing:CostHistory": "Maliyet Geçmişi",
+    "Pricing:SalesSnapshot": "Satış fiyatı snapshot'ı",
+    "Pricing:PurchaseDraft": "Taslak maliyeti değiştirmez",
+    "Pricing:DocumentCurrency": "Belge para birimi",
+    "Pricing:RefreshPrices": "Fiyatları güncelle",
+    "Pricing:CartPriceLocked": "Fiyat, ürün sepete eklendiğinde kilitlenir.",
+    "ProductApprovedPurchaseCostUnavailable": "Dinamik fiyat için onaylanmış son alış maliyeti bulunamadı.",
+    "PricingCurrencyLockedByApprovedCost": "Referans para birimi, onaylı maliyet geçmişi bulunduğu için değiştirilemez. Yeni referans para birimi sonraki onaylı alışla uygulanmalıdır."
   }
 }

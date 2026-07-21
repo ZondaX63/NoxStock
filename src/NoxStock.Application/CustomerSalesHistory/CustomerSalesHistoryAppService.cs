@@ -56,7 +56,9 @@ public class CustomerSalesHistoryAppService : ApplicationService, ICustomerSales
         }
 
         var customer = await _businessPartnerRepository.FindAsync(input.CustomerId);
-        if (customer is null || customer.Type is not (BusinessPartnerType.Customer or BusinessPartnerType.Both))
+        if (customer is null || (input.IncludePurchases
+                ? customer.Type is not (BusinessPartnerType.Supplier or BusinessPartnerType.Both)
+                : customer.Type is not (BusinessPartnerType.Customer or BusinessPartnerType.Both)))
         {
             throw new EntityNotFoundException(typeof(BusinessPartner), input.CustomerId);
         }
@@ -124,7 +126,9 @@ public class CustomerSalesHistoryAppService : ApplicationService, ICustomerSales
             join category in categories on product.CategoryId equals (Guid?)category.Id into productCategories
             from category in productCategories.DefaultIfEmpty()
             where document.BusinessPartnerId == input.CustomerId
-                  && (document.Type == DocumentType.SaleInvoice || document.Type == DocumentType.PosSale)
+                  && (input.IncludePurchases
+                      ? document.Type == DocumentType.PurchaseInvoice
+                      : document.Type == DocumentType.SaleInvoice || document.Type == DocumentType.PosSale)
                   && (document.Status == DocumentStatus.Approved ||
                       document.Status == DocumentStatus.PartiallyPaid ||
                       document.Status == DocumentStatus.Paid ||
@@ -136,9 +140,11 @@ public class CustomerSalesHistoryAppService : ApplicationService, ICustomerSales
                 DocumentId = document.Id,
                 DocumentItemId = item.Id,
                 Date = document.Date,
-                TransactionType = document.Type == DocumentType.PosSale
-                    ? CustomerSalesHistoryDocumentType.PosSale
-                    : CustomerSalesHistoryDocumentType.SaleInvoice,
+                TransactionType = input.IncludePurchases
+                    ? CustomerSalesHistoryDocumentType.PurchaseInvoice
+                    : document.Type == DocumentType.PosSale
+                        ? CustomerSalesHistoryDocumentType.PosSale
+                        : CustomerSalesHistoryDocumentType.SaleInvoice,
                 DocumentNumber = document.DocNumber,
                 ProductName = product.Name,
                 Sku = product.Sku,
@@ -156,12 +162,12 @@ public class CustomerSalesHistoryAppService : ApplicationService, ICustomerSales
                 Currency = document.Currency
             };
 
-        if (input.OnlyReturns || input.DocumentType == CustomerSalesHistoryDocumentType.Return)
+        if (!input.IncludePurchases && (input.OnlyReturns || input.DocumentType == CustomerSalesHistoryDocumentType.Return))
         {
             return query.Where(_ => false);
         }
 
-        if (input.DocumentType is CustomerSalesHistoryDocumentType.SaleInvoice or CustomerSalesHistoryDocumentType.PosSale)
+        if (input.DocumentType is CustomerSalesHistoryDocumentType.SaleInvoice or CustomerSalesHistoryDocumentType.PosSale or CustomerSalesHistoryDocumentType.PurchaseInvoice)
         {
             query = query.Where(x => x.TransactionType == input.DocumentType);
         }

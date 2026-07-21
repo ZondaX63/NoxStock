@@ -236,6 +236,22 @@
     "CustomerSalesHistory:ShowingRows": "Showing rows {0}-{1} of {2}",
     "CustomerSalesHistory:Previous": "Previous",
     "CustomerSalesHistory:Next": "Next",
-    "DocumentExchangeRateSnapshotUnavailable": "The document exchange-rate snapshot for {0} is unavailable. Approval could not be completed safely."
+    "DocumentExchangeRateSnapshotUnavailable": "The document exchange-rate snapshot for {0} is unavailable. Approval could not be completed safely.",
+    "Pricing:Mode": "Pricing mode",
+    "Pricing:Manual": "Manual price",
+    "Pricing:Dynamic": "Currency-based dynamic price",
+    "Pricing:ReferenceCurrency": "Reference currency",
+    "Pricing:Markup": "Cost markup (%)",
+    "Pricing:ActiveCostSnapshot": "Active cost snapshot",
+    "Pricing:NoCost": "Cost information is unavailable",
+    "Pricing:RecommendedSale": "Today's recommended sale",
+    "Pricing:CostHistory": "Cost History",
+    "Pricing:SalesSnapshot": "Sales price snapshot",
+    "Pricing:PurchaseDraft": "A draft does not change cost",
+    "Pricing:DocumentCurrency": "Document currency",
+    "Pricing:RefreshPrices": "Refresh prices",
+    "Pricing:CartPriceLocked": "The price is locked when the product is added to the cart.",
+    "ProductApprovedPurchaseCostUnavailable": "No approved latest purchase cost is available for dynamic pricing.",
+    "PricingCurrencyLockedByApprovedCost": "The reference currency cannot be changed while an approved cost history exists. A new reference currency must be applied by the next approved purchase."
   }
 }

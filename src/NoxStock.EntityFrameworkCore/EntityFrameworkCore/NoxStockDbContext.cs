@@ -234,6 +234,14 @@ public class NoxStockDbContext :
             b.Property(x => x.Total).HasColumnType("decimal(18,4)");
             b.Property(x => x.PriceCurrencyCode).HasMaxLength(3);
             b.Property(x => x.PriceExchangeRate).HasColumnType("decimal(18,6)");
+            b.Property(x => x.UnitPriceTry).HasColumnType("decimal(18,6)");
+            b.Property(x => x.CostCurrencyCode).HasMaxLength(3);
+            b.Property(x => x.CostCurrencyAmount).HasColumnType("decimal(18,6)");
+            b.Property(x => x.CostTryAmount).HasColumnType("decimal(18,6)");
+            b.Property(x => x.AppliedMarkupPercent).HasColumnType("decimal(9,4)");
+            b.Property(x => x.ReferenceSaleCurrencyCode).HasMaxLength(3);
+            b.Property(x => x.ReferenceSaleUnitPrice).HasColumnType("decimal(18,6)");
+            b.Property(x => x.ReferenceSaleExchangeRate).HasColumnType("decimal(18,6)");
             b.HasOne<Document>().WithMany(d => d.Items).HasForeignKey(x => x.DocumentId).IsRequired();
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
             b.HasOne<ProductCostHistory>().WithMany().HasForeignKey(x => x.ProductCostHistoryId).IsRequired(false);

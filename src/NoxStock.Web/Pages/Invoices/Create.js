@@ -1,8 +1,20 @@
 $(function () {
     var $tbody = $('#ItemsTbody');
     var $template = $('#ItemRowTemplate').html();
-    var currency = $('#InvoiceForm').data('currency') || 'TRY';
+    var currency = $('#InvoiceCurrency').val() || $('#InvoiceForm').data('currency') || 'TRY';
     var useProductPricing = String($('#InvoiceForm').data('use-product-pricing')) === 'true';
+    var usePurchaseCosting = String($('#InvoiceForm').data('use-purchase-costing')) === 'true';
+    var rates = {};
+
+    function escapeHtml(value) {
+        return $('<div>').text(value || '').html();
+    }
+
+    function formatAmount(value, currencyCode) {
+        return new Intl.NumberFormat(document.documentElement.lang === 'en' ? 'en-US' : 'tr-TR', {
+            style: 'currency', currency: currencyCode || 'TRY'
+        }).format(Number(value || 0));
+    }
 
     function uuidv4() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -34,20 +46,52 @@ $(function () {
             .then(function (quote) {
                 var isLatestQuote = Number($row.data('quoteRequestId')) === quoteRequestId;
                 var hasManualPrice = $row.find('.price-overridden-input').val() === 'true';
+                $row.data('priceQuote', quote);
+                if (useProductPricing && quote.isAvailable === false) {
+                    $row.find('.price-input').val('');
+                    $row.find('.price-source').html(
+                        '<span class="invoice-price-badge invoice-price-badge-warning">Maliyet bilgisi yok</span>' +
+                        '<span class="invoice-price-detail">Dinamik satış fiyatı için önce bu ürünü içeren bir alış faturasını onaylayın.</span>');
+                    calculateTotals();
+                    return;
+                }
                 if (isLatestQuote && !hasManualPrice && useProductPricing) {
                     $row.find('.price-input').val(Number(quote.unitPrice || 0).toFixed(4));
                 } else if (isLatestQuote && !hasManualPrice) {
                     $row.find('.price-input').val(Number(quote.purchasePrice || 0).toFixed(4));
                 }
 
-                var priceDetails = 'Alış: ' + Number(quote.purchasePrice || 0).toFixed(4) + ' ' + (quote.purchaseCurrency || 'TRY') +
-                    ' | Kart satış: ' + Number(quote.salePrice || 0).toFixed(4) + ' ' + (quote.saleCurrency || 'TRY');
-                if (quote.usesCurrentExchangeRate) {
-                    priceDetails += ' | İşlem fiyatı güncel kur + %' + Number(quote.profitMarkupPercent || 0) + ' marj ile hesaplandı.';
+                var sourceCurrency = quote.lastPurchaseSourceCurrencyCode || quote.purchaseCurrency || 'TRY';
+                var pricingCurrency = quote.pricingCurrencyCode || quote.lastPurchaseCostCurrencyCode || quote.purchaseCurrency || 'TRY';
+                var hasLastCost = Number(quote.lastPurchaseCostCurrencyAmount || 0) > 0;
+                var sourceDetails = hasLastCost
+                    ? 'Son onaylı alış: ' + Number(quote.lastPurchaseSourceNetUnitCost || 0).toFixed(4) + ' ' + sourceCurrency +
+                        ' · fiyatlama maliyeti: ' + Number(quote.lastPurchaseCostCurrencyAmount || 0).toFixed(4) + ' ' + pricingCurrency +
+                        (quote.lastPurchaseDocumentNumber ? ' · ' + quote.lastPurchaseDocumentNumber : '') +
+                        (quote.lastPurchaseSupplierName ? ' · ' + quote.lastPurchaseSupplierName : '')
+                    : 'Bu ürün için onaylı alış maliyeti yok.';
+                var priceDetails;
+                if (useProductPricing && quote.usesCurrentExchangeRate && hasLastCost) {
+                    var pricingRate = Number(quote.pricingCurrencyExchangeRate || quote.exchangeRate || 1);
+                    var transactionRate = quote.currency !== 'TRY'
+                        ? ' · ' + quote.currency + '/TRY: ' + Number(quote.exchangeRate || 1).toFixed(4)
+                        : '';
+                    priceDetails = '<span class="invoice-price-badge invoice-price-badge-dynamic">Güncel satış fiyatı</span>' +
+                        '<span class="invoice-price-detail">' + sourceDetails + '</span>' +
+                        '<span class="invoice-price-detail">Referans satış: ' + formatAmount(quote.referenceSaleUnitPrice || 0, pricingCurrency) + '</span>' +
+                        '<span class="invoice-price-detail">' + pricingCurrency + '/TRY: ' + pricingRate.toFixed(4) + transactionRate + ' · %' + Number(quote.profitMarkupPercent || 0).toFixed(2) + ' markup</span>' +
+                        '<span class="invoice-price-detail">Taslakta önerilir; onayda güncel kurla yeniden hesaplanıp kilitlenir. Fiyatı değiştirirseniz manuel override korunur.</span>';
+                } else if (useProductPricing) {
+                    priceDetails = '<span class="invoice-price-badge invoice-price-badge-warning">Dinamik maliyet beklemede</span>' +
+                        '<span class="invoice-price-detail">' + sourceDetails + '</span>' +
+                        '<span class="invoice-price-detail">Satış fiyatı ürün kartındaki değerden başlatıldı.</span>';
                 } else {
-                    priceDetails += ' | İşlem fiyatı ürün kartından alındı.';
+                    priceDetails = '<span class="invoice-price-badge invoice-price-badge-purchase">Alış maliyeti</span>' +
+                        '<span class="invoice-price-detail">Bu belge onaylandığında net alış maliyeti ürünün maliyet profilini günceller.</span>' +
+                        (hasLastCost ? '<span class="invoice-price-detail">Önceki maliyet: ' + sourceDetails + '</span>' : '<span class="invoice-price-detail">Önceki onaylı alış maliyeti bulunmuyor.</span>');
                 }
-                $row.find('.price-source').text(priceDetails);
+                $row.find('.price-source').html(priceDetails);
+                renderPurchaseCostImpact();
                 calculateTotals();
             })
             .catch(function () {
@@ -88,23 +132,87 @@ $(function () {
         $('#SumGrandTotal').text(grandTotal.toFixed(2) + ' ' + currency);
     }
 
+    function renderPurchaseCostImpact() {
+        if (!usePurchaseCosting) {
+            return;
+        }
+
+        var lines = [];
+        $tbody.find('.item-row').each(function () {
+            var $row = $(this);
+            var quote = $row.data('priceQuote');
+            var productName = $row.find('.product-select option:selected').text();
+            var unitPrice = Number($row.find('.price-input').val() || 0);
+            if (!productName || !quote || unitPrice <= 0) {
+                return;
+            }
+
+            var referenceCurrency = quote.pricingCurrencyCode || quote.purchaseCurrency || currency;
+            var referenceRate = referenceCurrency === 'TRY'
+                ? 1
+                : Number(quote.pricingCurrencyExchangeRate || (rates[referenceCurrency] && rates[referenceCurrency].rate) || 0);
+            var documentRate = currency === 'TRY' ? 1 : Number(quote.exchangeRate || (rates[currency] && rates[currency].rate) || 0);
+            var tryCost = unitPrice * documentRate;
+            var referenceCost = referenceRate > 0 ? tryCost / referenceRate : null;
+            var preview = referenceCost === null
+                ? 'Kur bulunamadı; referans maliyet hesaplanamadı.'
+                : 'Yeni son alış maliyeti: <strong>' + escapeHtml(formatAmount(referenceCost, referenceCurrency)) + '</strong>';
+            lines.push('<li><strong>' + escapeHtml(productName) + '</strong> · net birim alış: ' + escapeHtml(formatAmount(unitPrice, currency)) + ' · ' + preview + '</li>');
+        });
+
+        var $impact = $('#PurchaseCostImpact');
+        if (!lines.length) {
+            $impact.addClass('hidden').empty();
+            return;
+        }
+        $impact.removeClass('hidden').html('<strong>Onay öncesi maliyet etkisi</strong><p class="mt-1">Taslakta uygulanmaz; onayda bu satırların maliyet snapshotı güncellenir.</p><ul class="mt-2 list-disc space-y-1 pl-5">' + lines.join('') + '</ul>');
+    }
+
+    function renderManualOverride($row) {
+        if (!useProductPricing || $row.find('.price-overridden-input').val() !== 'true') {
+            return;
+        }
+        var quote = $row.data('priceQuote');
+        var manualPrice = Number($row.find('.price-input').val() || 0);
+        if (!quote) {
+            return;
+        }
+        var recommendedPrice = Number(quote.unitPrice || 0);
+        var difference = manualPrice - recommendedPrice;
+        var differenceText = difference === 0
+            ? 'Önerilen fiyatla aynı.'
+            : (difference > 0 ? '+' : '') + formatAmount(difference, currency) + ' fark';
+        $row.find('.price-source').html(
+            '<span class="invoice-price-badge invoice-price-badge-warning">Manuel fiyat uygulandı</span>' +
+            '<span class="invoice-price-detail">Önerilen: ' + formatAmount(recommendedPrice, currency) + ' · Manuel: ' + formatAmount(manualPrice, currency) + '</span>' +
+            '<span class="invoice-price-detail">' + differenceText + '. Onayda manuel fiyat snapshot olarak kilitlenir.</span>');
+    }
+
+    function refreshRates() {
+        return fetch(abp.appPath + 'api/app/exchange-rate/current', { credentials: 'same-origin' })
+            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (data) {
+                rates = {
+                    USD: data && (data.usd || data.USD),
+                    EUR: data && (data.eur || data.EUR)
+                };
+                var rate = currency === 'TRY' ? 1 : Number(rates[currency] && rates[currency].rate || 0);
+                $('#InvoiceRateInfo').text(rate > 0
+                    ? currency + '/TRY güncel kur: ' + rate.toFixed(4) + '. Onaylanan belgede kullanılan kur sabitlenir.'
+                    : 'Güncel kur bulunamadı. Sunucu belge kaydında tekrar deneyecek.');
+                renderPurchaseCostImpact();
+            })
+            .catch(function () {
+                $('#InvoiceRateInfo').text('Güncel kur alınamadı. Fiyat hesaplaması için tekrar deneyin.');
+            });
+    }
+
     $('#AddRowBtn').click(function () {
         addRow();
     });
 
     $('#InvoiceDocNumber').on('input', function () {
         $('#IsDocumentNumberAutoGenerated').val('false');
-    });
-
-    $('#InvoiceForm').on('submit', function () {
-        $tbody.find('.item-row').each(function () {
-            var $row = $(this);
-            var price = parseFloat($row.find('.price-input').val());
-
-            if (price > 0) {
-                $row.find('.price-overridden-input').val('true');
-            }
-        });
     });
 
     $tbody.on('click', '.remove-row-btn', function () {
@@ -114,17 +222,37 @@ $(function () {
 
     $tbody.on('input', '.calc-input', function () {
         if ($(this).hasClass('price-input')) {
-            $(this).closest('.item-row').find('.price-overridden-input').val('true');
+            var $row = $(this).closest('.item-row');
+            $row.find('.price-overridden-input').val('true');
+            renderManualOverride($row);
         }
         calculateTotals();
+        renderPurchaseCostImpact();
     });
 
     $tbody.on('change', '.product-select', function () {
         quoteProductPrice($(this).closest('.item-row'));
     });
 
+    $('#InvoiceCurrency').on('change', function () {
+        currency = $(this).val() || 'TRY';
+        $('#InvoiceForm').data('currency', currency);
+        $tbody.find('.item-row').each(function () {
+            quoteProductPrice($(this));
+        });
+        refreshRates();
+        calculateTotals();
+    });
+
     // Add first row by default
     if ($tbody.children().length === 0) {
         addRow();
     }
+
+    refreshRates();
+    $tbody.find('.item-row').each(function () {
+        if ($(this).find('.product-select').val()) {
+            quoteProductPrice($(this));
+        }
+    });
 });

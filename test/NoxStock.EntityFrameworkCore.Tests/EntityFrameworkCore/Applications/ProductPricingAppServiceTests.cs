@@ -18,6 +18,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     private readonly IProductPricingAppService _productPricingAppService;
     private readonly IBusinessPartnerAppService _businessPartnerAppService;
     private readonly IDocumentAppService _documentAppService;
+    private readonly IDocumentWorkflowAppService _documentWorkflowAppService;
     private readonly IRepository<ExchangeRate, Guid> _exchangeRateRepository;
 
     public ProductPricingAppServiceTests()
@@ -26,6 +27,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         _productPricingAppService = ServiceProvider.GetRequiredService<IProductPricingAppService>();
         _businessPartnerAppService = ServiceProvider.GetRequiredService<IBusinessPartnerAppService>();
         _documentAppService = ServiceProvider.GetRequiredService<IDocumentAppService>();
+        _documentWorkflowAppService = ServiceProvider.GetRequiredService<IDocumentWorkflowAppService>();
         _exchangeRateRepository = ServiceProvider.GetRequiredService<IRepository<ExchangeRate, Guid>>();
     }
 
@@ -47,6 +49,8 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             PurchaseCurrency = "EUR",
             SalePrice = 1m,
             SaleCurrency = "TRY",
+            PricingCurrencyCode = "EUR",
+            PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = 40m,
             UseCurrentExchangeRateForSale = true,
             Quantity = 10m,
@@ -54,6 +58,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             TrackStock = true,
             Currency = "TRY"
         });
+        await ApprovePurchaseAsync(product.Id, "EUR", 35m, "DYN-PURCHASE-001");
         var customer = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
         {
             Name = "Dynamic Price Customer",
@@ -115,6 +120,8 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             PurchaseCurrency = "USD",
             SalePrice = 1m,
             SaleCurrency = "TRY",
+            PricingCurrencyCode = "USD",
+            PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = 40m,
             UseCurrentExchangeRateForSale = true,
             Quantity = 10m,
@@ -122,6 +129,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             TrackStock = true,
             Currency = "TRY"
         });
+        await ApprovePurchaseAsync(product.Id, "USD", 25m, "OVERRIDE-PURCHASE-001");
         var customer = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
         {
             Name = "Override Price Customer",
@@ -152,5 +160,88 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
 
         document.Items.Single().UnitPrice.ShouldBe(999m);
         document.GrandTotal.ShouldBe(1198.8m);
+    }
+
+    [Fact]
+    public async Task Should_Return_Server_Calculated_List_Preview_In_Selected_Currency()
+    {
+        await _exchangeRateRepository.InsertAsync(new ExchangeRate(Guid.NewGuid(), "USD", 40m, DateTime.UtcNow));
+        await _exchangeRateRepository.InsertAsync(new ExchangeRate(Guid.NewGuid(), "EUR", 50m, DateTime.UtcNow));
+
+        var product = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "List Currency Preview Product",
+            Sku = "LIST-PREVIEW-001",
+            Barcode = "869000000305",
+            Description = string.Empty,
+            Unit = "Adet",
+            ShelfLocation = "D3",
+            PurchasePrice = 0m,
+            PurchaseCurrency = "TRY",
+            SalePrice = 0m,
+            SaleCurrency = "TRY",
+            PricingCurrencyCode = "USD",
+            PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
+            ProfitMarkupPercent = 20m,
+            UseCurrentExchangeRateForSale = true,
+            Quantity = 10m,
+            CriticalStockLevel = 1m,
+            TrackStock = true,
+            Currency = "TRY"
+        });
+        await ApprovePurchaseAsync(product.Id, "TRY", 1000m, "LIST-PREVIEW-PURCHASE-001");
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var usd = await _exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == "USD");
+            usd!.Rate = 41m;
+            await _exchangeRateRepository.UpdateAsync(usd);
+        });
+
+        var list = await _productAppService.GetListAsync(new ProductGetListInput
+        {
+            Filter = "LIST-PREVIEW-001",
+            DisplayCurrency = "TRY",
+            MaxResultCount = 10
+        });
+
+        var row = list.Items.Single();
+        row.IsSuggestedSaleAvailable.ShouldBeTrue();
+        row.SuggestedSaleCurrency.ShouldBe("TRY");
+        row.SuggestedSaleUnitPrice.ShouldBe(1230m);
+        row.ReferenceSaleUnitPrice.ShouldBe(30m);
+        row.CurrentPricingCurrencyExchangeRate.ShouldBe(41m);
+        row.LastPurchaseCostCurrencyAmount.ShouldBe(25m);
+    }
+
+    private async Task ApprovePurchaseAsync(Guid productId, string currency, decimal unitPrice, string documentNumber)
+    {
+        var supplier = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
+        {
+            Name = documentNumber + " Supplier",
+            Type = BusinessPartnerType.Supplier,
+            Currency = currency
+        });
+        var purchase = await _documentAppService.CreateAsync(new CreateUpdateDocumentDto
+        {
+            BusinessPartnerId = supplier.Id,
+            DocNumber = documentNumber,
+            Type = DocumentType.PurchaseInvoice,
+            Currency = currency,
+            Date = DateTime.UtcNow,
+            Items =
+            {
+                new CreateUpdateDocumentItemDto
+                {
+                    ProductId = productId,
+                    Quantity = 1m,
+                    UnitPrice = unitPrice,
+                    VatRate = 0m,
+                    DiscountRate = 0m
+                }
+            }
+        });
+
+        await _documentWorkflowAppService.ApproveAsync(purchase.Id, new ApproveDocumentInputDto());
     }
 }

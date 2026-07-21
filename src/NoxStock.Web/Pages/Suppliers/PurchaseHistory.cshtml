@@ -1,0 +1,52 @@
+@page "/Suppliers/{SupplierId}/PurchaseHistory"
+@using NoxStock.CustomerSalesHistory
+@model NoxStock.Web.Pages.Suppliers.PurchaseHistoryModel
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = "Alış Geçmişi";
+    var query = new { supplierId = Model.SupplierId, periodPreset = Model.PeriodPreset, startDate = Model.StartDate?.ToString("yyyy-MM-dd"), endDate = Model.EndDate?.ToString("yyyy-MM-dd"), documentType = Model.DocumentType, productSearch = Model.ProductSearch, documentNumber = Model.DocumentNumber, brandId = Model.BrandId, categoryId = Model.CategoryId, currency = Model.Currency };
+}
+
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div><div class="text-xs font-bold uppercase tracking-wider text-indigo-600">TEDARİKÇİ VE MALİYET</div><h2 class="mt-1 text-3xl font-bold text-slate-800 dark:text-white">Alış Geçmişi</h2><p class="mt-1 text-sm text-slate-500">@Model.History.Customer.Name · seçili dönemdeki alış faturaları ve ürün satırları.</p></div>
+    <div class="flex gap-2"><a href="~/SupplierDetail?id=@Model.SupplierId" class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"><span class="material-icons-round text-base">arrow_back</span>Tedarikçi detayı</a><a href="~/Suppliers" class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"><span class="material-icons-round text-base">people</span>Tedarikçiler</a></div>
+</div>
+
+<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+    <div class="card p-5"><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Toplam alış</p><p class="mt-2 text-2xl font-black text-indigo-600">@string.Join(" | ", Model.History.Summary.NetSales.Select(x => Model.Amount(x.Amount, x.Currency)))</p></div>
+    <div class="card p-5"><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Toplam miktar</p><p class="mt-2 text-2xl font-black text-slate-800 dark:text-white">@Model.Quantity(Model.History.Summary.TotalQuantity)</p></div>
+    <div class="card p-5"><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Belge sayısı</p><p class="mt-2 text-2xl font-black text-slate-800 dark:text-white">@Model.History.Summary.DocumentCount</p></div>
+    <div class="card p-5"><p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Cari bakiye</p><p class="mt-2 text-2xl font-black text-amber-600">@Model.Amount(Model.History.Customer.Balance, Model.History.Customer.Currency)</p></div>
+</div>
+
+<form method="get" class="card mb-6 grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-5">
+    <input type="hidden" name="SupplierId" value="@Model.SupplierId" />
+    <div><label class="mb-1 block text-xs font-semibold text-slate-500">Dönem</label><select name="PeriodPreset" class="field-input w-full"><option value="3" selected="@(Model.PeriodPreset == CustomerSalesHistoryPeriodPreset.ThisMonth ? "selected" : null)">Bu ay</option><option value="1" selected="@(Model.PeriodPreset == CustomerSalesHistoryPeriodPreset.ThisWeek ? "selected" : null)">Bu hafta</option><option value="5" selected="@(Model.PeriodPreset == CustomerSalesHistoryPeriodPreset.LastThreeMonths ? "selected" : null)">Son 3 ay</option><option value="6" selected="@(Model.PeriodPreset == CustomerSalesHistoryPeriodPreset.ThisYear ? "selected" : null)">Bu yıl</option><option value="7" selected="@(Model.PeriodPreset == CustomerSalesHistoryPeriodPreset.Custom ? "selected" : null)">Özel</option></select></div>
+    <div><label class="mb-1 block text-xs font-semibold text-slate-500">Ürün ara</label><input name="ProductSearch" value="@Model.ProductSearch" class="field-input w-full" placeholder="Ürün, SKU veya barkod" /></div>
+    <div><label class="mb-1 block text-xs font-semibold text-slate-500">Belge no</label><input name="DocumentNumber" value="@Model.DocumentNumber" class="field-input w-full" placeholder="AF-..." /></div>
+    <div><label class="mb-1 block text-xs font-semibold text-slate-500">Para birimi</label><select name="Currency" class="field-input w-full"><option value="">Tümü</option><option value="TRY" selected="@(Model.Currency == "TRY" ? "selected" : null)">TRY</option><option value="USD" selected="@(Model.Currency == "USD" ? "selected" : null)">USD</option><option value="EUR" selected="@(Model.Currency == "EUR" ? "selected" : null)">EUR</option></select></div>
+    <div><label class="mb-1 block text-xs font-semibold text-slate-500">Marka</label><select name="BrandId" class="field-input w-full"><option value="">Tümü</option>@foreach (var brand in Model.Brands) { <option value="@brand.Id" selected="@(Model.BrandId == brand.Id ? "selected" : null)">@brand.Name</option> }</select></div>
+    <div><label class="mb-1 block text-xs font-semibold text-slate-500">Kategori</label><select name="CategoryId" class="field-input w-full"><option value="">Tümü</option>@foreach (var category in Model.Categories) { <option value="@category.Id" selected="@(Model.CategoryId == category.Id ? "selected" : null)">@category.Name</option> }</select></div>
+    <div class="flex items-end"><button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"><span class="material-icons-round text-base">filter_alt</span>Filtrele</button></div>
+</form>
+
+<div class="card overflow-hidden">
+    <div class="flex flex-col gap-1 border-b border-slate-100 p-6 dark:border-slate-700"><h3 class="text-lg font-bold text-slate-800 dark:text-white">Alış Hareket Defteri</h3><p class="text-sm text-slate-500">@Model.History.TotalCount satır · onaylanmış alış faturaları · en yeni hareket üstte</p></div>
+    @if (Model.History.TotalCount == 0)
+    {
+        <div class="p-12 text-center text-sm text-slate-500">Seçili filtrelerle alış hareketi bulunamadı.</div>
+    }
+    else
+    {
+        <div class="overflow-x-auto"><table class="w-full min-w-[980px] text-left text-sm"><thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:bg-slate-800/60"><tr><th class="px-5 py-3">Tarih</th><th class="px-4 py-3">Belge</th><th class="px-4 py-3">Ürün</th><th class="px-4 py-3 text-right">Miktar</th><th class="px-4 py-3 text-right">Birim fiyat</th><th class="px-4 py-3 text-right">KDV</th><th class="px-5 py-3 text-right">Toplam</th><th class="px-4 py-3"></th></tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+        @foreach (var row in Model.History.Groups.SelectMany(x => x.Rows))
+        {
+            <tr class="text-slate-700 dark:text-slate-200"><td class="px-5 py-4">@row.Date.ToString("dd.MM.yyyy")</td><td class="px-4 py-4 font-semibold">@row.DocumentNumber</td><td class="px-4 py-4"><div class="font-semibold">@row.ProductName</div><div class="text-xs text-slate-500">@row.Sku</div></td><td class="px-4 py-4 text-right">@Model.Quantity(row.Quantity) @row.Unit</td><td class="px-4 py-4 text-right">@Model.Amount(row.UnitPrice, row.Currency)</td><td class="px-4 py-4 text-right">%@row.VatRate.ToString("0.##")</td><td class="px-5 py-4 text-right font-bold">@Model.Amount(row.Total, row.Currency)</td><td class="px-4 py-4 text-right"><a href="~/Invoices/Print?id=@row.DocumentId" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10" title="Belgeyi aç"><span class="material-icons-round text-base">open_in_new</span></a></td></tr>
+        }
+        </tbody></table></div>
+    }
+    @if (Model.History.TotalCount > Model.History.MaxResultCount)
+    {
+        <div class="flex items-center justify-between border-t border-slate-100 p-5 dark:border-slate-700"><span class="text-sm text-slate-500">@(Model.History.SkipCount + 1)-@Math.Min(Model.History.SkipCount + Model.History.MaxResultCount, Model.History.TotalCount) / @Model.History.TotalCount satır</span><div class="flex gap-2">@if (Model.History.SkipCount > 0) { <a href="@Url.Page("/Suppliers/PurchaseHistory", new { supplierId = Model.SupplierId, periodPreset = Model.PeriodPreset, productSearch = Model.ProductSearch, documentNumber = Model.DocumentNumber, currency = Model.Currency, skipCount = Math.Max(0, Model.History.SkipCount - Model.History.MaxResultCount) })" class="rounded-md border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">Önceki</a> } @if (Model.History.HasNextPage) { <a href="@Url.Page("/Suppliers/PurchaseHistory", new { supplierId = Model.SupplierId, periodPreset = Model.PeriodPreset, productSearch = Model.ProductSearch, documentNumber = Model.DocumentNumber, currency = Model.Currency, skipCount = Model.History.SkipCount + Model.History.MaxResultCount })" class="rounded-md bg-indigo-600 px-3 py-2 text-sm text-white">Sonraki</a> }</div></div>
+    }
+</div>

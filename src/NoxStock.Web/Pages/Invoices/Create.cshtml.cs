@@ -32,6 +32,7 @@ public class CreateModel : NoxStockPageModel
     public List<SelectListItem> Products { get; set; } = new();
     public decimal DefaultVatRate { get; private set; } = 20;
     public bool UsesSalesPricing => Type is DocumentType.SaleInvoice or DocumentType.Offer or DocumentType.SaleOrder;
+    public bool UsesPurchaseCosting => Type is DocumentType.PurchaseInvoice or DocumentType.PurchaseOrder;
     public bool IsEditing => Id.HasValue;
 
     private readonly IBusinessPartnerAppService _businessPartnerAppService;
@@ -190,12 +191,11 @@ public class CreateModel : NoxStockPageModel
             var itemPrefix = $"Invoice.Items[{itemIndexes[itemPosition]}]";
 
             NormalizeDecimalInput($"{itemPrefix}.Quantity", value => item.Quantity = value);
-            var submittedUnitPrice = Request.Form[$"{itemPrefix}.UnitPrice"].ToString();
             NormalizeDecimalInput($"{itemPrefix}.UnitPrice", value => item.UnitPrice = value);
-            if (decimal.TryParse(submittedUnitPrice, NumberStyles.Number, CultureInfo.InvariantCulture, out var unitPrice) && unitPrice > 0)
+            var submittedOverride = Request.Form[$"{itemPrefix}.IsUnitPriceOverridden"].ToString();
+            if (bool.TryParse(submittedOverride, out var isOverridden))
             {
-                // A price submitted from the invoice form is a document snapshot, not a new quote request.
-                item.IsUnitPriceOverridden = true;
+                item.IsUnitPriceOverridden = isOverridden;
             }
             NormalizeDecimalInput($"{itemPrefix}.DiscountRate", value => item.DiscountRate = value);
             NormalizeDecimalInput($"{itemPrefix}.VatRate", value => item.VatRate = value);
