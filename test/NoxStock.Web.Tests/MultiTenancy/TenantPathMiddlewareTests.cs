@@ -120,6 +120,9 @@ public class TenantPathIntegrationTests : NoxStockWebTestBase
     [Theory]
     [InlineData("AuditLogs")]
     [InlineData("Identity/Users")]
+    [InlineData("LicenseManagement")]
+    [InlineData("host/licenses")]
+    [InlineData("api/app/host-license/overview")]
     public async Task Tenant_Route_Is_Blocked_From_Platform_Administration(string route)
     {
         var context = new DefaultHttpContext();

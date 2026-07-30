@@ -15,5 +15,4 @@ public class ProductGetListInput : PagedAndSortedResultRequestDto
     /// Currency used for the server-calculated list price preview.
     /// This is a presentation preference only; it never changes a product price.
     /// </summary>
-    public string? DisplayCurrency { get; set; }
 }

@@ -34,6 +34,7 @@ public class DocumentAppService :
     private readonly IDataFilter _dataFilter;
     private readonly IRepository<DocumentExchangeRateSnapshot, Guid> _exchangeRateSnapshotRepository;
     private readonly IRepository<ExchangeRate, Guid> _exchangeRateRepository;
+    private readonly NoxStock.Licensing.ITenantLicenseAccessChecker _licenseAccessChecker;
 
     public DocumentAppService(
         IRepository<Document, Guid> repository,
@@ -44,7 +45,8 @@ public class DocumentAppService :
         IDocumentNumberGenerator documentNumberGenerator,
         IDataFilter dataFilter,
         IRepository<DocumentExchangeRateSnapshot, Guid> exchangeRateSnapshotRepository,
-        IRepository<ExchangeRate, Guid> exchangeRateRepository)
+        IRepository<ExchangeRate, Guid> exchangeRateRepository,
+        NoxStock.Licensing.ITenantLicenseAccessChecker licenseAccessChecker)
         : base(repository)
     {
         _businessPartnerRepository = businessPartnerRepository;
@@ -55,6 +57,7 @@ public class DocumentAppService :
         _dataFilter = dataFilter;
         _exchangeRateSnapshotRepository = exchangeRateSnapshotRepository;
         _exchangeRateRepository = exchangeRateRepository;
+        _licenseAccessChecker = licenseAccessChecker;
 
         GetPolicyName = NoxStockPermissions.Documents.Default;
         GetListPolicyName = NoxStockPermissions.Documents.Default;
@@ -63,9 +66,12 @@ public class DocumentAppService :
         DeletePolicyName = NoxStockPermissions.Documents.Delete;
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task<DocumentDto> CreateAsync(CreateUpdateDocumentDto input)
     {
         var tenantId = CurrentTenant.RequireTenantId();
+        EnsureSalesCurrencyIsTry(input.Type, input.Currency);
+        await EnsureCurrencyEntitlementAsync(IsTryOnlyDocument(input.Type) ? "TRY" : input.Currency);
         await CheckCreatePolicyAsync();
 
         var document = new Document(GuidGenerator.Create(), tenantId);
@@ -76,6 +82,7 @@ public class DocumentAppService :
         return await GetAsync(document.Id);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task<DocumentDto> UpdateAsync(Guid id, CreateUpdateDocumentDto input)
     {
         CurrentTenant.RequireTenantId();
@@ -93,6 +100,9 @@ public class DocumentAppService :
             throw new Volo.Abp.BusinessException("NoxStock:OnlyDraftDocumentsCanBeEdited");
         }
 
+        EnsureSalesCurrencyIsTry(document.Type, input.Currency);
+        await EnsureCurrencyEntitlementAsync(IsTryOnlyDocument(document.Type) ? "TRY" : input.Currency);
+
         foreach (var existingItem in document.Items.ToList())
         {
             await _documentItemRepository.DeleteAsync(existingItem);
@@ -104,6 +114,14 @@ public class DocumentAppService :
         await Repository.UpdateAsync(document, autoSave: true);
         await RefreshExchangeRateSnapshotsAsync(document);
         return await GetAsync(document.Id);
+    }
+
+    private Task EnsureCurrencyEntitlementAsync(string? currency)
+    {
+        return string.Equals(currency?.Trim(), "TRY", StringComparison.OrdinalIgnoreCase)
+            ? Task.CompletedTask
+            : _licenseAccessChecker.EnsureFeatureAsync(
+                NoxStock.Licensing.LicenseFeatureNames.MultiCurrency);
     }
 
     public override async Task<DocumentDto> GetAsync(Guid id)
@@ -179,6 +197,7 @@ public class DocumentAppService :
         return await _documentNumberGenerator.GetNextAsync(type);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task DeleteAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -268,8 +287,17 @@ public class DocumentAppService :
         document.Type = type;
         document.DocNumber = await GetDocumentNumberAsync(document, input.DocNumber);
         document.Status = isNewDocument ? DocumentStatus.Draft : document.Status;
-        document.Currency = string.IsNullOrWhiteSpace(input.Currency) ? "TRY" : input.Currency.Trim().ToUpperInvariant();
-        document.ExchangeRate = await _priceCalculator.GetExchangeRateAsync(document.Currency);
+        document.Currency = IsTryOnlyDocument(type)
+            ? "TRY"
+            : string.IsNullOrWhiteSpace(input.Currency) ? "TRY" : input.Currency.Trim().ToUpperInvariant();
+        var currentRate = await _priceCalculator.GetExchangeRateAsync(document.Currency);
+        // For purchase documents the entered document-date rate is the
+        // historical reference snapshot. It may be below 1 for currencies
+        // quoted against TRY, so only positivity—not an arbitrary >1 check—
+        // determines whether the user supplied a valid rate.
+        document.ExchangeRate = IsPurchaseDocument(type) && document.Currency != "TRY" && input.ExchangeRate > 0m
+            ? input.ExchangeRate
+            : currentRate;
         document.Date = input.Date;
         document.DueDate = input.DueDate;
         document.Description = input.Description?.Trim();
@@ -289,23 +317,37 @@ public class DocumentAppService :
                 product.UseCurrentExchangeRateForSale;
             if (IsSalesDocument(document.Type))
             {
-                priceCalculation = await _priceCalculator.CalculateAsync(product, document.Currency);
+                priceCalculation = await _priceCalculator.CalculateAsync(product);
                 if (usesDynamicPricing && !priceCalculation.IsAvailable)
                 {
                     throw new BusinessException(priceCalculation.UnavailableReason ?? "NoxStock:ProductApprovedPurchaseCostUnavailable")
                         .WithData("ProductName", product.Name);
                 }
 
-                if (!inputItem.IsUnitPriceOverridden && usesDynamicPricing)
+                if (!inputItem.IsUnitPriceOverridden && usesDynamicPricing && priceCalculation.IsAvailable)
                 {
-                    unitPrice = priceCalculation.UnitPrice;
+                    // A document line keeps the KDV-hariç list price. The
+                    // product's four sales discounts are stored separately
+                    // and applied once when calculating the taxable amount.
+                    unitPrice = priceCalculation.ListSalePriceInTry;
+                }
+
+                ApplyProductSalesDiscountDefaults(inputItem, product);
+                if (inputItem.VatRate == 0m && product.VatRate > 0)
+                {
+                    inputItem.VatRate = product.VatRate;
                 }
             }
 
             EnsureItemIsValid(inputItem);
 
+            var effectiveDiscountRate = IsPurchaseDocument(document.Type)
+                ? GetEffectivePurchaseDiscountRate(inputItem)
+                : IsSalesDocument(document.Type)
+                    ? GetEffectiveSalesDiscountRate(inputItem)
+                    : inputItem.DiscountRate;
             var lineNet = inputItem.Quantity * unitPrice;
-            var discount = lineNet * inputItem.DiscountRate / 100;
+            var discount = lineNet * effectiveDiscountRate / 100;
             var taxable = lineNet - discount;
             var vat = taxable * inputItem.VatRate / 100;
 
@@ -315,7 +357,15 @@ public class DocumentAppService :
                 Quantity = inputItem.Quantity,
                 UnitPrice = unitPrice,
                 VatRate = inputItem.VatRate,
-                DiscountRate = inputItem.DiscountRate,
+                DiscountRate = effectiveDiscountRate,
+                PurchaseDiscount1 = inputItem.PurchaseDiscount1,
+                PurchaseDiscount2 = inputItem.PurchaseDiscount2,
+                PurchaseDiscount3 = inputItem.PurchaseDiscount3,
+                PurchaseDiscount4 = inputItem.PurchaseDiscount4,
+                SalesDiscount1 = inputItem.SalesDiscount1,
+                SalesDiscount2 = inputItem.SalesDiscount2,
+                SalesDiscount3 = inputItem.SalesDiscount3,
+                SalesDiscount4 = inputItem.SalesDiscount4,
                 Total = RoundMoney(taxable + vat),
                 IsUnitPriceOverridden = inputItem.IsUnitPriceOverridden,
                 PriceCurrencyCode = priceCalculation?.Currency ?? document.Currency,
@@ -365,24 +415,30 @@ public class DocumentAppService :
             await _exchangeRateSnapshotRepository.DeleteAsync(snapshot);
         }
 
-        await _exchangeRateSnapshotRepository.InsertAsync(new DocumentExchangeRateSnapshot(
-            GuidGenerator.Create(), CurrentTenant.Id, document.Id, "TRY", 1m, document.Date));
-
         var currentRates = await _exchangeRateRepository.GetListAsync();
-        foreach (var rate in currentRates.Where(x => x.Rate > 0))
+        var snapshotCurrencies = currentRates
+            .Where(x => x.Rate > 0)
+            .Select(x => x.Currency.Trim().ToUpperInvariant())
+            .Append("TRY")
+            .Append(document.Currency.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (var currency in snapshotCurrencies)
         {
+            var currentRate = currentRates.FirstOrDefault(x =>
+                string.Equals(x.Currency, currency, StringComparison.OrdinalIgnoreCase));
+            var isDocumentCurrency = string.Equals(currency, document.Currency, StringComparison.OrdinalIgnoreCase);
+            var rateToTry = currency == "TRY"
+                ? 1m
+                : isDocumentCurrency && document.ExchangeRate > 0m
+                    ? document.ExchangeRate
+                    : currentRate?.Rate ?? 0m;
+            if (rateToTry <= 0m)
+            {
+                continue;
+            }
             await _exchangeRateSnapshotRepository.InsertAsync(new DocumentExchangeRateSnapshot(
                 GuidGenerator.Create(), CurrentTenant.Id, document.Id,
-                rate.Currency.Trim().ToUpperInvariant(), rate.Rate, rate.RateDate));
-        }
-
-        var hasDocumentCurrency = string.Equals(document.Currency, "TRY", StringComparison.OrdinalIgnoreCase) ||
-            currentRates.Any(x => string.Equals(x.Currency, document.Currency, StringComparison.OrdinalIgnoreCase));
-        if (!hasDocumentCurrency && document.ExchangeRate > 0)
-        {
-            await _exchangeRateSnapshotRepository.InsertAsync(new DocumentExchangeRateSnapshot(
-                GuidGenerator.Create(), CurrentTenant.Id, document.Id,
-                document.Currency, document.ExchangeRate, document.Date));
+                currency, rateToTry, isDocumentCurrency ? document.Date : currentRate?.RateDate ?? document.Date));
         }
     }
 
@@ -429,7 +485,20 @@ public class DocumentAppService :
 
     private static void EnsureItemIsValid(CreateUpdateDocumentItemDto item)
     {
-        if (item.Quantity <= 0 || item.UnitPrice < 0 || item.VatRate is < 0 or > 100 || item.DiscountRate is < 0 or > 100)
+        var percentages = new[]
+        {
+            item.DiscountRate,
+            item.PurchaseDiscount1,
+            item.PurchaseDiscount2,
+            item.PurchaseDiscount3,
+            item.PurchaseDiscount4,
+            item.SalesDiscount1,
+            item.SalesDiscount2,
+            item.SalesDiscount3,
+            item.SalesDiscount4
+        };
+        if (item.Quantity <= 0 || item.UnitPrice < 0 || item.VatRate is < 0 or > 100 ||
+            percentages.Any(value => value is < 0 or > 100))
         {
             throw new BusinessException("NoxStock:InvalidDocumentItem");
         }
@@ -450,21 +519,91 @@ public class DocumentAppService :
 
         item.PriceCurrencyCode = calculation.Currency;
         item.PriceExchangeRate = calculation.ExchangeRate;
-        item.PriceRateDate = calculation.PricingCurrencyRateDate ?? calculation.RateDate;
-        item.UnitPriceTry = RoundMoney(item.UnitPrice * calculation.ExchangeRate);
+        item.PriceRateDate = calculation.ReferenceCurrencyRateDate ?? calculation.RateDate;
+        item.UnitPriceTry = RoundMoney(item.UnitPrice);
         item.ProductCostHistoryId = calculation.ProductCostHistoryId ?? product.LastPurchaseCostHistoryId;
         item.CostCurrencyCode = product.LastPurchaseCostCurrencyCode;
         item.CostCurrencyAmount = product.LastPurchaseCostCurrencyAmount;
-        item.CostTryAmount = product.LastPurchaseCostTryAmount;
+        item.CostTryAmount = calculation.NetCostInTry > 0m
+            ? calculation.NetCostInTry
+            : product.LastPurchaseCostTryAmount;
         item.AppliedMarkupPercent = calculation.MarkupPercent;
-        item.ReferenceSaleCurrencyCode = calculation.PricingCurrencyCode;
-        item.ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice;
-        item.ReferenceSaleExchangeRate = calculation.PricingCurrencyExchangeRate;
+        item.ReferenceCurrencyCode = calculation.ReferenceCurrencyCode;
+        item.ReferenceUnitPrice = calculation.ReferenceSaleUnitPrice;
+        item.ReferenceExchangeRate = calculation.ReferenceCurrencyExchangeRate;
         item.PricingSnapshotDate = lockDate;
     }
 
     private static bool IsSalesDocument(DocumentType type)
     {
         return type is DocumentType.SaleInvoice or DocumentType.Offer or DocumentType.SaleOrder;
+    }
+
+    private static bool IsPurchaseDocument(DocumentType type)
+    {
+        return type is DocumentType.PurchaseInvoice or DocumentType.PurchaseOrder;
+    }
+
+    private static bool IsTryOnlyDocument(DocumentType type)
+    {
+        return type is DocumentType.SaleInvoice or DocumentType.SaleOrder or DocumentType.Offer or
+            DocumentType.Collection or DocumentType.PosSale;
+    }
+
+    private static void EnsureSalesCurrencyIsTry(DocumentType type, string? currency)
+    {
+        if (IsTryOnlyDocument(type) &&
+            !string.IsNullOrWhiteSpace(currency) &&
+            !string.Equals(currency.Trim(), "TRY", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessException("NoxStock:SalesDocumentsRequireTry");
+        }
+    }
+
+    private static decimal GetEffectivePurchaseDiscountRate(CreateUpdateDocumentItemDto item)
+    {
+        var hasDiscountChain = item.PurchaseDiscount1 != 0m || item.PurchaseDiscount2 != 0m ||
+            item.PurchaseDiscount3 != 0m || item.PurchaseDiscount4 != 0m;
+        if (!hasDiscountChain)
+        {
+            return item.DiscountRate;
+        }
+
+        var remainingFactor = (1m - item.PurchaseDiscount1 / 100m) *
+            (1m - item.PurchaseDiscount2 / 100m) *
+            (1m - item.PurchaseDiscount3 / 100m) *
+            (1m - item.PurchaseDiscount4 / 100m);
+        return RoundMoney((1m - remainingFactor) * 100m);
+    }
+
+    private static void ApplyProductSalesDiscountDefaults(CreateUpdateDocumentItemDto item, Product product)
+    {
+        var hasLineDiscounts = item.SalesDiscount1 != 0m || item.SalesDiscount2 != 0m ||
+            item.SalesDiscount3 != 0m || item.SalesDiscount4 != 0m || item.DiscountRate != 0m;
+        if (hasLineDiscounts)
+        {
+            return;
+        }
+
+        item.SalesDiscount1 = product.SalesDiscount1;
+        item.SalesDiscount2 = product.SalesDiscount2;
+        item.SalesDiscount3 = product.SalesDiscount3;
+        item.SalesDiscount4 = product.SalesDiscount4;
+    }
+
+    private static decimal GetEffectiveSalesDiscountRate(CreateUpdateDocumentItemDto item)
+    {
+        var hasDiscountChain = item.SalesDiscount1 != 0m || item.SalesDiscount2 != 0m ||
+            item.SalesDiscount3 != 0m || item.SalesDiscount4 != 0m;
+        if (!hasDiscountChain)
+        {
+            return item.DiscountRate;
+        }
+
+        var remainingFactor = (1m - item.SalesDiscount1 / 100m) *
+            (1m - item.SalesDiscount2 / 100m) *
+            (1m - item.SalesDiscount3 / 100m) *
+            (1m - item.SalesDiscount4 / 100m);
+        return RoundMoney((1m - remainingFactor) * 100m);
     }
 }

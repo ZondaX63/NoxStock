@@ -209,6 +209,7 @@ test('private beta critical commercial paths preserve business state and tenant 
 
     await page.goto(`/t/${atlas.name}/Products`);
     await page.locator('#NewProductButton').click();
+    await expect(page.locator('#ProductCreateDialogForm')).toBeVisible();
     await page.locator('#Product_Name').fill(`BMW F10 Fren Diski ${runId}`);
     await page.locator('#Product_Sku').fill(sku);
     await page.locator('#Product_Barcode').fill(barcode);
@@ -216,17 +217,18 @@ test('private beta critical commercial paths preserve business state and tenant 
     await page.locator('#Product_BrandId').selectOption(testBrand.id);
     await page.locator('#Product_OemCodes').fill(`${oem}, 34 11 6 775 277`);
     await page.locator('#Product_Description').fill('BMW E2E Test Product Description');
-    await page.locator('#Product_PurchasePrice').fill('10');
+    await page.locator('[data-dialog-tab="pricing"]').click();
+    await page.locator('#Product_PurchaseListPrice').fill('10');
     await page.locator('#Product_PurchaseCurrency').selectOption('USD');
-    await page.locator('#Product_SaleCurrency').selectOption('TRY');
+    await page.locator('#Product_PricingMode').selectOption('1');
     await page.locator('#Product_ProfitMarkupPercent').fill('25');
 
+    await page.locator('[data-dialog-tab="stock"]').click();
     await page.locator('#Product_Quantity').fill('25');
     await page.locator('#Product_CriticalStockLevel').fill('5');
     await page.locator('#Product_ShelfLocation').fill('A-1-1');
-    await page.locator('#CalculateSalePrice').click();
     await expect.poll(async () => Number(await page.locator('#Product_SalePrice').inputValue())).toBeGreaterThan(0);
-    const productForm = page.locator('#ProductEditor form');
+    const productForm = page.locator('#ProductCreateDialogForm');
     const validation = await productForm.evaluate(form => ({
       valid: form.checkValidity(),
       invalid: [...form.elements]
@@ -234,10 +236,8 @@ test('private beta critical commercial paths preserve business state and tenant 
         .map(element => ({ name: element.name, message: element.validationMessage }))
     }));
     expect(validation.valid, JSON.stringify(validation.invalid)).toBeTruthy();
-    await Promise.all([
-      page.waitForNavigation(),
-      page.locator('#ProductEditor form button[type="submit"]').click()
-    ]);
+    await page.locator('#ProductCreateDialogForm button[type="submit"]').click();
+    await expect(page.locator('#ProductCreateDialogForm')).toBeHidden();
     await page.locator('#ProductCategoryFilter').selectOption(testCategory.id);
     await page.locator('#ProductSearch').fill(oem);
     await expect.poll(async () => {
@@ -248,7 +248,6 @@ test('private beta critical commercial paths preserve business state and tenant 
     product = await getProduct(page, sku);
     expect(product).toBeTruthy();
     expect(product.purchaseCurrency).toBe('USD');
-    expect(product.saleCurrency).toBe('TRY');
     initialStock = product.quantity;
   });
 
@@ -256,7 +255,6 @@ test('private beta critical commercial paths preserve business state and tenant 
   let posTotal;
   await test.step('complete and cancel POS sale; verify stock, account, document, and reversal movements', async () => {
     await page.goto(`/t/${atlas.name}/Sales`);
-    await page.locator('#PosSaleCurrency').selectOption('TRY');
     await page.locator('#PosSearch').fill(oem);
     const productCard = page.locator('.pos-product-card').filter({ hasText: sku });
     await expect(productCard).toBeVisible();

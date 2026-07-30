@@ -1,6 +1,6 @@
 # Migration Notes
 
-Last updated: 2026-07-13
+Last updated: 2026-07-24
 
 ## Current Migrations
 
@@ -17,6 +17,10 @@ Known migration order:
 9. `20260713123858_Add_Tenant_Activation`
 10. `20260715174844_Add_Document_Number_Uniqueness`
 
+Later migrations are retained in source history. The current licensing migration is:
+
+- `20260724154448_Add_SaaS_Licensing`
+
 ## Important Notes
 
 - `20260710113202_Add_CommercialCore_Remove_BookStore` drops `AppBooks` and `AppAuthors`.
@@ -28,7 +32,8 @@ Known migration order:
 - Historical designer files may still contain Book/Author model snapshots. This is expected and should not be treated as live source.
 - `20260713123858_Add_Tenant_Activation` adds `AbpTenants.IsActive` with a safe default of `true`; it does not modify commercial ownership.
 - `20260715174844_Add_Document_Number_Uniqueness` adds a unique composite index over `AppDocuments.TenantId`, `Type`, and `DocNumber`.
-- The migration was applied idempotently through Docker DbMigrator on 2026-07-15.
+- `20260724154448_Add_SaaS_Licensing` creates host-owned plan/license/feature/limit/audit tables, a filtered one-current-license-per-tenant index, globally unique license references, and supporting status/audit indexes.
+- The licensing migration was applied through Docker DbMigrator on 2026-07-24 for the host database and both existing tenants; the migrator exited with code 0.
 - DbMigrator runs the read-only null-tenant ownership audit after migrations and logs counts/sample IDs without assigning data.
 - On 2026-07-13 the local Docker PostgreSQL migration history was queried directly and all nine migrations were present.
 - `dotnet ef migrations has-pending-model-changes` reported no model/snapshot drift.
@@ -49,6 +54,6 @@ Known migration order:
 
 ## Local Docker Verification
 
-- Compose exposes PostgreSQL on host port `5435`; service-to-service connections use `postgres:5432`.
+- Compose exposes PostgreSQL on host port `5449`; service-to-service connections use `postgres:5432`.
 - Use `docker --context default compose run --rm db-migrator` to apply and audit migrations inside the Compose network.
 - Host-side appsettings that point to `localhost:5433` do not describe the current Compose port and cannot be used to infer Docker migration status.

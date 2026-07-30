@@ -1,5 +1,17 @@
 # Progress
 
+## 2026-07-24 - SaaS Licensing Foundation
+
+- Added host-owned `LicensePlan`, `TenantLicense`, feature, limit, and audit entities with migration `20260724154448_Add_SaaS_Licensing`; PILOT/CUSTOM plans and existing-tenant PILOT trials seed idempotently.
+- Added host-only ABP permissions and explicit host-context/route checks. Tenant users cannot call host license services; the host UI supports assignment, plan change, extension, PastDue read-only, suspension, reactivation, and audit history.
+- Added backend enforcement at unsafe HTTP and application-service mutation boundaries. POS/dynamic pricing/multi-currency features and the PILOT 10,000-product limit are checked server-side with stable error codes.
+- Added UTC lifecycle processing, terminal cancellation rules, audit rows, 14/7/1-day expiry audit notices, tenant-prefix-independent cache invalidation, and immediate fail-closed suspension.
+- Added TR/EN license UI resources, dark-mode-compatible host management, and a read-only tenant topbar plan/status indicator.
+- Verification complete for the source/runtime gate: solution build succeeds; Domain 8/8, EntityFrameworkCore 58/58, and Web 48/48 pass. EF reports no pending model changes and `git diff --check` is clean.
+- Docker DbMigrator applied the licensing migration for host, `asd`, and `asd2`, then exited 0. PostgreSQL contains PILOT/CUSTOM plans and two Trial tenant licenses; Web `/health-status` reports process and database checks Healthy at `http://localhost:8080`.
+- Authenticated host/tenant browser verification of the new management UI remains required before production deployment.
+- Deliberately pending: `MaxUsers` provisioning enforcement, CUSTOM entitlement editing, tenant-facing expiry notification delivery, product SKU/barcode uniqueness hardening, and the separately staged `Product.Quantity`/WarehouseStock transition.
+
 ## 2026-07-20 - Customer Sales History
 
 - Added the tenant-scoped `ICustomerSalesHistoryAppService` and `/Customers/{customerId}/SalesHistory` Razor Page. The module joins sales documents, document items, products, brands and categories through projections; no schema or migration change was needed.

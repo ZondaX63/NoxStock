@@ -12,9 +12,13 @@ public sealed class PlatformAdministrationMiddleware
         "/AuditLogs",
         "/Identity",
         "/TenantManagement",
+        "/LicenseManagement",
+        "/host",
         "/api/identity",
         "/api/tenant-management",
-        "/api/app/audit-log"
+        "/api/app/audit-log",
+        "/api/app/host-license",
+        "/api/app/host-tenant-user"
     ];
     private readonly RequestDelegate _next;
 

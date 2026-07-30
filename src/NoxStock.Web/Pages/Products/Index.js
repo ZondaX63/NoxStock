@@ -1,12 +1,136 @@
 $(function () {
     var rates = {};
-    var displayCurrency = localStorage.getItem('productDisplayCurrency') || 'TRY';
+    var showReferenceCurrency = localStorage.getItem('productShowReferenceCurrency') === 'true';
     var editor = $('#ProductEditor');
     var editModal = new abp.ModalManager(abp.appPath + 'Products/EditModal');
+    var createModal = new abp.ModalManager({
+        viewUrl: abp.appPath + 'Products/CreateModal',
+        modalClass: 'ProductCreateModal'
+    });
     var dataTable;
     var searchTimer;
 
-    $('#DisplayCurrency').val(displayCurrency);
+    $('#ShowReferenceCurrency').prop('checked', showReferenceCurrency);
+
+    // The creation modal is loaded dynamically by ABP. Delegate these actions
+    // from the static page root so they work even if a modal lifecycle hook is
+    // skipped by a cached or already-open Bootstrap dialog.
+    $(document).on('click', '.product-create-dialog-form [data-dialog-tab]', function (event) {
+        event.preventDefault();
+        var $form = $(this).closest('.product-create-dialog-form');
+        var tab = String($(this).data('dialog-tab'));
+        $form.find('[data-dialog-tab]')
+            .removeClass('is-active')
+            .attr('aria-selected', 'false');
+        $(this)
+            .addClass('is-active')
+            .attr('aria-selected', 'true');
+        $form.find('[data-dialog-section]')
+            .attr('hidden', 'hidden')
+            .filter('[data-dialog-section="' + tab + '"]')
+            .removeAttr('hidden');
+        refreshCreateDialogHero($form);
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-dialog-generate-sku]', function (event) {
+        event.preventDefault();
+        var now = new Date();
+        var stamp = now.getFullYear().toString() +
+            String(now.getMonth() + 1).padStart(2, '0') +
+            String(now.getDate()).padStart(2, '0') +
+            String(now.getTime()).slice(-6);
+        $(this).closest('.product-create-dialog-form').find('#Product_Sku')
+            .val('STK-' + stamp)
+            .trigger('input')
+            .trigger('focus')
+            .select();
+    });
+
+    $(document).on('change', '.product-create-dialog-form #Product_PurchaseCurrency', function () {
+        var $form = $(this).closest('.product-create-dialog-form');
+        syncPurchaseRate($form, true);
+        refreshCreateDialogHero($form);
+    });
+
+    $(document).on('change', '.product-create-dialog-form [data-rate-override]', function () {
+        var $form = $(this).closest('.product-create-dialog-form');
+        syncPurchaseRate($form, !this.checked);
+        refreshCreateDialogHero($form);
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-rate-refresh]', function (event) {
+        event.preventDefault();
+        var $button = $(this);
+        var $form = $button.closest('.product-create-dialog-form');
+        $button.addClass('is-loading').prop('disabled', true);
+        fetchRates().then(function () {
+            syncPurchaseRate($form, true);
+            refreshCreateDialogHero($form);
+        }).finally(function () {
+            $button.removeClass('is-loading').prop('disabled', false);
+        });
+    });
+
+    $(document).on('input change', '.product-create-dialog-form #Product_SalePrice, .product-create-dialog-form #Product_ProfitMarkupPercent', function () {
+        $(this).closest('.product-create-dialog-form').data('pricingSource', this.id === 'Product_ProfitMarkupPercent' ? 'markup' : 'sale');
+    });
+
+    $(document).on('input change', '.product-create-dialog-form input, .product-create-dialog-form select', function () {
+        refreshCreateDialogHero($(this).closest('.product-create-dialog-form'));
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-apply-recommended-price]', function (event) {
+        event.preventDefault();
+        applyRecommendedDialogPrice($(this).closest('.product-create-dialog-form'));
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-quick-lookup-create]', function (event) {
+        event.preventDefault();
+        var $button = $(this);
+        var $form = $button.closest('.product-create-dialog-form');
+        var lookupType = String($button.data('quick-lookup-create'));
+        var $panel = $form.find('[data-quick-lookup-panel="' + lookupType + '"]');
+        $form.find('[data-quick-lookup-panel]').not($panel).attr('hidden', 'hidden');
+        $panel.removeAttr('hidden').find('[data-quick-lookup-name]').val('').trigger('focus');
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-quick-lookup-cancel]', function (event) {
+        event.preventDefault();
+        $(this).closest('[data-quick-lookup-panel]').attr('hidden', 'hidden');
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-quick-lookup-save]', function (event) {
+        event.preventDefault();
+        var $button = $(this);
+        var $panel = $button.closest('[data-quick-lookup-panel]');
+        var $form = $button.closest('.product-create-dialog-form');
+        var lookupType = String($panel.data('quick-lookup-panel'));
+        var label = lookupType === 'brand' ? 'marka' : 'kategori';
+        var name = String($panel.find('[data-quick-lookup-name]').val() || '').trim();
+        if (!name) {
+            $panel.find('[data-quick-lookup-name]').trigger('focus');
+            return;
+        }
+
+        $button.prop('disabled', true).text('Kaydediliyor…');
+        var service = lookupType === 'brand'
+            ? noxStock.brands.brand
+            : noxStock.categories.category;
+        service.create({ name: name })
+            .then(function (created) {
+                var selectId = lookupType === 'brand' ? '#Product_BrandId' : '#Product_CategoryId';
+                var $select = $form.find(selectId);
+                var option = new Option(created.name, created.id, true, true);
+                $select.append(option).trigger('change');
+                $panel.attr('hidden', 'hidden');
+                abp.notify.success('Yeni ' + label + ' eklendi.');
+            })
+            .catch(function (error) {
+                var message = error && error.message ? error.message : 'Yeni ' + label + ' eklenemedi.';
+                abp.notify.error(message);
+            })
+            .finally(function () { $button.prop('disabled', false).text('Kaydet'); });
+    });
 
     function formatMoney(value, currency) {
         var locale = document.documentElement.lang === 'en' ? 'en-US' : 'tr-TR';
@@ -18,13 +142,215 @@ $(function () {
         }).format(Number(value || 0));
     }
 
+    function formatDecimal(value, digits) {
+        var locale = document.documentElement.lang === 'en' ? 'en-US' : 'tr-TR';
+        return new Intl.NumberFormat(locale, {
+            minimumFractionDigits: digits,
+            maximumFractionDigits: digits
+        }).format(Number(value || 0));
+    }
+
+    function currentRate(currency) {
+        return currency === 'TRY' ? 1 : Number(rates[currency] && rates[currency].rate);
+    }
+
+    function chainDiscount($form, value, fieldPrefix) {
+        var result = Number(value || 0);
+        for (var index = 1; index <= 4; index++) {
+            var discount = Math.min(100, Math.max(0, Number($form.find('#Product_' + fieldPrefix + index).val()) || 0));
+            result *= 1 - discount / 100;
+        }
+        return result;
+    }
+
+    function syncPurchaseRate($form, forceCurrentRate) {
+        if (!$form || !$form.length) return;
+        var currency = $form.find('#Product_PurchaseCurrency').val() || 'TRY';
+        var $rate = $form.find('[data-purchase-rate]');
+        var $override = $form.find('[data-rate-override]');
+        var isOverride = $override.prop('checked');
+
+        if (currency === 'TRY') {
+            $rate.val('1').prop('readonly', true);
+            $override.prop('checked', false).prop('disabled', true);
+            return;
+        }
+
+        $override.prop('disabled', false);
+        if (isOverride) {
+            $rate.prop('readonly', false);
+            return;
+        }
+
+        $rate.prop('readonly', true);
+        var rate = currentRate(currency);
+        if (forceCurrentRate && rate > 0) {
+            $rate.val(rate.toFixed(6)).trigger('input');
+        }
+    }
+
+    function getDialogNetCostTry($form) {
+        var purchaseCurrency = $form.find('#Product_PurchaseCurrency').val() || 'TRY';
+        var purchaseList = Math.max(0, Number($form.find('#Product_PurchaseListPrice').val()) || 0);
+        var netPurchase = chainDiscount($form, purchaseList, 'PurchaseDiscount');
+        var approvedTryCost = Number($form.attr('data-approved-try-cost')) || 0;
+        if (approvedTryCost > 0) {
+            return approvedTryCost;
+        }
+
+        var purchaseRate = Number($form.find('[data-purchase-rate]').val());
+        if (purchaseCurrency === 'TRY') {
+            purchaseRate = 1;
+        }
+        return purchaseRate > 0 ? netPurchase * purchaseRate : null;
+    }
+
+    function applyRecommendedDialogPrice($form) {
+        if (!$form || !$form.length || String($form.find('#Product_PricingMode').val() || '0') === '1') {
+            return;
+        }
+
+        var netCostTry = getDialogNetCostTry($form);
+        var $salePrice = $form.find('#Product_SalePrice');
+        var $markup = $form.find('#Product_ProfitMarkupPercent');
+        if (netCostTry == null || netCostTry <= 0) {
+            $form.find('[data-sale-price-hint]').text('Öneri için önce liste alış fiyatı ve kur bilgisini girin.');
+            refreshCreateDialogHero($form);
+            return;
+        }
+
+        var markupRaw = $markup.val();
+        var markup = Number(markupRaw);
+        if (markupRaw == null || String(markupRaw).trim() === '' || !Number.isFinite(markup) || markup < 0) {
+            markup = 30;
+        }
+        $form.data('pricingSource', 'markup');
+        $salePrice.val((netCostTry * (1 + markup / 100)).toFixed(4));
+        $salePrice.trigger('input');
+        refreshCreateDialogHero($form);
+    }
+
+    function syncDialogPricingMode($form) {
+        var dynamic = String($form.find('#Product_PricingMode').val() || '0') === '1';
+        var $salePrice = $form.find('#Product_SalePrice');
+        var $markup = $form.find('#Product_ProfitMarkupPercent');
+        $form.find('[data-manual-sale-field]').toggleClass('is-automatic', dynamic);
+        $salePrice.prop('disabled', dynamic).attr('aria-disabled', dynamic ? 'true' : 'false');
+        $form.find('[data-markup-field]').removeClass('is-automatic');
+        $markup.prop('readonly', false).attr('aria-readonly', 'false');
+        $form.find('[data-sale-price-label]').text(dynamic
+            ? 'Otomatik satış fiyatı (KDV\'siz)'
+            : 'Manuel satış fiyatı (KDV\'siz)');
+        $form.find('[data-markup-label]').text(dynamic
+            ? 'Hedef kâr ekleme oranı (%)'
+            : 'Hedef / hesaplanan kâr ekleme oranı (%)');
+        $form.find('[data-sale-price-hint]').text(dynamic
+            ? 'Maliyet ve hedef oran üzerinden otomatik hesaplanır.'
+            : 'Satışta kullanılacak liste fiyatını girin.');
+        $form.find('[data-markup-hint]').text(dynamic
+            ? 'Dinamik fiyatın ana girdisidir.'
+            : 'Fiyatı veya oranı değiştirebilirsiniz; diğeri maliyete göre anında eşitlenir.');
+        $form.find('[data-pricing-mode-explainer]').text(dynamic
+            ? 'Satış fiyatı, maliyetin döviz tutarı güncel kura taşınarak ve hedef kâr oranı eklenerek hesaplanır.'
+            : 'Sabit satış fiyatı TL olarak korunur ve kur değişiminden etkilenmez.');
+        return dynamic;
+    }
+
+    function refreshCreateDialogHero($form) {
+        if (!$form || !$form.length) return;
+        var purchaseCurrency = $form.find('#Product_PurchaseCurrency').val() || 'TRY';
+        var purchaseList = Math.max(0, Number($form.find('#Product_PurchaseListPrice').val()) || 0);
+        var netPurchase = chainDiscount($form, purchaseList, 'PurchaseDiscount');
+        var approvedReferenceCost = Number($form.attr('data-approved-reference-cost')) || 0;
+        var approvedTryCost = Number($form.attr('data-approved-try-cost')) || 0;
+        var purchaseRate = Number($form.find('[data-purchase-rate]').val());
+        var hasPurchaseRate = purchaseCurrency === 'TRY' || purchaseRate > 0;
+        purchaseRate = purchaseCurrency === 'TRY' ? 1 : purchaseRate;
+        var netCost = hasPurchaseRate ? netPurchase * purchaseRate : null;
+        var dynamic = syncDialogPricingMode($form);
+        var markup = Math.max(0, Number($form.find('#Product_ProfitMarkupPercent').val()) || 0);
+        var livePurchaseRate = currentRate(purchaseCurrency);
+        var dynamicReferenceCost = approvedReferenceCost > 0 ? approvedReferenceCost : netPurchase;
+        var dynamicCost = livePurchaseRate > 0 ? dynamicReferenceCost * livePurchaseRate : null;
+        var pricingSource = $form.data('pricingSource') || 'sale';
+        var listSale = dynamic
+            ? (dynamicCost == null ? null : dynamicCost * (1 + markup / 100))
+            : pricingSource === 'markup' && (approvedTryCost > 0 || netCost != null)
+                ? (approvedTryCost > 0 ? approvedTryCost : netCost) * (1 + markup / 100)
+                : Math.max(0, Number($form.find('#Product_SalePrice').val()) || 0);
+        var netSale = listSale == null ? null : chainDiscount($form, listSale, 'SalesDiscount');
+        var salesDiscount = listSale == null || netSale == null ? null : Math.max(0, listSale - netSale);
+        var vatRate = Math.min(100, Math.max(0, Number($form.find('#Product_VatRate').val()) || 0));
+        var vatAmount = netSale == null ? null : netSale * vatRate / 100;
+        var finalPrice = netSale == null ? null : netSale + vatAmount;
+        var displayedCost = dynamic ? dynamicCost : (approvedTryCost > 0 ? approvedTryCost : netCost);
+        var salePriceMissing = !dynamic && (!listSale || listSale <= 0);
+        var profit = displayedCost == null || netSale == null || salePriceMissing ? null : netSale - displayedCost;
+        var margin = netSale > 0 && profit != null ? profit / netSale * 100 : null;
+        var realizedMarkup = displayedCost > 0 && profit != null ? profit / displayedCost * 100 : null;
+        var effectivePurchaseDiscount = purchaseList > 0 ? (1 - netPurchase / purchaseList) * 100 : 0;
+        var displayedRate = dynamic ? livePurchaseRate : purchaseRate;
+        var hasDisplayedRate = purchaseCurrency === 'TRY' || displayedRate > 0;
+        var text = function (amount) { return amount == null ? 'Kur bekleniyor' : formatMoney(amount, 'TRY'); };
+
+        if (dynamic && listSale != null) {
+            $form.find('#Product_SalePrice').val(listSale.toFixed(4));
+        }
+        if (!dynamic) {
+            if (pricingSource === 'markup' && listSale != null) {
+                $form.find('#Product_SalePrice').val(listSale.toFixed(4));
+            }
+            var reverseMarkup = displayedCost != null && displayedCost > 0 && listSale != null
+                ? Math.max(0, (listSale / displayedCost - 1) * 100)
+                : 0;
+            if (pricingSource !== 'markup') {
+                $form.find('#Product_ProfitMarkupPercent').val(reverseMarkup.toFixed(4));
+            }
+        }
+
+        $form.find('[data-dialog-value="net-purchase-currency"]').text(
+            formatDecimal(dynamic && approvedReferenceCost > 0 ? approvedReferenceCost : netPurchase, 4) + ' ' + purchaseCurrency);
+        $form.find('[data-dialog-value="cost"]').text(text(displayedCost));
+        $form.find('[data-dialog-value="list"]').text(text(listSale));
+        $form.find('[data-dialog-value="sales-discount"]').text(salesDiscount == null ? '—' : '-' + formatMoney(salesDiscount, 'TRY'));
+        $form.find('[data-dialog-value="net-sale"]').text(text(netSale));
+        $form.find('[data-dialog-value="vat-label"]').text('KDV (%' + formatDecimal(vatRate, 0) + ')');
+        $form.find('[data-dialog-value="vat-amount"]').text(text(vatAmount));
+        $form.find('[data-dialog-value="final"]').text(text(finalPrice));
+        $form.find('[data-dialog-value="profit"]').text(salePriceMissing ? '—' : (profit == null ? 'Hesaplanamadı' : formatMoney(profit, 'TRY')));
+        $form.find('[data-dialog-value="margin"]').text(salePriceMissing
+            ? 'Satış fiyatı giriniz · Önerilen fiyatı kullanın'
+            : (margin == null ? 'Brüt kâr marjı hesaplanamadı' : 'Brüt kâr marjı: %' + formatDecimal(margin, 2)));
+        $form.find('[data-dialog-value="realized-markup"]').text(salePriceMissing
+            ? 'Önerilen fiyatı kullanın'
+            : (realizedMarkup == null ? 'Gerçekleşen markup hesaplanamadı' : 'Gerçekleşen markup: %' + formatDecimal(realizedMarkup, 2)));
+        $form.find('[data-dialog-value="meta"]').text(
+            !hasDisplayedRate
+                ? purchaseCurrency + '/TRY işlem kuru gerekli.'
+                : dynamic && approvedReferenceCost > 0
+                    ? 'Onaylı maliyet profili · güncel kur ' + formatDecimal(displayedRate, 4)
+                : '%' + formatDecimal(effectivePurchaseDiscount, 2) + ' bileşik alış iskontosu · kur ' + formatDecimal(displayedRate, 4)
+        );
+        $form.find('.product-finance-profit').attr('data-profit-state', salePriceMissing
+            ? 'placeholder'
+            : (profit == null || profit === 0 ? 'neutral' : (profit < 0 ? 'loss' : 'profit')));
+    }
+
+    function refreshDialogHeroAfterOpen(selector) {
+        [80, 260, 600].forEach(function (delay) {
+            window.setTimeout(function () {
+                $(selector).each(function () { refreshCreateDialogHero($(this)); });
+            }, delay);
+        });
+    }
+
     function escapeHtml(value) {
         return $('<div>').text(value == null ? '' : value).html();
     }
 
     function toTry(value, currency) {
         var rate = currency === 'TRY' ? 1 : Number(rates[currency] && rates[currency].rate);
-        return Number(value || 0) * (rate || 1);
+        return rate > 0 ? Number(value || 0) * rate : null;
     }
 
     function isDynamicPrice(row) {
@@ -61,9 +387,9 @@ $(function () {
         var price = dynamic ? 'Döviz bazlı dinamik' : 'Manuel fiyat';
         var detail = dynamic
             ? (hasLastPurchaseCost(row)
-                ? (escapeHtml(row.pricingCurrencyCode || row.lastPurchaseCostCurrencyCode || 'TRY') + ' referansli · %' + Number(row.profitMarkupPercent || 0).toFixed(2) + ' markup')
+                ? (escapeHtml(row.purchaseCurrency || row.lastPurchaseCostCurrencyCode || 'TRY') + ' referanslı · %' + Number(row.profitMarkupPercent || 0).toFixed(2) + ' markup')
                 : 'Onaylı alış maliyeti bekleniyor')
-            : ('Kart fiyatı · ' + escapeHtml(row.saleCurrency || 'TRY'));
+            : 'Sabit TL kart fiyatı';
         return '<div class="product-pricing-status ' + (dynamic ? 'is-dynamic' : 'is-manual') + '"><span class="material-icons-round" aria-hidden="true">' + (dynamic ? 'currency_exchange' : 'sell') + '</span><span>' + price + '</span></div>' +
             '<div class="product-table-subtitle">' + detail + '</div>';
     }
@@ -83,7 +409,7 @@ $(function () {
             : formatMoney(row.lastPurchaseCostTryAmount, 'TRY');
         var rate = Number(row.lastPurchaseExchangeRate || row.lastPurchaseSourceExchangeRate || 0);
         return '<div class="product-cost-value product-cost-source-title" title="' + escapeHtml(sourceLine) + '">' + escapeHtml(sourceLine) + '</div>' +
-            '<div class="product-cost-source">' + escapeHtml(netCost) + (rate > 0 ? ' · 1 ' + escapeHtml(row.pricingCurrencyCode || 'TRY') + ' = ' + rate.toFixed(4) + ' TRY' : '') + '</div>' +
+            '<div class="product-cost-source">' + escapeHtml(netCost) + (rate > 0 ? ' · 1 ' + escapeHtml(row.purchaseCurrency || 'TRY') + ' = ' + rate.toFixed(4) + ' TRY' : '') + '</div>' +
             '<div class="product-table-subtitle">' + escapeHtml(date) + '</div>';
     }
 
@@ -92,10 +418,13 @@ $(function () {
             return '<div class="product-cost-empty"><span class="material-icons-round" aria-hidden="true">lock_clock</span><div><strong>Kilitli maliyet yok</strong><span>Alış onayında otomatik oluşur.</span></div></div>';
         }
 
-        var currency = row.lastPurchaseCostCurrencyCode || row.pricingCurrencyCode || 'TRY';
-        return '<div class="product-cost-value">' + escapeHtml(formatMoney(row.lastPurchaseCostCurrencyAmount, currency)) + '</div>' +
-            '<div class="product-table-subtitle">' + escapeHtml(currency) + ' bazlı maliyet snapshotı</div>' +
-            (row.lastPurchaseCostTryAmount ? '<div class="product-table-subtitle">TRY karşılığı: ' + escapeHtml(formatMoney(row.lastPurchaseCostTryAmount, 'TRY')) + '</div>' : '');
+        var currency = row.purchaseCurrency || row.lastPurchaseCostCurrencyCode || 'TRY';
+        var currentTryCost = row.currentNetCostInTry != null ? row.currentNetCostInTry : row.lastPurchaseCostTryAmount;
+        var referenceDetail = showReferenceCurrency
+            ? '<div class="product-table-subtitle">' + escapeHtml(formatMoney(row.lastPurchaseCostCurrencyAmount, currency)) + ' referans maliyet</div>'
+            : '';
+        return '<div class="product-cost-value">' + escapeHtml(formatMoney(currentTryCost, 'TRY')) + '</div>' +
+            '<div class="product-table-subtitle">Güncel net TL maliyet</div>' + referenceDetail;
     }
 
     function renderBrandCategory(row) {
@@ -117,8 +446,8 @@ $(function () {
 
     function renderOptionalReferenceSale(row) {
         return row.suggestedSaleUnitPrice != null
-            ? '<div class="product-cost-value">' + escapeHtml(formatMoney(row.suggestedSaleUnitPrice, row.suggestedSaleCurrency || displayCurrency || 'TRY')) + '</div>' +
-                '<div class="product-table-subtitle">Seçili para birimindeki satış önerisi</div>'
+            ? '<div class="product-cost-value">' + escapeHtml(formatMoney(row.suggestedSaleUnitPrice, 'TRY')) + '</div>' +
+                '<div class="product-table-subtitle">Güncel TL satış fiyatı</div>'
             : '<span class="product-table-muted">-</span>';
     }
 
@@ -132,14 +461,13 @@ $(function () {
             return '<div class="product-sale-unavailable"><span class="material-icons-round" aria-hidden="true">cloud_off</span><div><strong>Kur bekleniyor</strong><span>Fiyat satışta backend tarafından hesaplanır.</span></div></div>';
         }
 
-        var currency = row.suggestedSaleCurrency || displayCurrency || 'TRY';
-        var suggested = formatMoney(row.suggestedSaleUnitPrice, currency);
+        var suggested = formatMoney(row.suggestedSaleUnitPrice, 'TRY');
         var rateDate = row.suggestedSaleRateDate
             ? luxon.DateTime.fromISO(row.suggestedSaleRateDate).toFormat('dd.MM.yyyy HH:mm')
             : '';
-        var pricingRate = Number(row.currentPricingCurrencyExchangeRate || 0);
-        var pricingRateText = dynamic && row.pricingCurrencyCode !== 'TRY' && pricingRate > 0
-            ? 'Güncel kur: 1 ' + escapeHtml(row.pricingCurrencyCode) + ' = ' + pricingRate.toFixed(4) + ' TRY'
+        var pricingRate = Number(row.currentReferenceCurrencyExchangeRate || 0);
+        var pricingRateText = dynamic && row.purchaseCurrency !== 'TRY' && pricingRate > 0
+            ? 'Güncel kur: 1 ' + escapeHtml(row.purchaseCurrency) + ' = ' + pricingRate.toFixed(4) + ' TRY'
             : (rateDate ? 'Kur zamanı: ' + escapeHtml(rateDate) : 'TRY baz para birimi');
         return '<div class="product-sale-value">' + escapeHtml(suggested) + '</div>' +
             '<div class="product-sale-live"><span></span>' + (dynamic ? 'Güncel kurla dinamik' : 'Manuel fiyatın güncel görünümü') + '</div>' +
@@ -165,30 +493,97 @@ $(function () {
         $('#ProductAttentionStockCount').text(stockAttention);
     }
 
-    function refreshTablePrices() {
-        if (dataTable) {
-            $('#DisplayCurrency').prop('disabled', true);
-            $('#DisplayCurrencyStatus').text(displayCurrency + ' satış önerileri yükleniyor...');
-            dataTable.ajax.reload(function () {
-                $('#DisplayCurrency').prop('disabled', false);
-                $('#DisplayCurrencyStatus').text(displayCurrency + ' satış önerisi gösteriliyor. Kilitli maliyet kaynak dövizinde korunur.');
-            }, false);
-        }
-    }
-
     function updateEquivalent(priceInput, currencyInput, target) {
         var value = Number(priceInput.val());
         var currency = currencyInput.val();
-        target.text(value && currency !== 'TRY' ? 'Yaklaşık ' + formatMoney(toTry(value, currency), 'TRY') : '');
+        var tryValue = toTry(value, currency);
+        target.text(value && currency !== 'TRY'
+            ? (tryValue == null ? 'Güncel kur bekleniyor' : 'Yaklaşık ' + formatMoney(tryValue, 'TRY'))
+            : '');
     }
 
     function updatePriceEquivalents() {
         updateEquivalent($('#Product_PurchasePrice'), $('#Product_PurchaseCurrency'), $('#PurchaseTryEquivalent'));
-        updateEquivalent($('#Product_SalePrice'), $('#Product_SaleCurrency'), $('#SaleTryEquivalent'));
+    }
+
+    function clampPercent(value) {
+        return Math.min(100, Math.max(0, Number(value) || 0));
+    }
+
+    function applyDiscountChain(value, matrixName) {
+        var result = Number(value || 0);
+        $('[data-discount-matrix="' + matrixName + '"] input').each(function () {
+            result *= 1 - (clampPercent($(this).val()) / 100);
+        });
+        return result;
+    }
+
+    function updateCreateFinanceHero() {
+        var purchaseCurrency = $('#Product_PurchaseCurrency').val() || 'TRY';
+        var purchaseListTryRaw = toTry($('#Product_PurchasePrice').val(), purchaseCurrency);
+        var purchaseRateAvailable = purchaseListTryRaw != null;
+        var purchaseListTry = purchaseListTryRaw || 0;
+        var netCostTry = applyDiscountChain(purchaseListTry, 'purchase');
+        var modeValue = String($('#Product_PricingMode').val() || '0');
+        var dynamicMode = modeValue === '1' || modeValue.indexOf('Dynamic') > -1 || modeValue.indexOf('Döviz') > -1;
+        var markup = Math.max(0, Number($('#Product_ProfitMarkupPercent').val()) || 0);
+        var manualSaleTryRaw = Number($('#Product_SalePrice').val());
+        var saleRateAvailable = dynamicMode ? purchaseRateAvailable : manualSaleTryRaw != null;
+        var manualSaleTry = manualSaleTryRaw || 0;
+        var listSaleTry = dynamicMode ? netCostTry * (1 + markup / 100) : manualSaleTry;
+        var netSaleTry = applyDiscountChain(listSaleTry, 'sale');
+        var saleDiscountTry = Math.max(0, listSaleTry - netSaleTry);
+        var vatRate = clampPercent($('#ProductPreviewVatRate').val());
+        var vatSaleTry = netSaleTry * (1 + vatRate / 100);
+        var profitTry = netSaleTry - netCostTry;
+        var margin = netSaleTry > 0 ? (profitTry / netSaleTry) * 100 : 0;
+        var effectivePurchaseDiscount = purchaseListTry > 0 ? (1 - netCostTry / purchaseListTry) * 100 : 0;
+
+        $('#ProductHeroNetCost').text(purchaseRateAvailable ? formatMoney(netCostTry, 'TRY') : 'Kur bekleniyor');
+        $('#ProductHeroCostMeta').text(
+            !purchaseRateAvailable
+                ? purchaseCurrency + '/TRY kuru alınmadan maliyet gösterilmez.'
+                : purchaseCurrency === 'TRY'
+                ? 'Zincirleme alış iskontosu: %' + effectivePurchaseDiscount.toFixed(2)
+                : formatMoney(Number($('#Product_PurchasePrice').val()) || 0, purchaseCurrency) + ' · güncel kur · %' + effectivePurchaseDiscount.toFixed(2) + ' iskonto'
+        );
+        $('#ProductHeroListSale').text(saleRateAvailable ? formatMoney(listSaleTry, 'TRY') : 'Kur bekleniyor');
+        $('#ProductHeroSaleDiscount').text(saleRateAvailable ? '-' + formatMoney(saleDiscountTry, 'TRY') : '—');
+        $('#ProductHeroNetSale').text(saleRateAvailable ? formatMoney(netSaleTry, 'TRY') : '—');
+        $('#ProductHeroVatSale').text(saleRateAvailable ? formatMoney(vatSaleTry, 'TRY') : '—');
+        $('#ProductHeroProfit').text(purchaseRateAvailable && saleRateAvailable ? formatMoney(profitTry, 'TRY') : 'Hesaplanamadı');
+        $('#ProductHeroMargin').text(purchaseRateAvailable && saleRateAvailable ? '%' + margin.toFixed(2) + ' satış marjı' : 'Güncel kur gerekli');
+        $('.product-finance-profit').attr('data-profit-state', profitTry < 0 ? 'loss' : (profitTry > 0 ? 'profit' : 'neutral'));
+    }
+
+    function activateCreateSection(sectionName) {
+        var $section = $('[data-product-section="' + sectionName + '"]');
+        if (!$section.length) {
+            return;
+        }
+        $('.product-editor-tab').toggleClass('is-active', false).filter('[data-product-tab="' + sectionName + '"]').addClass('is-active');
+        $section[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(function () {
+            $section.find('input:not([type="hidden"]), select, textarea').first().trigger('focus');
+        }, 250);
+    }
+
+    function generateSku() {
+        var now = new Date();
+        var stamp = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, '0'),
+            String(now.getDate()).padStart(2, '0'),
+            String(now.getHours()).padStart(2, '0'),
+            String(now.getMinutes()).padStart(2, '0'),
+            String(now.getSeconds()).padStart(2, '0')
+        ].join('');
+        $('#Product_Sku').val('STK-' + stamp).trigger('input').trigger('focus').select();
     }
 
     function openEditor() {
         editor.prop('hidden', false);
+        updateCreateFinanceHero();
         editor[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
         window.setTimeout(function () { $('#Product_Name').trigger('focus'); }, 250);
     }
@@ -203,6 +598,44 @@ $(function () {
         $('#SaleCalculationInfo').text('Dinamik fiyat için ürün kartını kaydedin ve alış faturasını onaylayın. Referans maliyet elle girilmez; onaylı faturadan otomatik oluşur.');
     }
 
+    function initCreateDialog($modal) {
+        var $form = $modal.is('.product-create-dialog-form')
+            ? $modal
+            : $modal.find('.product-create-dialog-form').first();
+        if (!$form.length) {
+            $form = $modal.closest('.product-create-dialog-form');
+        }
+        if (!$form.length || $form.data('noxstock-create-ready')) return;
+        $form.data('noxstock-create-ready', true);
+        $form.find('[data-dialog-tab]').first().attr('aria-selected', 'true');
+        $form.on('keydown', function (event) {
+            if (event.key === 'Escape') { event.preventDefault(); $modal.modal('hide'); }
+            else if (event.key === 'Enter' && !event.isComposing && !$(event.target).is('textarea, button, select')) {
+                event.preventDefault();
+                if (this.requestSubmit) this.requestSubmit();
+                else $modal.find('.modal-footer button[type="submit"]').trigger('click');
+            }
+        });
+        syncPurchaseRate($form, false);
+        refreshCreateDialogHero($form);
+        fetchRates().then(function () {
+            var shouldUseCurrentRate = !$form.hasClass('product-edit-dialog-form');
+            syncPurchaseRate($form, shouldUseCurrentRate);
+            refreshCreateDialogHero($form);
+        });
+    }
+
+    // ABP invokes initModal for every open, before the Bootstrap animation. This
+    // avoids relying on a document-level event that may fire before the modal's
+    // dynamically loaded content is available.
+    abp.modals.ProductCreateModal = function () {
+        return {
+            initModal: function (publicApi) {
+                initCreateDialog(publicApi.getModal());
+            }
+        };
+    };
+
     function fetchRates() {
         return fetch(abp.appPath + 'api/app/exchange-rate/current', { credentials: 'same-origin' })
             .then(function (response) { return response.ok ? response.json() : null; })
@@ -211,10 +644,22 @@ $(function () {
                     rates = { USD: data.usd || data.USD, EUR: data.eur || data.EUR };
                 }
                 updatePriceEquivalents();
+                updateCreateFinanceHero();
+                $('.product-create-dialog-form').each(function () {
+                    var $form = $(this);
+                    syncPurchaseRate($form, false);
+                    refreshCreateDialogHero($form);
+                });
                 refreshTablePrices();
             })
             .catch(function () {
                 updatePriceEquivalents();
+                updateCreateFinanceHero();
+                $('.product-create-dialog-form').each(function () {
+                    var $form = $(this);
+                    syncPurchaseRate($form, false);
+                    refreshCreateDialogHero($form);
+                });
                 refreshTablePrices();
             });
     }
@@ -250,7 +695,6 @@ $(function () {
             var referenceCost = Number(dashboard.dataset.referenceCost || 0);
             var referenceCurrency = dashboard.dataset.referenceCurrency || 'TRY';
             var sourceCurrency = dashboard.dataset.sourceCurrency || 'TRY';
-            var saleCurrency = $modal.find('#Product_SaleCurrency').val() || 'TRY';
             var markupInput = $modal.find('#Product_ProfitMarkupPercent');
             var markup = Number(markupInput.val());
             if (!Number.isFinite(markup) || markup <= 0) {
@@ -260,7 +704,6 @@ $(function () {
 
             var mode = Number($modal.find('#Product_PricingMode').val());
             var currentReferenceRate = editRate(referenceCurrency);
-            var currentSaleRate = editRate(saleCurrency);
             var hasCost = referenceCost > 0 || tryCost > 0;
             var $warning = $modal.find('#EditPricingWarning');
 
@@ -288,7 +731,7 @@ $(function () {
                 return;
             }
 
-            if (!currentReferenceRate || !currentSaleRate) {
+            if (!currentReferenceRate) {
                 $modal.find('#EditSuggestedSale').text('Kur bekleniyor');
                 $modal.find('#EditSuggestedSaleMeta').text('Güncel kur alınamadığı için satış önerisi hesaplanamadı.');
                 $warning.text('Güncel kur bulunamadı. Fiyat 0 gösterilmez; kur geldiğinde öneri otomatik yenilenir.').prop('hidden', false);
@@ -300,13 +743,11 @@ $(function () {
                 : (tryCost || sourceCost);
             var referenceSale = referenceCost * (1 + markup / 100);
             var suggestedTry = referenceCostInTry * (1 + markup / 100);
-            var suggestedSale = suggestedTry / currentSaleRate;
+            var suggestedSale = suggestedTry;
             $modal.find('#EditReferenceSale').text(editFormatMoney(referenceSale, referenceCurrency));
-            $modal.find('#EditCurrentRate').text(saleCurrency === 'TRY'
-                ? 'TRY baz para birimi'
-                : '1 ' + saleCurrency + ' = ' + currentSaleRate.toFixed(4) + ' TRY');
-            $modal.find('#EditSuggestedSale').text(editFormatMoney(suggestedSale, saleCurrency));
-            $modal.find('#EditSuggestedSaleMeta').text('TRY eşdeğeri: ' + editFormatMoney(suggestedTry, 'TRY') + ' · Güncel ' + saleCurrency + '/TRY kuru: ' + currentSaleRate.toFixed(4) + ' · %' + markup.toFixed(2) + ' markup');
+            $modal.find('#EditCurrentRate').text('Satış para birimi: TRY');
+            $modal.find('#EditSuggestedSale').text(editFormatMoney(suggestedSale, 'TRY'));
+            $modal.find('#EditSuggestedSaleMeta').text('Güncel ' + referenceCurrency + '/TRY kuru ve %' + markup.toFixed(2) + ' markup ile hesaplandı.');
             $warning.text(mode === 1
                 ? 'Dinamik satış fiyatı aktif. POS ve satış faturası bu maliyet, güncel kur ve markup üzerinden hesaplar.'
                 : 'Bu ürün manuel fiyat modunda. Bu öneriyi satışta kullanmak için fiyatlandırma modunu “Döviz bazlı dinamik” yapıp kaydedin.').prop('hidden', false);
@@ -336,7 +777,7 @@ $(function () {
             $modal.find('[data-pricing-manual-field]').prop('hidden', dynamic);
         }
 
-        $modal.find('#Product_SaleCurrency, #Product_PricingCurrencyCode, #Product_PricingMode, #Product_ProfitMarkupPercent').on('input change', function () {
+        $modal.find('#Product_PurchaseCurrency, #Product_PricingMode, #Product_ProfitMarkupPercent').on('input change', function () {
             syncEditModePicker();
             updateEditPricing();
         });
@@ -416,6 +857,9 @@ $(function () {
     $(document).on('shown.bs.modal.productsEditPricing', '.modal', function () {
         initEditPricing($(this));
     });
+    $(document).on('shown.bs.modal.productsCreatePricing', '.modal', function () {
+        initCreateDialog($(this));
+    });
 
     function getFilterPayload() {
         return {
@@ -425,12 +869,22 @@ $(function () {
             stockStatus: $('#ProductStockStatusFilter').val() || null,
             pricingMode: $('#ProductPricingModeFilter').val() || null,
             costStatus: $('#ProductCostStatusFilter').val() || null,
-            displayCurrency: displayCurrency
         };
     }
 
     function reloadProducts() {
         dataTable.ajax.reload();
+    }
+
+    // Exchange-rate changes affect dynamic product prices returned by the
+    // server. Keep the table in sync when the rate cache is refreshed, while
+    // safely no-oping during page/modal initialization before DataTables is
+    // ready.
+    function refreshTablePrices() {
+        if (!dataTable || !dataTable.ajax) {
+            return;
+        }
+        dataTable.ajax.reload(null, false);
     }
 
     function resetFilters() {
@@ -517,14 +971,14 @@ $(function () {
             { title: 'Stok', data: 'quantity', render: function (data, type, row) { return renderStock(row); } },
             { title: 'Fiyat politikası', orderable: false, render: function (data, type, row) { return renderPricingBehavior(row); } },
             { title: 'Maliyet kaynağı', data: 'lastPurchaseDocumentNumber', orderable: false, render: function (data, type, row) { return renderCostSource(row); } },
-            { title: 'Kilitli referans maliyet', data: 'lastPurchaseCostCurrencyAmount', render: function (data, type, row) { return renderReferenceCost(row); } },
-            { title: 'Güncel satış önerisi', data: 'suggestedSaleUnitPrice', orderable: false, render: function (data, type, row) { return renderSalePreview(row); } },
+            { title: 'Güncel net TL maliyet', data: 'currentNetCostInTry', render: function (data, type, row) { return renderReferenceCost(row); } },
+            { title: 'Güncel TL satış fiyatı', data: 'suggestedSaleUnitPrice', orderable: false, render: function (data, type, row) { return renderSalePreview(row); } },
             { title: 'Marka / kategori', data: 'brandName', visible: false, orderable: false, render: function (data, type, row) { return renderBrandCategory(row); } },
             { title: 'Barkod', data: 'barcode', visible: false, render: function (data, type, row) { return escapeHtml(row.barcode || '-'); } },
             { title: 'OEM kodları', data: 'oemCodes', visible: false, orderable: false, render: function (data, type, row) { return escapeHtml(row.oemCodes || '-'); } },
             { title: 'Son alış tarihi', data: 'lastPurchaseDate', visible: false, render: function (data, type, row) { return renderOptionalDate(row); } },
             { title: 'Alış tutarı', data: 'lastPurchaseSourceNetUnitCost', visible: false, render: function (data, type, row) { return renderOptionalMoney(row.lastPurchaseSourceNetUnitCost, row.lastPurchaseSourceCurrencyCode); } },
-            { title: 'Fatura kuru', data: 'lastPurchaseExchangeRate', visible: false, render: function (data, type, row) { return Number(data || 0) > 0 ? '1 ' + escapeHtml(row.pricingCurrencyCode || 'TRY') + ' = ' + Number(data).toFixed(4) + ' TRY' : '<span class="product-table-muted">-</span>'; } },
+            { title: 'Fatura kuru', data: 'lastPurchaseExchangeRate', visible: false, render: function (data, type, row) { return Number(data || 0) > 0 ? '1 ' + escapeHtml(row.purchaseCurrency || 'TRY') + ' = ' + Number(data).toFixed(4) + ' TRY' : '<span class="product-table-muted">-</span>'; } },
             { title: 'TRY maliyeti', data: 'lastPurchaseCostTryAmount', visible: false, render: function (data, type, row) { return renderOptionalMoney(data, 'TRY'); } },
             { title: 'Referans satış (seçili)', data: 'suggestedSaleUnitPrice', visible: false, render: function (data, type, row) { return renderOptionalReferenceSale(row); } },
             { title: 'Raf / konum', data: 'shelfLocation', visible: false, orderable: false, render: function (data, type, row) { return escapeHtml(row.shelfLocation || '-'); } }
@@ -533,10 +987,44 @@ $(function () {
 
     initColumnResizeHandles();
 
-    $('#NewProductButton').on('click', openEditor);
+    $('#NewProductButton').on('click', function () {
+        createModal.open();
+        refreshDialogHeroAfterOpen('.product-create-dialog-form');
+    });
     $('#CloseProductEditor').on('click', closeEditor);
-    $('#Product_PurchasePrice, #Product_SalePrice, #Product_PurchaseCurrency, #Product_SaleCurrency, #Product_ProfitMarkupPercent').on('input change', updatePriceEquivalents);
+    $('#Product_PurchasePrice, #Product_SalePrice, #Product_PurchaseCurrency, #Product_ProfitMarkupPercent').on('input change', function () {
+        updatePriceEquivalents();
+        updateCreateFinanceHero();
+    });
+    $('#ProductPreviewVatRate, [data-discount-matrix] input').on('input change', updateCreateFinanceHero);
     $('#CalculateSalePrice').on('click', calculateSalePrice);
+    $('#GenerateProductSku').on('click', generateSku);
+    $('.product-editor-tab').on('click', function () {
+        activateCreateSection(String($(this).data('product-tab')));
+    });
+    $('#ProductCreateForm').on('keydown', function (event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeEditor();
+            return;
+        }
+        if (event.key === 'Enter' && !event.isComposing && !$(event.target).is('textarea, button')) {
+            event.preventDefault();
+            this.requestSubmit();
+        }
+    });
+    $(document).on('keydown.productsCreate', function (event) {
+        if (editor.prop('hidden')) {
+            return;
+        }
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeEditor();
+        } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            document.getElementById('ProductCreateForm').requestSubmit();
+        }
+    });
 
     function initCreatePricingModePicker() {
         var $scope = $('#ProductEditor');
@@ -553,6 +1041,7 @@ $(function () {
                 $(this).toggleClass('is-selected', String($(this).data('pricing-mode')) === compareMode);
             });
             $scope.find('[data-pricing-manual-field]').prop('hidden', dynamic);
+            updateCreateFinanceHero();
         }
         $scope.find('[data-pricing-mode-picker] .product-pricing-mode-option').on('click', function () {
             var targetMode = String($(this).data('pricing-mode'));
@@ -583,17 +1072,21 @@ $(function () {
     $('#ResetProductFilters').on('click', resetFilters);
     $('.products-quick-filter').on('click', function () { applyQuickFilter($(this).data('quick-filter')); });
 
-    $('#DisplayCurrency').on('change', function () {
-        displayCurrency = String(this.value || 'TRY').toUpperCase();
-        localStorage.setItem('productDisplayCurrency', displayCurrency);
-        refreshTablePrices();
+    $('#ShowReferenceCurrency').on('change', function () {
+        showReferenceCurrency = this.checked;
+        localStorage.setItem('productShowReferenceCurrency', String(showReferenceCurrency));
+        if (dataTable) {
+            dataTable.rows().invalidate().draw(false);
+        }
     });
 
     editModal.onResult(function () { dataTable.ajax.reload(null, false); });
+    createModal.onResult(function () { dataTable.ajax.reload(null, false); });
 
     $('#ProductsTable').on('click', '.product-edit-button', function () {
         closeEditor();
         editModal.open({ id: $(this).data('id') });
+        refreshDialogHeroAfterOpen('.product-edit-dialog-form');
     });
 
     $('#ProductsTable').on('click', '.product-delete-button', function () {

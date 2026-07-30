@@ -59,9 +59,7 @@ public class DocumentWorkflowAppServiceTests : NoxStockEntityFrameworkCoreTestBa
             Quantity = 10,
             CriticalStockLevel = 2,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
         });
 
         var customer = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
@@ -111,7 +109,7 @@ public class DocumentWorkflowAppServiceTests : NoxStockEntityFrameworkCoreTestBa
         });
 
         approved.Status.ShouldBe(DocumentStatus.PartiallyPaid);
-        approved.GrandTotal.ShouldBe(200);
+        approved.GrandTotal.ShouldBe(240);
         approved.PaidAmount.ShouldBe(50);
 
         var duplicateApproval = await Should.ThrowAsync<BusinessException>(() =>
@@ -125,7 +123,7 @@ public class DocumentWorkflowAppServiceTests : NoxStockEntityFrameworkCoreTestBa
         var transactionsAfterApprove = await _accountTransactionRepository.GetListAsync(x => x.DocumentId == document.Id);
 
         productAfterApprove.Quantity.ShouldBe(8);
-        customerAfterApprove.Balance.ShouldBe(150);
+        customerAfterApprove.Balance.ShouldBe(190);
         cashAfterApprove.Balance.ShouldBe(50);
         movementsAfterApprove.Single().Type.ShouldBe(StockMovementType.SalesInvoice);
         movementsAfterApprove.Single().Quantity.ShouldBe(-2);
@@ -136,7 +134,7 @@ public class DocumentWorkflowAppServiceTests : NoxStockEntityFrameworkCoreTestBa
         {
             OperationKey = "sales-payment-001",
             AccountId = cashAccount.Id,
-            Amount = 150,
+            Amount = 190,
             PaymentDate = DateTime.UtcNow,
             Description = "Kalan tutar tahsil edildi"
         };
@@ -144,17 +142,17 @@ public class DocumentWorkflowAppServiceTests : NoxStockEntityFrameworkCoreTestBa
         var replayedPayment = await _documentWorkflowAppService.RecordPaymentAsync(document.Id, paymentInput);
 
         paid.Status.ShouldBe(DocumentStatus.Paid);
-        paid.PaidAmount.ShouldBe(200);
-        replayedPayment.PaidAmount.ShouldBe(200);
+        paid.PaidAmount.ShouldBe(240);
+        replayedPayment.PaidAmount.ShouldBe(240);
 
         var customerAfterPayment = await _businessPartnerRepository.GetAsync(customer.Id);
         var cashAfterPayment = await _accountRepository.GetAsync(cashAccount.Id);
         var transactionsAfterPayment = await _accountTransactionRepository.GetListAsync(x => x.DocumentId == document.Id);
 
         customerAfterPayment.Balance.ShouldBe(0);
-        cashAfterPayment.Balance.ShouldBe(200);
+        cashAfterPayment.Balance.ShouldBe(240);
         transactionsAfterPayment.Count(x => x.Type == AccountTransactionType.Collection).ShouldBe(2);
-        transactionsAfterPayment.Sum(x => x.Amount).ShouldBe(200);
+        transactionsAfterPayment.Sum(x => x.Amount).ShouldBe(240);
 
         var paymentHistory = await _businessPartnerStatementAppService.GetPaymentHistoryAsync(customer.Id);
         paymentHistory.Count.ShouldBe(2);
@@ -177,7 +175,7 @@ public class DocumentWorkflowAppServiceTests : NoxStockEntityFrameworkCoreTestBa
         movementsAfterCancel.Count(x => x.Type == StockMovementType.Reversal).ShouldBe(1);
         movementsAfterCancel.Single(x => x.Type == StockMovementType.Reversal).Quantity.ShouldBe(2);
         transactionsAfterCancel.Count(x => x.Type == AccountTransactionType.Reversal).ShouldBe(2);
-        transactionsAfterCancel.Where(x => x.Type == AccountTransactionType.Reversal).Sum(x => x.Amount).ShouldBe(-200);
+        transactionsAfterCancel.Where(x => x.Type == AccountTransactionType.Reversal).Sum(x => x.Amount).ShouldBe(-240);
 
         var duplicateCancellation = await Should.ThrowAsync<BusinessException>(() =>
             _documentWorkflowAppService.CancelAsync(document.Id));
@@ -205,9 +203,7 @@ public class DocumentWorkflowAppServiceTests : NoxStockEntityFrameworkCoreTestBa
             Quantity = 20,
             CriticalStockLevel = 5,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
         });
 
         var supplier = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto

@@ -14,10 +14,20 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     public string Unit { get; set; }
     public string ShelfLocation { get; set; }
     public decimal PurchasePrice { get; set; }
+    public decimal PurchaseListPrice { get; set; }
+    public decimal PurchaseDiscount1 { get; set; }
+    public decimal PurchaseDiscount2 { get; set; }
+    public decimal PurchaseDiscount3 { get; set; }
+    public decimal PurchaseDiscount4 { get; set; }
+    public decimal ExchangeRateAtPurchase { get; set; }
     public decimal SalePrice { get; set; }
+    public decimal SalesDiscount1 { get; set; }
+    public decimal SalesDiscount2 { get; set; }
+    public decimal SalesDiscount3 { get; set; }
+    public decimal SalesDiscount4 { get; set; }
+    public int VatRate { get; set; }
     public decimal ProfitMarkupPercent { get; set; }
     public bool UseCurrentExchangeRateForSale { get; set; }
-    public string PricingCurrencyCode { get; set; } = "TRY";
     public ProductPricingMode PricingMode { get; set; }
     public string? LastPurchaseCostCurrencyCode { get; set; }
     public decimal? LastPurchaseCostCurrencyAmount { get; set; }
@@ -35,9 +45,7 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     public decimal Quantity { get; set; }
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; }
-    public string Currency { get; set; }
     public string PurchaseCurrency { get; set; }
-    public string SaleCurrency { get; set; }
     public string? OemCodes { get; set; }
     
     // Derived properties for UI
@@ -49,12 +57,12 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     // Server-calculated list preview. A list must never recalculate dynamic prices in the browser.
     public bool IsSuggestedSaleAvailable { get; set; } = true;
     public string? SuggestedSaleUnavailableReason { get; set; }
-    public string SuggestedSaleCurrency { get; set; } = "TRY";
     public decimal? SuggestedSaleUnitPrice { get; set; }
     public decimal? SuggestedSalePriceInTry { get; set; }
     public decimal? SuggestedSaleExchangeRate { get; set; }
     public DateTime? SuggestedSaleRateDate { get; set; }
-    public decimal? CurrentPricingCurrencyExchangeRate { get; set; }
-    public DateTime? CurrentPricingCurrencyRateDate { get; set; }
+    public decimal? CurrentReferenceCurrencyExchangeRate { get; set; }
+    public DateTime? CurrentReferenceCurrencyRateDate { get; set; }
+    public decimal? CurrentNetCostInTry { get; set; }
     public decimal? ReferenceSaleUnitPrice { get; set; }
 }

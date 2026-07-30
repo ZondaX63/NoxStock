@@ -42,14 +42,12 @@ public class ProductCostProfileService : DomainService, IProductCostProfileServi
 
             var product = await _productRepository.GetAsync(item.ProductId);
             var sourceCurrency = NormalizeCurrency(document.Currency);
-            var pricingCurrency = NormalizeCurrency(string.IsNullOrWhiteSpace(product.PricingCurrencyCode)
-                ? product.SaleCurrency
-                : product.PricingCurrencyCode);
+            var referenceCurrency = NormalizeCurrency(product.PurchaseCurrency);
             var sourceExchangeRate = GetDocumentRate(document, sourceCurrency);
-            var pricingExchangeRate = GetDocumentRate(document, pricingCurrency);
-            var sourceNetUnitCost = Round(item.UnitPrice * (1 - item.DiscountRate / 100m));
+            var referenceExchangeRate = GetDocumentRate(document, referenceCurrency);
+            var sourceNetUnitCost = ApplyPurchaseDiscountChain(item);
             var tryEquivalentCost = Round(sourceNetUnitCost * sourceExchangeRate);
-            var pricingEquivalentCost = Round(tryEquivalentCost / pricingExchangeRate);
+            var referenceEquivalentCost = Round(tryEquivalentCost / referenceExchangeRate);
 
             var history = new ProductCostHistory(GuidGenerator.Create(), CurrentTenant.Id)
             {
@@ -62,8 +60,8 @@ public class ProductCostProfileService : DomainService, IProductCostProfileServi
                 SourceNetUnitCost = sourceNetUnitCost,
                 SourceExchangeRate = sourceExchangeRate,
                 TryEquivalentNetUnitCost = tryEquivalentCost,
-                PricingCurrencyCode = pricingCurrency,
-                PricingCurrencyEquivalentCost = pricingEquivalentCost,
+                ReferenceCurrencyCode = referenceCurrency,
+                ReferenceCurrencyEquivalentCost = referenceEquivalentCost,
                 ChangeType = ProductCostHistoryChangeType.PurchaseApproved
             };
 
@@ -97,8 +95,8 @@ public class ProductCostProfileService : DomainService, IProductCostProfileServi
                     SourceNetUnitCost = approvedHistory.SourceNetUnitCost,
                     SourceExchangeRate = approvedHistory.SourceExchangeRate,
                     TryEquivalentNetUnitCost = approvedHistory.TryEquivalentNetUnitCost,
-                    PricingCurrencyCode = approvedHistory.PricingCurrencyCode,
-                    PricingCurrencyEquivalentCost = approvedHistory.PricingCurrencyEquivalentCost,
+                    ReferenceCurrencyCode = approvedHistory.ReferenceCurrencyCode,
+                    ReferenceCurrencyEquivalentCost = approvedHistory.ReferenceCurrencyEquivalentCost,
                     ChangeType = ProductCostHistoryChangeType.PurchaseCancelled
                 });
             }
@@ -147,12 +145,11 @@ public class ProductCostProfileService : DomainService, IProductCostProfileServi
 
     private Task ApplyProfileAsync(Product product, ProductCostHistory history)
     {
-        product.PricingCurrencyCode = history.PricingCurrencyCode;
-        product.LastPurchaseCostCurrencyCode = history.PricingCurrencyCode;
-        product.LastPurchaseCostCurrencyAmount = history.PricingCurrencyEquivalentCost;
+        product.LastPurchaseCostCurrencyCode = history.ReferenceCurrencyCode;
+        product.LastPurchaseCostCurrencyAmount = history.ReferenceCurrencyEquivalentCost;
         product.LastPurchaseCostTryAmount = history.TryEquivalentNetUnitCost;
-        product.LastPurchaseExchangeRate = history.PricingCurrencyEquivalentCost > 0m
-            ? Math.Round(history.TryEquivalentNetUnitCost / history.PricingCurrencyEquivalentCost, 6, MidpointRounding.AwayFromZero)
+        product.LastPurchaseExchangeRate = history.ReferenceCurrencyEquivalentCost > 0m
+            ? Math.Round(history.TryEquivalentNetUnitCost / history.ReferenceCurrencyEquivalentCost, 6, MidpointRounding.AwayFromZero)
             : history.SourceExchangeRate;
         product.LastPurchaseDate = history.CostDate;
         product.LastPurchaseDocumentId = history.SourceDocumentId;
@@ -200,4 +197,20 @@ public class ProductCostProfileService : DomainService, IProductCostProfileServi
     }
 
     private static decimal Round(decimal value) => Math.Round(value, 6, MidpointRounding.AwayFromZero);
+
+    private static decimal ApplyPurchaseDiscountChain(DocumentItem item)
+    {
+        var hasDiscountChain = item.PurchaseDiscount1 != 0m || item.PurchaseDiscount2 != 0m ||
+            item.PurchaseDiscount3 != 0m || item.PurchaseDiscount4 != 0m;
+        if (!hasDiscountChain)
+        {
+            return Round(item.UnitPrice * (1m - item.DiscountRate / 100m));
+        }
+
+        return Round(item.UnitPrice *
+            (1m - item.PurchaseDiscount1 / 100m) *
+            (1m - item.PurchaseDiscount2 / 100m) *
+            (1m - item.PurchaseDiscount3 / 100m) *
+            (1m - item.PurchaseDiscount4 / 100m));
+    }
 }

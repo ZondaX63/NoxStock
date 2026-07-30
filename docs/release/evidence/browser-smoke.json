@@ -3,7 +3,9 @@
     "argv": [
       "/usr/bin/node",
       "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/node_modules/.bin/playwright",
-      "test"
+      "test",
+      "tests/license-regression.spec.js",
+      "--project=chromium"
     ],
     "configFile": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/playwright.config.js",
     "rootDir": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests",
@@ -65,13 +67,13 @@
   },
   "suites": [
     {
-      "title": "private-beta.spec.js",
-      "file": "private-beta.spec.js",
+      "title": "license-regression.spec.js",
+      "file": "license-regression.spec.js",
       "column": 0,
       "line": 0,
       "specs": [
         {
-          "title": "private beta critical commercial paths preserve business state and tenant isolation",
+          "title": "C1 license states, MaxUsers and CUSTOM entitlements are enforced end to end",
           "ok": false,
           "tags": [],
           "tests": [
@@ -85,23 +87,26 @@
                 {
                   "workerIndex": 0,
                   "parallelIndex": 0,
-                  "status": "timedOut",
-                  "duration": 180033,
+                  "status": "failed",
+                  "duration": 8439,
                   "error": {
-                    "message": "\u001b[31mTest timeout of 180000ms exceeded.\u001b[39m",
-                    "stack": "\u001b[31mTest timeout of 180000ms exceeded.\u001b[39m"
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"LICENSE_LIMIT_REACHED\"\u001b[39m\nReceived string:    \u001b[31m\" An internal error occurred during your request!\"\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"LICENSE_LIMIT_REACHED\"\u001b[39m\nReceived string:    \u001b[31m\" An internal error occurred during your request!\"\u001b[39m\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js:174:52\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js:161:3",
+                    "location": {
+                      "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js",
+                      "column": 52,
+                      "line": 174
+                    },
+                    "snippet": "  172 |     const rejected = await createTenantUserFromHost(hostPage, tenantId, `${runId}.6`);\n  173 |     expect(rejected.ok).toBe(false);\n> 174 |     expect(`${rejected.code} ${rejected.message}`).toContain('LICENSE_LIMIT_REACHED');\n      |                                                    ^\n  175 |   });\n  176 |\n  177 |   await test.step('expired tenant is read-only while dashboard remains available', async () => {"
                   },
                   "errors": [
                     {
-                      "message": "\u001b[31mTest timeout of 180000ms exceeded.\u001b[39m"
-                    },
-                    {
                       "location": {
-                        "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js",
-                        "column": 61,
-                        "line": 370
+                        "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js",
+                        "column": 52,
+                        "line": 174
                       },
-                      "message": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Satış Geçmişi' })\u001b[22m\n\n\n  368 |   await test.step('open customer sales history, change the period, and follow the invoice detail link', async () => {\n  369 |     await page.goto(`/t/${atlas.name}/CustomerDetail?id=${customer.id}`);\n> 370 |     await page.getByRole('link', { name: 'Satış Geçmişi' }).click();\n      |                                                             ^\n  371 |     await expect(page).toHaveURL(new RegExp(`/t/${atlas.name}/Customers/${customer.id}/SalesHistory`));\n  372 |     await expect(page.getByRole('heading', { name: customer.name })).toBeVisible();\n  373 |     await expect(page.locator('tbody tr').filter({ hasText: invoiceNumber })).toBeVisible();\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:370:61\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:368:3"
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"LICENSE_LIMIT_REACHED\"\u001b[39m\nReceived string:    \u001b[31m\" An internal error occurred during your request!\"\u001b[39m\n\n  172 |     const rejected = await createTenantUserFromHost(hostPage, tenantId, `${runId}.6`);\n  173 |     expect(rejected.ok).toBe(false);\n> 174 |     expect(`${rejected.code} ${rejected.message}`).toContain('LICENSE_LIMIT_REACHED');\n      |                                                    ^\n  175 |   });\n  176 |\n  177 |   await test.step('expired tenant is read-only while dashboard remains available', async () => {\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js:174:52\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js:161:3"
                     }
                   ],
                   "stdout": [],
@@ -109,80 +114,65 @@
                   "retry": 0,
                   "steps": [
                     {
-                      "title": "provision active A/B and inactive pilot tenants through host UI",
-                      "duration": 1663
+                      "title": "host creates a tenant with a five-user PILOT trial",
+                      "duration": 1966
                     },
                     {
-                      "title": "tenant URL login, logout redirect, and login again",
-                      "duration": 1421
+                      "title": "active tenant creates product, invoice and POS sale",
+                      "duration": 1425
                     },
                     {
-                      "title": "prepare isolated cash account and customer using authenticated application contracts",
-                      "duration": 84
-                    },
-                    {
-                      "title": "add a foreign-cost product and find it by OEM through the UI",
-                      "duration": 1001
-                    },
-                    {
-                      "title": "complete and cancel POS sale; verify stock, account, document, and reversal movements",
-                      "duration": 1211
-                    },
-                    {
-                      "title": "create and approve a sale invoice through UI",
-                      "duration": 1177
-                    },
-                    {
-                      "title": "record collection and verify current-account and cash history",
-                      "duration": 953
-                    },
-                    {
-                      "title": "open customer sales history, change the period, and follow the invoice detail link",
-                      "duration": 172688,
+                      "title": "PILOT rejects the sixth user through host provisioning",
+                      "duration": 555,
                       "error": {
-                        "message": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Satış Geçmişi' })\u001b[22m\n",
-                        "stack": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('link', { name: 'Satış Geçmişi' })\u001b[22m\n\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:370:61\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js:368:3",
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"LICENSE_LIMIT_REACHED\"\u001b[39m\nReceived string:    \u001b[31m\" An internal error occurred during your request!\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"LICENSE_LIMIT_REACHED\"\u001b[39m\nReceived string:    \u001b[31m\" An internal error occurred during your request!\"\u001b[39m\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js:174:52\n    at /home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js:161:3",
                         "location": {
-                          "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/private-beta.spec.js",
-                          "column": 61,
-                          "line": 370
+                          "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js",
+                          "column": 52,
+                          "line": 174
                         },
-                        "snippet": "  368 |   await test.step('open customer sales history, change the period, and follow the invoice detail link', async () => {\n  369 |     await page.goto(`/t/${atlas.name}/CustomerDetail?id=${customer.id}`);\n> 370 |     await page.getByRole('link', { name: 'Satış Geçmişi' }).click();\n      |                                                             ^\n  371 |     await expect(page).toHaveURL(new RegExp(`/t/${atlas.name}/Customers/${customer.id}/SalesHistory`));\n  372 |     await expect(page.getByRole('heading', { name: customer.name })).toBeVisible();\n  373 |     await expect(page.locator('tbody tr').filter({ hasText: invoiceNumber })).toBeVisible();"
+                        "snippet": "  172 |     const rejected = await createTenantUserFromHost(hostPage, tenantId, `${runId}.6`);\n  173 |     expect(rejected.ok).toBe(false);\n> 174 |     expect(`${rejected.code} ${rejected.message}`).toContain('LICENSE_LIMIT_REACHED');\n      |                                                    ^\n  175 |   });\n  176 |\n  177 |   await test.step('expired tenant is read-only while dashboard remains available', async () => {"
                       }
                     }
                   ],
-                  "startTime": "2026-07-20T19:52:23.303Z",
+                  "startTime": "2026-07-24T16:40:04.871Z",
                   "annotations": [],
                   "attachments": [
                     {
                       "name": "screenshot",
                       "contentType": "image/png",
-                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/test-failed-1.png"
+                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/license-regression-C1-lice-a0a6d-nts-are-enforced-end-to-end-chromium/test-failed-2.png"
                     },
                     {
                       "name": "screenshot",
                       "contentType": "image/png",
-                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/test-failed-2.png"
+                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/license-regression-C1-lice-a0a6d-nts-are-enforced-end-to-end-chromium/test-failed-1.png"
                     },
                     {
                       "name": "error-context",
                       "contentType": "text/markdown",
-                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/error-context.md"
+                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/license-regression-C1-lice-a0a6d-nts-are-enforced-end-to-end-chromium/error-context.md"
                     },
                     {
                       "name": "trace",
                       "contentType": "application/zip",
-                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/private-beta-private-beta--79827--state-and-tenant-isolation-chromium/trace.zip"
+                      "path": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/test-results/license-regression-C1-lice-a0a6d-nts-are-enforced-end-to-end-chromium/trace.zip"
                     }
-                  ]
+                  ],
+                  "errorLocation": {
+                    "file": "/home/zondax/VSCode/NexStock/NoxStock/test/NoxStock.BrowserTests/tests/license-regression.spec.js",
+                    "column": 52,
+                    "line": 174
+                  }
                 }
               ],
               "status": "unexpected"
             }
           ],
-          "id": "57ab227373b2c4b90c39-987ffc885b1db9734bbc",
-          "file": "private-beta.spec.js",
-          "line": 133,
+          "id": "0240e18453cdafd4765a-d0a53bea5113f321b054",
+          "file": "license-regression.spec.js",
+          "line": 69,
           "column": 1
         }
       ]
@@ -190,8 +180,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-20T19:52:22.952Z",
-    "duration": 181065.085,
+    "startTime": "2026-07-24T16:40:04.302Z",
+    "duration": 9369.731,
     "expected": 0,
     "skipped": 0,
     "unexpected": 1,

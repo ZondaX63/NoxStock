@@ -42,6 +42,7 @@ public class CategoryAppService :
         return base.GetListAsync(input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task<CategoryDto> CreateAsync(CreateUpdateCategoryDto input)
     {
         CurrentTenant.RequireTenantId();
@@ -49,6 +50,7 @@ public class CategoryAppService :
         return await base.CreateAsync(input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task<CategoryDto> UpdateAsync(Guid id, CreateUpdateCategoryDto input)
     {
         CurrentTenant.RequireTenantId();
@@ -61,6 +63,7 @@ public class CategoryAppService :
         return await base.UpdateAsync(id, input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task DeleteAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();

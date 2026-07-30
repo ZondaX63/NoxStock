@@ -30,6 +30,7 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
 
     [Authorize(NoxStockPermissions.Offers.Edit)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public Task<DocumentDto> SendOfferAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -38,6 +39,7 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
 
     [Authorize(NoxStockPermissions.Offers.Convert)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public Task<DocumentDto> ConvertOfferToOrderAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -46,6 +48,7 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
 
     [Authorize(NoxStockPermissions.Offers.Convert)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public Task<DocumentDto> ConvertOfferToInvoiceAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -54,6 +57,7 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
 
     [Authorize(NoxStockPermissions.Orders.Edit)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public Task<DocumentDto> SendOrderAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -62,6 +66,7 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
 
     [Authorize(NoxStockPermissions.Orders.Convert)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task<DocumentDto> ConvertOrderToInvoiceAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -131,6 +136,11 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
                 .WithData("TargetDocumentId", existingTarget.Id);
         }
 
+        var isTrySaleTarget = targetType is DocumentType.SaleOrder or DocumentType.SaleInvoice or DocumentType.Offer;
+        var conversionFactor = isTrySaleTarget &&
+            !string.Equals(source.Currency, "TRY", StringComparison.OrdinalIgnoreCase)
+                ? source.ExchangeRate
+                : 1m;
         var target = new Document(GuidGenerator.Create(), CurrentTenant.Id)
         {
             SourceDocumentId = source.Id,
@@ -138,12 +148,12 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
             DocNumber = await _documentNumberGenerator.GetNextAsync(targetType),
             Type = targetType,
             Status = DocumentStatus.Draft,
-            Subtotal = source.Subtotal,
-            VatTotal = source.VatTotal,
-            DiscountTotal = source.DiscountTotal,
-            GrandTotal = source.GrandTotal,
-            Currency = source.Currency,
-            ExchangeRate = source.ExchangeRate,
+            Subtotal = RoundMoney(source.Subtotal * conversionFactor),
+            VatTotal = RoundMoney(source.VatTotal * conversionFactor),
+            DiscountTotal = RoundMoney(source.DiscountTotal * conversionFactor),
+            GrandTotal = RoundMoney(source.GrandTotal * conversionFactor),
+            Currency = isTrySaleTarget ? "TRY" : source.Currency,
+            ExchangeRate = isTrySaleTarget ? 1m : source.ExchangeRate,
             Date = Clock.Now,
             DueDate = source.DueDate,
             Description = $"{source.DocNumber} belgesinden dönüştürüldü."
@@ -155,10 +165,14 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
             {
                 ProductId = item.ProductId,
                 Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
+                UnitPrice = RoundMoney(item.UnitPrice * conversionFactor),
                 VatRate = item.VatRate,
                 DiscountRate = item.DiscountRate,
-                Total = item.Total
+                PurchaseDiscount1 = item.PurchaseDiscount1,
+                PurchaseDiscount2 = item.PurchaseDiscount2,
+                PurchaseDiscount3 = item.PurchaseDiscount3,
+                PurchaseDiscount4 = item.PurchaseDiscount4,
+                Total = RoundMoney(item.Total * conversionFactor)
             });
         }
 
@@ -167,6 +181,9 @@ public class CommercialDocumentWorkflowAppService : ApplicationService, ICommerc
         await _documentRepository.InsertAsync(target, autoSave: true);
         return await MapDocumentAsync(target);
     }
+
+    private static decimal RoundMoney(decimal value) =>
+        Math.Round(value, 4, MidpointRounding.AwayFromZero);
 
     private async Task<Document> GetDocumentWithItemsAsync(Guid id)
     {

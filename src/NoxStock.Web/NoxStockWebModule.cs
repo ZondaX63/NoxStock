@@ -50,11 +50,11 @@ using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.SettingManagement.Web;
-using Volo.Abp.Threading;
 using NoxStock.Web.ExchangeRates;
 using NoxStock.Web.Diagnostics;
 using NoxStock.Web.MultiTenancy;
 using Volo.Abp.Auditing;
+using NoxStock.Web.Licensing;
 
 namespace NoxStock.Web;
 
@@ -117,6 +117,7 @@ public class NoxStockWebModule : AbpModule
 
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        context.Services.AddHostedService<LicenseLifecycleBackgroundService>();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
 
@@ -211,6 +212,7 @@ public class NoxStockWebModule : AbpModule
         
         Configure<RazorPagesOptions>(options =>
         {
+            options.Conventions.AddPageRoute("/LicenseManagement/Index", "/host/licenses");
             options.Conventions.AuthorizePage("/Dashboard/Index");
             options.Conventions.AuthorizeFolder("/Products", NoxStockPermissions.Products.Default);
             options.Conventions.AuthorizeFolder("/Brands", NoxStockPermissions.Brands.Default);
@@ -228,6 +230,7 @@ public class NoxStockWebModule : AbpModule
             options.Conventions.AuthorizePage("/Sales/Index", NoxStockPermissions.Sales.Default);
             options.Conventions.AuthorizePage("/Reports/Index", NoxStockPermissions.Reports.Default);
             options.Conventions.AuthorizePage("/Notifications/Index", NoxStockPermissions.Notifications.Default);
+            options.Conventions.AuthorizeFolder("/LicenseManagement", NoxStockPermissions.Licenses.Default);
             options.Conventions.AuthorizePage("/AuditLogs/Index", NoxStockPermissions.AuditLogs.Default);
             options.Conventions.AuthorizePage("/Settings/Index", NoxStockPermissions.Settings.Default);
             options.Conventions.AuthorizePage("/Personnel/Index", NoxStockPermissions.Personnel.Default);
@@ -393,8 +396,6 @@ public class NoxStockWebModule : AbpModule
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
 
-        EnsureDefaultUserRolePermissions(context);
-
         app.UseForwardedHeaders();
 
         if (env.IsDevelopment())
@@ -429,6 +430,7 @@ public class NoxStockWebModule : AbpModule
         app.UseUnitOfWork();
         app.UseMiddleware<TenantActivationMiddleware>();
         app.UseMiddleware<PlatformAdministrationMiddleware>();
+        app.UseMiddleware<TenantLicenseEnforcementMiddleware>();
         app.UseDynamicClaims();
         app.UseAuthorization();
 
@@ -437,19 +439,4 @@ public class NoxStockWebModule : AbpModule
         app.UseConfiguredEndpoints();
     }
 
-    private static void EnsureDefaultUserRolePermissions(ApplicationInitializationContext context)
-    {
-        using var scope = context.ServiceProvider.CreateScope();
-        var permissionDataSeeder = scope.ServiceProvider.GetRequiredService<Volo.Abp.PermissionManagement.IPermissionDataSeeder>();
-        AsyncHelper.RunSync(() => permissionDataSeeder.SeedAsync(
-            Volo.Abp.Authorization.Permissions.RolePermissionValueProvider.ProviderName,
-            "user",
-            NoxStockDefaultUserPermissions.Basic
-        ));
-        AsyncHelper.RunSync(() => permissionDataSeeder.SeedAsync(
-            Volo.Abp.Authorization.Permissions.RolePermissionValueProvider.ProviderName,
-            "admin",
-            [NoxStockPermissions.AuditLogs.Default]
-        ));
-    }
 }

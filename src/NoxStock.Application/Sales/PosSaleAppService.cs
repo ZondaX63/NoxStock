@@ -34,6 +34,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     private readonly IRepository<ProductCostHistory, Guid> _costHistoryRepository;
     private readonly ISettingProvider _settingProvider;
     private readonly IProductPriceCalculator _priceCalculator;
+    private readonly NoxStock.Licensing.ITenantLicenseAccessChecker _licenseAccessChecker;
 
     public PosSaleAppService(
         IRepository<Document, Guid> documentRepository,
@@ -45,7 +46,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         IRepository<StockMovement, Guid> stockMovementRepository,
         IRepository<ProductCostHistory, Guid> costHistoryRepository,
         ISettingProvider settingProvider,
-        IProductPriceCalculator priceCalculator)
+        IProductPriceCalculator priceCalculator,
+        NoxStock.Licensing.ITenantLicenseAccessChecker licenseAccessChecker)
     {
         _documentRepository = documentRepository;
         _productRepository = productRepository;
@@ -57,12 +59,14 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         _costHistoryRepository = costHistoryRepository;
         _settingProvider = settingProvider;
         _priceCalculator = priceCalculator;
+        _licenseAccessChecker = licenseAccessChecker;
     }
 
     public async Task<List<PosProductLookupDto>> GetProductsAsync(PosProductLookupInputDto input)
     {
         CurrentTenant.RequireTenantId();
-        var targetCurrency = NormalizePosCurrency(input.Currency);
+        await _licenseAccessChecker.EnsureFeatureAsync(
+            NoxStock.Licensing.LicenseFeatureNames.Pos);
         var query = await _productRepository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
         if (!string.IsNullOrWhiteSpace(filter))
@@ -91,8 +95,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         var result = new List<PosProductLookupDto>();
         foreach (var product in products)
         {
-            var currency = targetCurrency ?? (string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency);
-            var calculation = await _priceCalculator.CalculateAsync(product, currency);
+            var calculation = await _priceCalculator.CalculateAsync(product);
             var costHistory = product.LastPurchaseCostHistoryId.HasValue
                 ? await _costHistoryRepository.FindAsync(product.LastPurchaseCostHistoryId.Value)
                 : null;
@@ -104,12 +107,21 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 Barcode = product.Barcode,
                 OemCodes = oemCodesByProduct.GetValueOrDefault(product.Id),
                 Unit = product.Unit,
-                SalePrice = calculation.UnitPrice,
+                // SalePrice remains the editable KDV-hariç list price. The
+                // separate final amount is what the cashier sees and collects.
+                SalePrice = calculation.ListSalePriceInTry,
+                ListSalePrice = calculation.ListSalePriceInTry,
+                NetSalePrice = calculation.UnitPrice,
+                CustomerFinalUnitPrice = calculation.CustomerFinalPriceInTry,
+                VatRate = product.VatRate,
+                SalesDiscount1 = product.SalesDiscount1,
+                SalesDiscount2 = product.SalesDiscount2,
+                SalesDiscount3 = product.SalesDiscount3,
+                SalesDiscount4 = product.SalesDiscount4,
                 IsPriceAvailable = calculation.IsAvailable,
                 PriceUnavailableReason = calculation.UnavailableReason,
                 Currency = calculation.Currency,
                 OriginalSalePrice = product.SalePrice,
-                SaleCurrency = product.SaleCurrency,
                 PurchasePrice = product.PurchasePrice,
                 PurchaseCurrency = product.PurchaseCurrency,
                 UsesCurrentExchangeRate = calculation.UsesCurrentExchangeRate,
@@ -121,9 +133,9 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 LastPurchaseSourceCurrencyCode = costHistory?.SourceCurrencyCode,
                 LastPurchaseSourceNetUnitCost = costHistory?.SourceNetUnitCost,
                 LastPurchaseSourceExchangeRate = costHistory?.SourceExchangeRate,
-                PricingCurrencyCode = product.PricingCurrencyCode,
-                PricingCurrencyExchangeRate = calculation.PricingCurrencyExchangeRate,
-                PricingCurrencyRateDate = calculation.PricingCurrencyRateDate,
+                ReferenceCurrencyCode = product.PurchaseCurrency,
+                ReferenceCurrencyExchangeRate = calculation.ReferenceCurrencyExchangeRate,
+                ReferenceCurrencyRateDate = calculation.ReferenceCurrencyRateDate,
                 ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice,
                 ProductCostHistoryId = calculation.ProductCostHistoryId,
                 Quantity = product.Quantity,
@@ -137,6 +149,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     public async Task<PosCheckoutOptionsDto> GetCheckoutOptionsAsync()
     {
         CurrentTenant.RequireTenantId();
+        await _licenseAccessChecker.EnsureFeatureAsync(
+            NoxStock.Licensing.LicenseFeatureNames.Pos);
         var accounts = await _accountRepository.GetQueryableAsync();
         var businessPartners = await _businessPartnerRepository.GetQueryableAsync();
 
@@ -171,10 +185,12 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
     [Authorize(NoxStockPermissions.Sales.Create)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task<PosSaleDto> CreateAsync(CreatePosSaleDto input)
     {
         CurrentTenant.RequireTenantId();
-        var targetCurrency = NormalizePosCurrency(input.Currency);
+        await _licenseAccessChecker.EnsureFeatureAsync(
+            NoxStock.Licensing.LicenseFeatureNames.Pos);
         var operationKey = NormalizeOperationKey(input.OperationKey);
         if (operationKey is not null)
         {
@@ -230,25 +246,19 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         foreach (var cartItem in cartItems)
         {
             var product = await _productRepository.GetAsync(cartItem.ProductId);
-            var productCurrency = targetCurrency ?? (string.IsNullOrWhiteSpace(product.SaleCurrency) ? "TRY" : product.SaleCurrency);
-            var calculation = await _priceCalculator.CalculateAsync(product, productCurrency);
+            var calculation = await _priceCalculator.CalculateAsync(product);
             if (!calculation.IsAvailable)
             {
                 throw new BusinessException(calculation.UnavailableReason ?? "NoxStock:ProductApprovedPurchaseCostUnavailable")
                     .WithData("ProductName", product.Name);
             }
             var usesManualPrice = cartItem.IsUnitPriceOverridden && cartItem.UnitPrice is > 0;
-            var unitPrice = usesManualPrice ? cartItem.UnitPrice!.Value : calculation.UnitPrice;
-            if (document.Items.Count == 0)
-            {
-                document.Currency = calculation.Currency;
-                document.ExchangeRate = calculation.ExchangeRate;
-            }
-            else if (!string.Equals(document.Currency, calculation.Currency, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new BusinessException("NoxStock:PosSaleRequiresSingleCurrency");
-            }
-
+            var unitPrice = usesManualPrice ? cartItem.UnitPrice!.Value : calculation.ListSalePriceInTry;
+            var effectiveDiscountRate = GetEffectiveSalesDiscountRate(product);
+            var lineNet = unitPrice * cartItem.Quantity;
+            var discount = lineNet * effectiveDiscountRate / 100m;
+            var taxable = lineNet - discount;
+            var vat = taxable * product.VatRate / 100m;
             if (product.TrackStock && product.Quantity < cartItem.Quantity)
             {
                 throw new BusinessException("NoxStock:InsufficientStock")
@@ -261,29 +271,42 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 ProductId = product.Id,
                 Quantity = cartItem.Quantity,
                 UnitPrice = unitPrice,
-                VatRate = 0,
-                DiscountRate = 0,
-                Total = unitPrice * cartItem.Quantity,
+                VatRate = product.VatRate,
+                DiscountRate = effectiveDiscountRate,
+                SalesDiscount1 = product.SalesDiscount1,
+                SalesDiscount2 = product.SalesDiscount2,
+                SalesDiscount3 = product.SalesDiscount3,
+                SalesDiscount4 = product.SalesDiscount4,
+                Total = RoundMoney(taxable + vat),
                 IsUnitPriceOverridden = usesManualPrice,
                 PriceCurrencyCode = calculation.Currency,
                 PriceExchangeRate = calculation.ExchangeRate,
-                PriceRateDate = calculation.PricingCurrencyRateDate ?? calculation.RateDate,
-                UnitPriceTry = RoundMoney(unitPrice * calculation.ExchangeRate),
+                PriceRateDate = calculation.ReferenceCurrencyRateDate ?? calculation.RateDate,
+                UnitPriceTry = RoundMoney(unitPrice),
                 ProductCostHistoryId = calculation.ProductCostHistoryId ?? product.LastPurchaseCostHistoryId,
                 PricingMode = usesManualPrice ? ProductPricingMode.Manual : product.PricingMode,
                 CostCurrencyCode = product.LastPurchaseCostCurrencyCode,
                 CostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
-                CostTryAmount = product.LastPurchaseCostTryAmount,
+                CostTryAmount = calculation.NetCostInTry > 0m
+                    ? calculation.NetCostInTry
+                    : product.LastPurchaseCostTryAmount,
                 AppliedMarkupPercent = calculation.MarkupPercent,
-                ReferenceSaleCurrencyCode = calculation.PricingCurrencyCode,
-                ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice,
-                ReferenceSaleExchangeRate = calculation.PricingCurrencyExchangeRate,
+                ReferenceCurrencyCode = calculation.ReferenceCurrencyCode,
+                ReferenceUnitPrice = calculation.ReferenceSaleUnitPrice,
+                ReferenceExchangeRate = calculation.ReferenceCurrencyExchangeRate,
                 PricingSnapshotDate = saleDate
             });
         }
 
-        document.Subtotal = document.Items.Sum(x => x.Total);
-        document.GrandTotal = document.Subtotal;
+        document.Subtotal = RoundMoney(document.Items.Sum(x => x.Quantity * x.UnitPrice));
+        document.DiscountTotal = RoundMoney(document.Items.Sum(x => x.Quantity * x.UnitPrice * x.DiscountRate / 100m));
+        document.VatTotal = RoundMoney(document.Items.Sum(x =>
+        {
+            var lineNet = x.Quantity * x.UnitPrice;
+            var discount = lineNet * x.DiscountRate / 100m;
+            return (lineNet - discount) * x.VatRate / 100m;
+        }));
+        document.GrandTotal = RoundMoney(document.Subtotal - document.DiscountTotal + document.VatTotal);
 
         var businessPartner = await ResolveBusinessPartnerAsync(input.BusinessPartnerId, input.PaymentMethod, document.Currency);
         document.BusinessPartnerId = businessPartner.Id;
@@ -354,6 +377,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     public async Task<List<PosSaleDto>> GetRecentAsync()
     {
         CurrentTenant.RequireTenantId();
+        await _licenseAccessChecker.EnsureFeatureAsync(
+            NoxStock.Licensing.LicenseFeatureNames.Pos);
         var documents = await _documentRepository.GetQueryableAsync();
         var businessPartners = await _businessPartnerRepository.GetQueryableAsync();
         var transactions = await _accountTransactionRepository.GetQueryableAsync();
@@ -408,9 +433,12 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
     [Authorize(NoxStockPermissions.Sales.Cancel)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task<PosSaleDto> CancelAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
+        await _licenseAccessChecker.EnsureFeatureAsync(
+            NoxStock.Licensing.LicenseFeatureNames.Pos);
         var queryable = await _documentRepository.WithDetailsAsync(x => x.Items);
         var document = await AsyncExecuter.FirstOrDefaultAsync(queryable.Where(x => x.Id == id));
         if (document is null || document.Type != DocumentType.PosSale)
@@ -496,20 +524,13 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
     private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
 
-    private static string? NormalizePosCurrency(string? currency)
+    private static decimal GetEffectiveSalesDiscountRate(Product product)
     {
-        if (string.IsNullOrWhiteSpace(currency))
-        {
-            return null;
-        }
-
-        var normalized = currency.Trim().ToUpperInvariant();
-        if (normalized is not ("TRY" or "USD" or "EUR"))
-        {
-            throw new BusinessException("NoxStock:UnsupportedCurrency").WithData("Currency", currency);
-        }
-
-        return normalized;
+        var remainingFactor = (1m - product.SalesDiscount1 / 100m) *
+            (1m - product.SalesDiscount2 / 100m) *
+            (1m - product.SalesDiscount3 / 100m) *
+            (1m - product.SalesDiscount4 / 100m);
+        return RoundMoney((1m - remainingFactor) * 100m);
     }
 
     private async Task<BusinessPartner> ResolveBusinessPartnerAsync(

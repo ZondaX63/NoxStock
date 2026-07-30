@@ -40,9 +40,26 @@
             </div>
             <div>
                 <label asp-for="Invoice.Currency" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">@L["Pricing:DocumentCurrency"]</label>
-                <select asp-for="Invoice.Currency" id="InvoiceCurrency" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white"><option>TRY</option><option>USD</option><option>EUR</option></select>
-                <p id="InvoiceRateInfo" class="mt-1 text-xs text-slate-500">İşlem kuru kaydedilirken güvenilir kur kaynağından alınır.</p>
+                @if (Model.IsTryOnlySalesDocument)
+                {
+                    <input asp-for="Invoice.Currency" type="hidden" value="TRY" />
+                    <select id="InvoiceCurrency" class="w-full bg-slate-100 border border-slate-200 text-slate-700 rounded-lg block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" disabled><option selected>TRY</option></select>
+                    <p id="InvoiceRateInfo" class="mt-1 text-xs text-slate-500">Türkiye satış işlemleri yalnızca TL olarak yürütülür.</p>
+                }
+                else
+                {
+                    <select asp-for="Invoice.Currency" id="InvoiceCurrency" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white"><option>TRY</option><option>USD</option><option>EUR</option></select>
+                    <p id="InvoiceRateInfo" class="mt-1 text-xs text-slate-500">İşlem kuru kaydedilirken güvenilir kur kaynağından alınır.</p>
+                }
             </div>
+            @if (!Model.IsTryOnlySalesDocument)
+            {
+                <div>
+                    <label asp-for="Invoice.ExchangeRate" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Belge günü kuru (1 döviz = TL)</label>
+                    <input asp-for="Invoice.ExchangeRate" id="InvoiceExchangeRate" type="number" min="0.000001" step="0.000001" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" />
+                    <p class="mt-1 text-xs text-slate-500">Bu değer alış maliyetinin tarihsel kur snapshot'ı olarak kilitlenir.</p>
+                </div>
+            }
             <div>
                 <label asp-for="Invoice.BusinessPartnerId" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     @Model.GetPartnerLabel()
@@ -99,7 +116,7 @@
                         <th>Ürün</th>
                         <th>Miktar</th>
                         <th>Birim fiyat</th>
-                        <th>İskonto %</th>
+                        <th>@(Model.UsesPurchaseCosting ? "Alış iskontoları %" : "Satış iskontoları %")</th>
                         <th>KDV %</th>
                         <th class="text-right">Satır toplamı</th>
                         <th></th>
@@ -112,7 +129,9 @@
                         <tr class="item-row border-b border-slate-100 dark:border-slate-700">
                             <td>
                                 <input type="hidden" name="Invoice.Items.Index" value="@index" />
-                                <select name="Invoice.Items[@index].ProductId" class="product-select invoice-product-select w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required>
+                                <div class="invoice-product-picker">
+                                <input type="search" class="product-search" placeholder="Ürün ara / barkod okut" autocomplete="off" aria-label="Ürün ara" />
+                                <div class="invoice-product-select-row"><select name="Invoice.Items[@index].ProductId" class="product-select invoice-product-select w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required>
                                     @foreach (var opt in Model.Products)
                                     {
                                         if (opt.Value == item.ProductId.ToString())
@@ -124,7 +143,7 @@
                                             <option value="@opt.Value">@opt.Text</option>
                                         }
                                     }
-                                </select>
+                                </select><button type="button" class="quick-product-create" title="Listede olmayan ürünü kaydet">Yeni ürün</button></div></div>
                             </td>
                             <td><input type="number" name="Invoice.Items[@index].Quantity" class="calc-input quantity-input invoice-number-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0.01" step="any" required /></td>
                             <td>
@@ -132,7 +151,28 @@
                                 <input type="number" name="Invoice.Items[@index].UnitPrice" class="calc-input price-input invoice-price-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" step="any" required />
                                 <p class="price-source mt-1 text-xs text-slate-500">Bu satırın kaydedilmiş fiyatı.</p>
                             </td>
-                            <td><input type="number" name="Invoice.Items[@index].DiscountRate" class="calc-input discount-input invoice-rate-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.DiscountRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" /></td>
+                            <td>
+                                @if (Model.UsesPurchaseCosting)
+                                {
+                                    <input type="hidden" name="Invoice.Items[@index].DiscountRate" value="@item.DiscountRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                    <div class="invoice-purchase-discounts">
+                                        <input type="number" name="Invoice.Items[@index].PurchaseDiscount1" class="calc-input purchase-discount-input invoice-rate-input" value="@item.PurchaseDiscount1.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" aria-label="Alış iskontosu 1" />
+                                        <input type="number" name="Invoice.Items[@index].PurchaseDiscount2" class="calc-input purchase-discount-input invoice-rate-input" value="@item.PurchaseDiscount2.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" aria-label="Alış iskontosu 2" />
+                                        <input type="number" name="Invoice.Items[@index].PurchaseDiscount3" class="calc-input purchase-discount-input invoice-rate-input" value="@item.PurchaseDiscount3.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" aria-label="Alış iskontosu 3" />
+                                        <input type="number" name="Invoice.Items[@index].PurchaseDiscount4" class="calc-input purchase-discount-input invoice-rate-input" value="@item.PurchaseDiscount4.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" aria-label="Alış iskontosu 4" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <input type="hidden" name="Invoice.Items[@index].DiscountRate" value="@item.DiscountRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                    <div class="invoice-purchase-discounts">
+                                        <input type="number" name="Invoice.Items[@index].SalesDiscount1" class="calc-input sales-discount-input invoice-rate-input" value="@item.SalesDiscount1.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" aria-label="Satış iskontosu 1" />
+                                        <input type="number" name="Invoice.Items[@index].SalesDiscount2" class="calc-input sales-discount-input invoice-rate-input" value="@item.SalesDiscount2.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" aria-label="Satış iskontosu 2" />
+                                        <input type="number" name="Invoice.Items[@index].SalesDiscount3" class="calc-input sales-discount-input invoice-rate-input" value="@item.SalesDiscount3.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" aria-label="Satış iskontosu 3" />
+                                        <input type="number" name="Invoice.Items[@index].SalesDiscount4" class="calc-input sales-discount-input invoice-rate-input" value="@item.SalesDiscount4.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" aria-label="Satış iskontosu 4" />
+                                    </div>
+                                }
+                            </td>
                             <td><input type="number" name="Invoice.Items[@index].VatRate" class="calc-input vat-input invoice-rate-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.VatRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" /></td>
                             <td class="text-right font-semibold text-slate-800 dark:text-white row-total">0.00</td>
                             <td class="text-center"><button type="button" class="remove-row-btn text-slate-400 hover:text-red-500 transition-colors"><span class="material-icons-round text-lg">delete</span></button></td>
@@ -180,16 +220,32 @@
 </form>
 </div>
 
+<div id="QuickProductPanel" class="quick-product-panel" hidden role="dialog" aria-modal="true" aria-labelledby="QuickProductPanelTitle">
+    <div class="quick-product-panel-card">
+        <div class="flex items-center justify-between gap-3 border-b border-slate-200 pb-3 dark:border-slate-700">
+            <div><h3 id="QuickProductPanelTitle" class="text-base font-semibold text-slate-800 dark:text-white">Yeni ürün kartı</h3><p class="mt-1 text-xs text-slate-500">Ürünü kaydedin; seçili fatura satırına otomatik eklenir.</p></div>
+            <button type="button" class="quick-product-cancel text-slate-400 hover:text-slate-700" aria-label="Kapat">×</button>
+        </div>
+        <div class="grid grid-cols-1 gap-3 py-4 sm:grid-cols-2">
+            <label class="text-sm font-medium text-slate-700 dark:text-slate-300 sm:col-span-2">Ürün adı *<input id="QuickProductName" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white" maxlength="150" required /></label>
+            <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Stok kodu *<input id="QuickProductSku" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white" maxlength="100" required /></label>
+            <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Barkod<input id="QuickProductBarcode" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white" maxlength="100" /></label>
+            <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Birim<select id="QuickProductUnit" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select></label>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-700"><button type="button" class="quick-product-cancel rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium dark:border-slate-600">Vazgeç</button><button type="button" id="QuickProductSave" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Ürünü kaydet</button></div>
+    </div>
+</div>
+
 <template id="ItemRowTemplate">
     <tr class="item-row border-b border-slate-100 dark:border-slate-700">
         <td>
             <input type="hidden" name="Invoice.Items.Index" value="{id}" />
-            <select name="Invoice.Items[{id}].ProductId" class="product-select invoice-product-select w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required>
+            <div class="invoice-product-picker"><input type="search" class="product-search" placeholder="Ürün ara / barkod okut" autocomplete="off" aria-label="Ürün ara" /><div class="invoice-product-select-row"><select name="Invoice.Items[{id}].ProductId" class="product-select invoice-product-select w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required>
                 @foreach (var opt in Model.Products)
                 {
                     <option value="@opt.Value">@opt.Text</option>
                 }
-            </select>
+            </select><button type="button" class="quick-product-create" title="Listede olmayan ürünü kaydet">Yeni ürün</button></div></div>
         </td>
         <td>
             <input type="number" name="Invoice.Items[{id}].Quantity" class="calc-input quantity-input invoice-number-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="1" min="0.01" step="any" required />
@@ -200,7 +256,26 @@
             <p class="price-source mt-1 text-xs text-slate-500"></p>
         </td>
         <td>
-            <input type="number" name="Invoice.Items[{id}].DiscountRate" class="calc-input discount-input invoice-rate-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="0" min="0" max="100" step="any" />
+            @if (Model.UsesPurchaseCosting)
+            {
+                <input type="hidden" name="Invoice.Items[{id}].DiscountRate" value="0" />
+                <div class="invoice-purchase-discounts">
+                    <input type="number" name="Invoice.Items[{id}].PurchaseDiscount1" class="calc-input purchase-discount-input invoice-rate-input" value="0" min="0" max="100" step="any" aria-label="Alış iskontosu 1" />
+                    <input type="number" name="Invoice.Items[{id}].PurchaseDiscount2" class="calc-input purchase-discount-input invoice-rate-input" value="0" min="0" max="100" step="any" aria-label="Alış iskontosu 2" />
+                    <input type="number" name="Invoice.Items[{id}].PurchaseDiscount3" class="calc-input purchase-discount-input invoice-rate-input" value="0" min="0" max="100" step="any" aria-label="Alış iskontosu 3" />
+                    <input type="number" name="Invoice.Items[{id}].PurchaseDiscount4" class="calc-input purchase-discount-input invoice-rate-input" value="0" min="0" max="100" step="any" aria-label="Alış iskontosu 4" />
+                </div>
+            }
+            else
+            {
+                <input type="hidden" name="Invoice.Items[{id}].DiscountRate" value="0" />
+                <div class="invoice-purchase-discounts">
+                    <input type="number" name="Invoice.Items[{id}].SalesDiscount1" class="calc-input sales-discount-input invoice-rate-input" value="0" min="0" max="100" step="any" aria-label="Satış iskontosu 1" />
+                    <input type="number" name="Invoice.Items[{id}].SalesDiscount2" class="calc-input sales-discount-input invoice-rate-input" value="0" min="0" max="100" step="any" aria-label="Satış iskontosu 2" />
+                    <input type="number" name="Invoice.Items[{id}].SalesDiscount3" class="calc-input sales-discount-input invoice-rate-input" value="0" min="0" max="100" step="any" aria-label="Satış iskontosu 3" />
+                    <input type="number" name="Invoice.Items[{id}].SalesDiscount4" class="calc-input sales-discount-input invoice-rate-input" value="0" min="0" max="100" step="any" aria-label="Satış iskontosu 4" />
+                </div>
+            }
         </td>
         <td>
             <input type="number" name="Invoice.Items[{id}].VatRate" class="calc-input vat-input invoice-rate-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@Model.DefaultVatRate.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" max="100" step="any" />
@@ -226,6 +301,16 @@
     .invoice-lines-table .invoice-col-vat { width: 9%; }
     .invoice-lines-table .invoice-col-total { width: 15%; }
     .invoice-lines-table .invoice-col-actions { width: 5%; }
+    .invoice-purchase-discounts { display: grid; grid-template-columns: repeat(2, minmax(3.5rem, 1fr)); gap: .35rem; }
+    .invoice-purchase-discounts input { width: 100%; border: 1px solid var(--nx-border); border-radius: .45rem; padding: .45rem; background: var(--nx-surface); color: var(--nx-text); }
+    .invoice-product-picker { display: grid; gap: .4rem; }
+    .invoice-product-select-row { display: flex; gap: .35rem; }
+    .invoice-product-select-row select { min-width: 0; }
+    .product-search { width: 100%; border: 1px solid var(--nx-border); border-radius: .45rem; padding: .4rem .55rem; background: var(--nx-surface); color: var(--nx-text); font-size: .78rem; }
+    .quick-product-create { flex: 0 0 auto; border: 1px solid #818cf8; color: #4338ca; background: transparent; border-radius: .45rem; padding: .35rem .5rem; font-size: .72rem; font-weight: 600; }
+    .quick-product-panel { position: fixed; inset: 0; z-index: 1060; display: grid; place-items: center; padding: 1rem; background: rgb(15 23 42 / .5); }
+    .quick-product-panel[hidden] { display: none; }
+    .quick-product-panel-card { width: min(32rem, 100%); border: 1px solid var(--nx-border); border-radius: .85rem; background: var(--nx-surface); padding: 1.25rem; box-shadow: 0 1.5rem 4rem rgb(15 23 42 / .25); }
     .invoice-lines-table th { padding: 0.75rem 0.875rem; border-bottom: 1px solid var(--nx-border); background: var(--nx-surface-muted); color: var(--nx-text-muted); font-size: 0.75rem; font-weight: 600; letter-spacing: 0; text-transform: uppercase; }
     .invoice-lines-table td { padding: 0.875rem; vertical-align: top; border-bottom: 1px solid var(--nx-border); color: var(--nx-text); }
     .invoice-lines-table .row-total, .invoice-lines-table td:last-child { padding-top: 1.75rem; }

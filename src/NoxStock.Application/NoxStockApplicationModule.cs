@@ -8,6 +8,9 @@ using Volo.Abp.Modularity;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using Volo.Abp.TenantManagement;
+using Volo.Abp.Application.Services;
+using Volo.Abp.DependencyInjection;
+using NoxStock.Licensing;
 
 namespace NoxStock;
 
@@ -25,6 +28,14 @@ public class NoxStockApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        context.Services.OnRegistered(registrationContext =>
+        {
+            if (typeof(IApplicationService).IsAssignableFrom(registrationContext.ImplementationType))
+            {
+                registrationContext.Interceptors.TryAdd<TenantLicenseWriteInterceptor>();
+            }
+        });
+
         context.Services.AddHttpClient("TcmbExchangeRates", client =>
         {
             client.BaseAddress = new Uri("https://www.tcmb.gov.tr/");

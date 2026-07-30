@@ -5,7 +5,8 @@
 @using System.Globalization
 @using Microsoft.AspNetCore.Mvc.Localization
 @using Volo.Abp.MultiTenancy
-@model OperationalAlertsSummaryDto
+@using NoxStock.Licensing
+@model NoxStock.Web.Components.AppTopbar.AppTopbarViewModel
 @inject ICurrentUser CurrentUser
 @inject ICurrentTenant CurrentTenant
 @inject IHtmlLocalizer<NoxStockResource> L
@@ -22,6 +23,17 @@
     var currentCulture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
     var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
     var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+    string LicenseStatusText(LicenseStatus? status) => status switch
+    {
+        LicenseStatus.Trial => L["License:Status:Trial"].Value,
+        LicenseStatus.Active => L["License:Status:Active"].Value,
+        LicenseStatus.GracePeriod => L["License:Status:GracePeriod"].Value,
+        LicenseStatus.PastDue => L["License:Status:PastDue"].Value,
+        LicenseStatus.Suspended => L["License:Status:Suspended"].Value,
+        LicenseStatus.Expired => L["License:Status:Expired"].Value,
+        LicenseStatus.Cancelled => L["License:Status:Cancelled"].Value,
+        _ => L["License:Missing"].Value
+    };
 }
 
 <header class="app-topbar bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-700 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-20 transition-colors duration-200">
@@ -48,6 +60,15 @@
             <div><span class="font-semibold text-indigo-500">EUR</span><span id="CurrencyTickerEur" class="ml-1.5 font-bold text-slate-700 dark:text-slate-200">--</span></div>
             <span id="CurrencyTickerUpdated" class="sr-only">@L["Topbar:Loading"]</span>
         </div>
+
+        @if (isTenantUser && Model.License is not null)
+        {
+            <div class="hidden items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold lg:flex @(Model.License.CanWrite ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300")" title="@L["License:Description"]">
+                <span>@(string.IsNullOrWhiteSpace(Model.License.PlanCode) ? "-" : Model.License.PlanCode)</span>
+                <span aria-hidden="true">·</span>
+                <span>@LicenseStatusText(Model.License.Status)</span>
+            </div>
+        }
         
         <button @@click="darkMode = !darkMode" class="p-2 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors focus:outline-none" title="@L["Topbar:Theme"]">
             <span class="material-icons-round" x-text="darkMode ? 'light_mode' : 'dark_mode'"></span>
@@ -55,9 +76,9 @@
 
         <div class="relative" x-data="{ showNotifications: false }">
             <button @@click="showNotifications = !showNotifications" @@click.away="showNotifications = false" class="relative p-2 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors focus:outline-none">
-                @if (Model.TotalCount > 0)
+                @if (Model.AlertsSummary.TotalCount > 0)
                 {
-                    <span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-5 text-white ring-2 ring-white">@Model.TotalCount</span>
+                    <span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-5 text-white ring-2 ring-white">@Model.AlertsSummary.TotalCount</span>
                 }
                 <span class="material-icons-round">notifications</span>
             </button>
@@ -76,14 +97,14 @@
                     <h3 class="text-sm font-semibold text-gray-900 dark:text-white">@L["Topbar:Notifications"]</h3>
                     <a href="~/Notifications" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">@L["Topbar:ViewAllNotifications"]</a>
                 </div>
-                @if (Model.Alerts.Count == 0)
+                @if (Model.AlertsSummary.Alerts.Count == 0)
                 {
                     <div class="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">@L["Topbar:NoOpenNotifications"]</div>
                 }
                 else
                 {
                     <div class="max-h-64 overflow-y-auto">
-                        @foreach (var alert in Model.Alerts.Take(4))
+                        @foreach (var alert in Model.AlertsSummary.Alerts.Take(4))
                         {
                             <a href="@alert.Link" class="block border-b border-slate-100 px-4 py-3 text-left hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700/50">
                                 <span class="block text-xs font-semibold @(alert.Severity == "Critical" ? "text-red-600" : "text-amber-600")">@alert.Title</span>

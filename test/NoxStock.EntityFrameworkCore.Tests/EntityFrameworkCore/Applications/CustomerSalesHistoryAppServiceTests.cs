@@ -75,7 +75,7 @@ public class CustomerSalesHistoryAppServiceTests : NoxStockEntityFrameworkCoreTe
         history.TotalCount.ShouldBe(2);
         history.Summary.DocumentCount.ShouldBe(2);
         history.Summary.TotalQuantity.ShouldBe(3);
-        history.Summary.NetSales.Single(x => x.Currency == "TRY").Amount.ShouldBe(250);
+        history.Summary.NetSales.Single(x => x.Currency == "TRY").Amount.ShouldBe(300);
         history.Summary.TopProductName.ShouldBe(fixture.Product.Name);
         history.Groups.SelectMany(group => group.Rows).Select(row => row.DocumentNumber)
             .ShouldContain("HISTORY-INV-001");
@@ -241,9 +241,7 @@ public class CustomerSalesHistoryAppServiceTests : NoxStockEntityFrameworkCoreTe
             Quantity = 100,
             CriticalStockLevel = 1,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY",
             BrandId = brandId,
             CategoryId = categoryId
         });

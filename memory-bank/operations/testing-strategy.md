@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Last updated: 2026-07-13
+Last updated: 2026-07-24
 
 ## Current Test Status
 
@@ -9,6 +9,22 @@ Current command:
 ```bash
 dotnet test NoxStock.slnx -m:1
 ```
+
+Licensing coverage added on 2026-07-24:
+
+- Domain status/period invariants, suspension reason, reactivation, and terminal cancellation.
+- Host-only service boundary, one-current-license invariant, entitlements, and audit history.
+- Immediate write denial after host suspension using the real tenant-independent distributed-cache key.
+- Host-only license permission and route tenancy sides.
+
+Final licensing run:
+
+- Domain tests: 8 passed
+- EntityFrameworkCore tests: 58 passed
+- Web tests: 48 passed
+- Docker DbMigrator: exit code 0
+- Web process/database health: Healthy
+- Authenticated browser pass: pending
 
 Status on 2026-07-13:
 

@@ -33,9 +33,7 @@ public class NullTenantDataAuditTests : NoxStockEntityFrameworkCoreTestBase
             Description = string.Empty,
             Unit = "Adet",
             ShelfLocation = string.Empty,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
         };
 
         using (_currentTenant.Change(null))

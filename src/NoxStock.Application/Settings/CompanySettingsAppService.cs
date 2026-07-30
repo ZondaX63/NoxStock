@@ -57,6 +57,7 @@ public class CompanySettingsAppService : ApplicationService, ICompanySettingsApp
     }
 
     [Authorize(NoxStockPermissions.Settings.Edit)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task<CompanySettingsDto> UpdateAsync(CompanySettingsDto input)
     {
         CurrentTenant.RequireTenantId();

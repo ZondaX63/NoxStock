@@ -1,12 +1,17 @@
 # Active Context
 
-Last updated: 2026-07-20
+Last updated: 2026-07-24
 
 ## Current Work Focus
 
-The active target is **Private Beta Prototype Release**. All new modules and broad optimization work are frozen. Pilot scope is 5-10 tenants with limited users and a recommended 5,000-10,000 products per tenant. Follow only B1-B5 in `privateBetaRelease.md`; Warehouse, reservation, e-Invoice, CRM, advanced accounting, broad report refactors, and target-scale performance work are out of scope. P1.1 is paused. AI features remain explicitly out of scope.
+The active target remains **Private Beta Prototype Release**. The explicitly requested tenant-license foundation is now the only newly opened platform module; other broad module and optimization work remains frozen. Pilot scope is 5-10 tenants with limited users and a recommended 5,000-10,000 products per tenant. Warehouse, reservation, e-Invoice, CRM, advanced accounting, broad report refactors, and target-scale performance work remain out of scope. P1.1 is paused. AI features remain explicitly out of scope.
 
 ## Recent Changes
+
+- Added the host-owned SaaS licensing model, migration `20260724154448_Add_SaaS_Licensing`, PILOT/CUSTOM plan seed, one-current-license database invariant, feature/limit rows, lifecycle audit, UTC status transitions, and 14/7/1-day expiry audit notices.
+- Added host-only license permissions, application-service and unsafe-HTTP write enforcement, product/POS/dynamic-pricing/multi-currency entitlement checks, and stable license error codes. The access cache is tenant-prefix independent; host suspension is fail-closed and the next tenant write check is covered by integration test.
+- Added the localized host license management page and tenant topbar status indicator. Existing tenants receive an idempotent PILOT trial; host tenant provisioning assigns the same default trial.
+- Remaining license scope is explicit in `features/licensing.md`: `MaxUsers` provisioning enforcement, CUSTOM entitlement editing, and tenant-facing expiry notification delivery are not complete. Docker/PostgreSQL runtime migration and health verification pass; authenticated host/tenant browser verification remains required before deployment.
 
 - Completed the currency-cost UI integration for Products, invoices, and POS without changing the commercial pricing rules. Product creation/edit now exposes explicit Manual vs Dynamic Currency Markup mode, reference currency, markup, an active last-approved-cost snapshot, current TRY sale quote, and a tenant-scoped cost-history table sourced from immutable `ProductCostHistory` records.
 - Invoice create/edit now exposes the document currency, server-rate status, sales-price snapshot guidance, automatic quote details, and a clear manual-price state. Purchase documents show a per-line approval-impact preview and explicitly state that drafts do not update product cost; cost changes remain limited to purchase approval.
@@ -229,8 +234,8 @@ The active target is **Private Beta Prototype Release**. All new modules and bro
 
 ## Immediate Next Steps
 
-0. Validate spare-parts OEM search in a tenant browser walkthrough with multiple brands sharing one OEM code; expand product interchange/reference-code capabilities if manufacturer catalog imports are added.
-1. Perform a browser/device regression pass across tenant onboarding, login/logout, products, POS, invoices, offers/orders, reports, notifications, audit logs, modals, and both color themes; fix any page-specific overflow found in real viewport screenshots.
-2. Continue invoice excellence: detail/edit view, payment reconciliation and allocation history, tax-inclusive/withholding scenarios, and true PDF/email/archive output.
-3. Add remaining production safeguards: backups/restore drill, health alerts, secrets/TLS/reverse-proxy review, CI smoke checks, and alert routing.
-4. Start Phase 8 with warehouses, locations, transfers, stock counts, returns, and historical inventory costing after invoice work is stable.
+0. Apply the license migration through Docker DbMigrator, verify host/tenant seed counts, and browser-check assign/suspend/read-only/reactivate plus TR/EN/dark mode.
+1. Connect `MaxUsers` to host user provisioning and add a small CUSTOM feature/limit editor; route expiry audit notices to tenant notifications.
+2. Add tenant-scoped backend/database uniqueness for SKU and non-empty barcode, define the intended OEM uniqueness boundary, and handle concurrent conflicts with stable business errors.
+3. Remove direct operational quantity editing from the product form; keep `Product.Quantity` as the documented compatibility balance until the separately approved WarehouseStock backfill phase.
+4. Continue invoice/browser regression and private-beta production safeguards without opening broad Warehouse/CRM/e-Invoice scope.

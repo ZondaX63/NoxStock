@@ -16,8 +16,8 @@ public class ProductCostHistory : FullAuditedEntity<Guid>, IMultiTenant
     public decimal SourceNetUnitCost { get; set; }
     public decimal SourceExchangeRate { get; set; }
     public decimal TryEquivalentNetUnitCost { get; set; }
-    public string PricingCurrencyCode { get; set; } = "TRY";
-    public decimal PricingCurrencyEquivalentCost { get; set; }
+    public string ReferenceCurrencyCode { get; set; } = "TRY";
+    public decimal ReferenceCurrencyEquivalentCost { get; set; }
     public ProductCostHistoryChangeType ChangeType { get; set; }
 
     protected ProductCostHistory()

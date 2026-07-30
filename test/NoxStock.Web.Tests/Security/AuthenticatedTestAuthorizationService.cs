@@ -46,7 +46,8 @@ public sealed class AuthenticatedTestAuthorizationService : IAuthorizationServic
         return !policyNames.Any(policyName =>
             policyName.StartsWith("AbpIdentity.", System.StringComparison.Ordinal) ||
             policyName.StartsWith("AbpTenantManagement.", System.StringComparison.Ordinal) ||
-            policyName.StartsWith("NoxStock.AuditLogs", System.StringComparison.Ordinal));
+            policyName.StartsWith("NoxStock.AuditLogs", System.StringComparison.Ordinal) ||
+            policyName.StartsWith("NoxStock.Licenses", System.StringComparison.Ordinal));
     }
 
     private static IEnumerable<string> GetPolicies(object? resource)

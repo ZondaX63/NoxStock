@@ -32,6 +32,66 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     }
 
     [Fact]
+    public void Should_Apply_Purchase_Discounts_In_Sequence()
+    {
+        ProductPriceCalculator.ApplyDiscountChain(100m, 10m, 5m, 0m, 0m)
+            .ShouldBe(85.5m);
+    }
+
+    [Fact]
+    public async Task Should_Calculate_Complete_Manual_Pricing_Pipeline()
+    {
+        await _exchangeRateRepository.InsertAsync(new ExchangeRate(Guid.NewGuid(), "USD", 40m, DateTime.UtcNow));
+
+        var product = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Pipeline Product",
+            Sku = "PIPELINE-001",
+            Barcode = "869000000306",
+            Description = string.Empty,
+            Unit = "Adet",
+            ShelfLocation = "D4",
+            PurchaseListPrice = 30m,
+            PurchaseCurrency = "USD",
+            PurchaseDiscount1 = 10m,
+            PurchaseDiscount2 = 5m,
+            ExchangeRateAtPurchase = 40m,
+            SalePrice = 2000m,
+            SalesDiscount1 = 5m,
+            VatRate = 20,
+            PricingMode = ProductPricingMode.Manual,
+            ProfitMarkupPercent = 30m,
+            Quantity = 10m,
+            CriticalStockLevel = 1m,
+            TrackStock = true
+        });
+
+        var quote = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto
+        {
+            ProductId = product.Id
+        });
+
+        quote.NetCostInTry.ShouldBe(1026m);
+        quote.ListSalePriceInTry.ShouldBe(2000m);
+        quote.SalesDiscountAmountInTry.ShouldBe(100m);
+        quote.UnitPrice.ShouldBe(1900m);
+        quote.VatAmountInTry.ShouldBe(380m);
+        quote.CustomerFinalPriceInTry.ShouldBe(2280m);
+        quote.EstimatedProfitInTry.ShouldBe(874m);
+        quote.EstimatedNetMarginPercent.ShouldBe(46m);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var usd = await _exchangeRateRepository.GetAsync(x => x.Currency == "USD");
+            usd.Rate = 50m;
+            await _exchangeRateRepository.UpdateAsync(usd);
+        });
+        var afterRateChange = await _productPricingAppService.GetQuoteAsync(
+            new ProductPriceQuoteInputDto { ProductId = product.Id });
+        afterRateChange.UnitPrice.ShouldBe(1900m);
+    }
+
+    [Fact]
     public async Task Should_Use_Current_Cost_Currency_Rate_And_Markup_For_Sales_Document()
     {
         await _exchangeRateRepository.InsertAsync(new ExchangeRate(Guid.NewGuid(), "EUR", 35m, DateTime.UtcNow));
@@ -48,28 +108,23 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             PurchasePrice = 35m,
             PurchaseCurrency = "EUR",
             SalePrice = 1m,
-            SaleCurrency = "TRY",
-            PricingCurrencyCode = "EUR",
             PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = 40m,
             UseCurrentExchangeRateForSale = true,
             Quantity = 10m,
             CriticalStockLevel = 1m,
-            TrackStock = true,
-            Currency = "TRY"
+            TrackStock = true
         });
         await ApprovePurchaseAsync(product.Id, "EUR", 35m, "DYN-PURCHASE-001");
         var customer = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
         {
             Name = "Dynamic Price Customer",
-            Type = BusinessPartnerType.Customer,
-            Currency = "TRY"
+            Type = BusinessPartnerType.Customer
         });
 
         var quote = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto
         {
-            ProductId = product.Id,
-            Currency = "TRY"
+            ProductId = product.Id
         });
 
         quote.UnitPrice.ShouldBe(1715m);
@@ -100,7 +155,31 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
 
         document.ExchangeRate.ShouldBe(1m);
         document.Items.Single().UnitPrice.ShouldBe(1715m);
+        document.Items.Single().PriceCurrencyCode.ShouldBe("TRY");
+        document.Items.Single().ReferenceCurrencyCode.ShouldBe("EUR");
+        document.Items.Single().ReferenceExchangeRate.ShouldBe(35m);
         document.GrandTotal.ShouldBe(2058m);
+
+        var foreignCurrencyError = await Should.ThrowAsync<Volo.Abp.BusinessException>(() =>
+            _documentAppService.CreateAsync(new CreateUpdateDocumentDto
+            {
+                BusinessPartnerId = customer.Id,
+                DocNumber = "DYN-SALE-USD-REJECTED",
+                Type = DocumentType.SaleInvoice,
+                Currency = "USD",
+                Date = DateTime.UtcNow,
+                Items =
+                {
+                    new CreateUpdateDocumentItemDto
+                    {
+                        ProductId = product.Id,
+                        Quantity = 1m,
+                        UnitPrice = 1m,
+                        VatRate = 20m
+                    }
+                }
+            }));
+        foreignCurrencyError.Code.ShouldBe("NoxStock:SalesDocumentsRequireTry");
     }
 
     [Fact]
@@ -119,22 +198,18 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             PurchasePrice = 25m,
             PurchaseCurrency = "USD",
             SalePrice = 1m,
-            SaleCurrency = "TRY",
-            PricingCurrencyCode = "USD",
             PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = 40m,
             UseCurrentExchangeRateForSale = true,
             Quantity = 10m,
             CriticalStockLevel = 1m,
-            TrackStock = true,
-            Currency = "TRY"
+            TrackStock = true
         });
         await ApprovePurchaseAsync(product.Id, "USD", 25m, "OVERRIDE-PURCHASE-001");
         var customer = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
         {
             Name = "Override Price Customer",
-            Type = BusinessPartnerType.Customer,
-            Currency = "TRY"
+            Type = BusinessPartnerType.Customer
         });
 
         var document = await _documentAppService.CreateAsync(new CreateUpdateDocumentDto
@@ -177,17 +252,14 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             Unit = "Adet",
             ShelfLocation = "D3",
             PurchasePrice = 0m,
-            PurchaseCurrency = "TRY",
+            PurchaseCurrency = "USD",
             SalePrice = 0m,
-            SaleCurrency = "TRY",
-            PricingCurrencyCode = "USD",
             PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = 20m,
             UseCurrentExchangeRateForSale = true,
             Quantity = 10m,
             CriticalStockLevel = 1m,
-            TrackStock = true,
-            Currency = "TRY"
+            TrackStock = true
         });
         await ApprovePurchaseAsync(product.Id, "TRY", 1000m, "LIST-PREVIEW-PURCHASE-001");
 
@@ -201,16 +273,14 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         var list = await _productAppService.GetListAsync(new ProductGetListInput
         {
             Filter = "LIST-PREVIEW-001",
-            DisplayCurrency = "TRY",
             MaxResultCount = 10
         });
 
         var row = list.Items.Single();
         row.IsSuggestedSaleAvailable.ShouldBeTrue();
-        row.SuggestedSaleCurrency.ShouldBe("TRY");
         row.SuggestedSaleUnitPrice.ShouldBe(1230m);
         row.ReferenceSaleUnitPrice.ShouldBe(30m);
-        row.CurrentPricingCurrencyExchangeRate.ShouldBe(41m);
+        row.CurrentReferenceCurrencyExchangeRate.ShouldBe(41m);
         row.LastPurchaseCostCurrencyAmount.ShouldBe(25m);
     }
 

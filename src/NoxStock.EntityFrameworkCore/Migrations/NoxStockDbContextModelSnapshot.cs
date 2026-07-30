@@ -673,17 +673,57 @@ namespace NoxStock.Migrations
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("PurchaseDiscount1")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("PurchaseDiscount2")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("PurchaseDiscount3")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("PurchaseDiscount4")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("SalesDiscount1")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("SalesDiscount2")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("SalesDiscount3")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("SalesDiscount4")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,4)");
 
-                    b.Property<string>("ReferenceSaleCurrencyCode")
+                    b.Property<string>("ReferenceCurrencyCode")
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
-                    b.Property<decimal?>("ReferenceSaleExchangeRate")
+                    b.Property<decimal?>("ReferenceExchangeRate")
                         .HasColumnType("decimal(18,6)");
 
-                    b.Property<decimal?>("ReferenceSaleUnitPrice")
+                    b.Property<decimal?>("ReferenceUnitPrice")
                         .HasColumnType("decimal(18,6)");
 
                     b.Property<Guid?>("TenantId")
@@ -779,6 +819,336 @@ namespace NoxStock.Migrations
                     b.ToTable("AppExchangeRates", (string)null);
                 });
 
+            modelBuilder.Entity("NoxStock.Licensing.LicensePlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsCustom")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("AppLicensePlans", (string)null);
+                });
+
+            modelBuilder.Entity("NoxStock.Licensing.TenantLicense", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<DateTime?>("GracePeriodEndsAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("InternalNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsAutoRenew")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<Guid>("LicensePlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LicenseReference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SuspensionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LicensePlanId");
+
+                    b.HasIndex("LicenseReference")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasFilter("\"IsCurrent\" = TRUE AND \"IsDeleted\" = FALSE");
+
+                    b.HasIndex("Status", "ExpiresAtUtc");
+
+                    b.ToTable("AppTenantLicenses", (string)null);
+                });
+
+            modelBuilder.Entity("NoxStock.Licensing.TenantLicenseAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int?>("NewStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PreviousStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantLicenseId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantLicenseId");
+
+                    b.HasIndex("TenantId", "CreationTime");
+
+                    b.ToTable("AppTenantLicenseAuditLogs", (string)null);
+                });
+
+            modelBuilder.Entity("NoxStock.Licensing.TenantLicenseFeature", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("FeatureName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<Guid>("TenantLicenseId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantLicenseId", "FeatureName")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("AppTenantLicenseFeatures", (string)null);
+                });
+
+            modelBuilder.Entity("NoxStock.Licensing.TenantLicenseLimit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("LimitName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("LimitValue")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantLicenseId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantLicenseId", "LimitName")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("AppTenantLicenseLimits", (string)null);
+                });
+
             modelBuilder.Entity("NoxStock.Products.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -813,13 +1183,6 @@ namespace NoxStock.Migrations
                     b.Property<decimal>("CriticalStockLevel")
                         .HasColumnType("decimal(15,4)");
 
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasDefaultValue("TRY");
-
                     b.Property<Guid?>("DeleterId")
                         .HasColumnType("uuid")
                         .HasColumnName("DeleterId");
@@ -831,6 +1194,11 @@ namespace NoxStock.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<decimal>("ExchangeRateAtPurchase")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,6)")
+                        .HasDefaultValue(1m);
 
                     b.Property<string>("ExtraProperties")
                         .IsRequired()
@@ -887,13 +1255,6 @@ namespace NoxStock.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<string>("PricingCurrencyCode")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasDefaultValue("TRY");
-
                     b.Property<int>("PricingMode")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -911,21 +1272,59 @@ namespace NoxStock.Migrations
                         .HasColumnType("character varying(3)")
                         .HasDefaultValue("TRY");
 
+                    b.Property<decimal>("PurchaseDiscount1")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("PurchaseDiscount2")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("PurchaseDiscount3")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("PurchaseDiscount4")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("PurchaseListPrice")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,6)")
+                        .HasDefaultValue(0m);
+
                     b.Property<decimal>("PurchasePrice")
                         .HasColumnType("decimal(15,4)");
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(15,4)");
 
-                    b.Property<string>("SaleCurrency")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasDefaultValue("TRY");
-
                     b.Property<decimal>("SalePrice")
                         .HasColumnType("decimal(15,4)");
+
+                    b.Property<decimal>("SalesDiscount1")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("SalesDiscount2")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("SalesDiscount3")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("SalesDiscount4")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("ShelfLocation")
                         .IsRequired()
@@ -955,6 +1354,11 @@ namespace NoxStock.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
+
+                    b.Property<int>("VatRate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(20);
 
                     b.HasKey("Id");
 
@@ -1006,16 +1410,16 @@ namespace NoxStock.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
-                    b.Property<string>("PricingCurrencyCode")
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenceCurrencyCode")
                         .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
-                    b.Property<decimal>("PricingCurrencyEquivalentCost")
+                    b.Property<decimal>("ReferenceCurrencyEquivalentCost")
                         .HasColumnType("decimal(18,6)");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("SourceCurrencyCode")
                         .IsRequired()
@@ -3211,6 +3615,48 @@ namespace NoxStock.Migrations
                     b.HasOne("NoxStock.Products.Product", null)
                         .WithMany()
                         .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NoxStock.Licensing.TenantLicense", b =>
+                {
+                    b.HasOne("NoxStock.Licensing.LicensePlan", null)
+                        .WithMany()
+                        .HasForeignKey("LicensePlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Volo.Abp.TenantManagement.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NoxStock.Licensing.TenantLicenseAuditLog", b =>
+                {
+                    b.HasOne("NoxStock.Licensing.TenantLicense", null)
+                        .WithMany()
+                        .HasForeignKey("TenantLicenseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NoxStock.Licensing.TenantLicenseFeature", b =>
+                {
+                    b.HasOne("NoxStock.Licensing.TenantLicense", null)
+                        .WithMany()
+                        .HasForeignKey("TenantLicenseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NoxStock.Licensing.TenantLicenseLimit", b =>
+                {
+                    b.HasOne("NoxStock.Licensing.TenantLicense", null)
+                        .WithMany()
+                        .HasForeignKey("TenantLicenseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

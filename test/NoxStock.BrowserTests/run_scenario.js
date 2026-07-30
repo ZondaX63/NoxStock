@@ -45,7 +45,7 @@ const fs = require('fs');
 
     console.log('Yeni ürün ekleme formu açılıyor...');
     await page.locator('#NewProductButton').click();
-    await page.waitForSelector('#ProductEditor form:visible');
+    await page.waitForSelector('#ProductCreateDialogForm:visible');
 
     const runId = Date.now().toString(36).toUpperCase();
     const sku = `YAG-${runId}`;
@@ -54,9 +54,9 @@ const fs = require('fs');
     await page.locator('#Product_Name').fill(name);
     await page.locator('#Product_Sku').fill(sku);
     await page.locator('#Product_Barcode').fill(`869${Date.now().toString().slice(-10)}`);
-    await page.locator('#Product_PurchasePrice').fill('25');
+    await page.locator('[data-dialog-tab="pricing"]').click();
+    await page.locator('#Product_PurchaseListPrice').fill('25');
     await page.locator('#Product_PurchaseCurrency').selectOption('USD');
-    await page.locator('#Product_SaleCurrency').selectOption('TRY');
     await page.locator('#Product_ProfitMarkupPercent').fill('30');
     
     console.log('Dinamik fiyatlandırma moduna alınıyor...');
@@ -66,10 +66,8 @@ const fs = require('fs');
 
     // Formu gönder
     console.log('Ürün kartı oluşturuluyor...');
-    await Promise.all([
-      page.waitForNavigation(),
-      page.locator('.product-editor-submit').click()
-    ]);
+    await page.locator('#ProductCreateDialogForm button[type="submit"]').click();
+    await page.waitForSelector('#ProductCreateDialogForm', { state: 'hidden' });
     console.log('Ürün oluşturuldu. SKU:', sku);
 
     // 3. Alış faturası oluştur

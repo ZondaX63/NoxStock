@@ -34,6 +34,7 @@ public class ProductAppService :
     private readonly IRepository<BusinessPartner, Guid> _businessPartnerRepository;
     private readonly IRepository<ProductCostHistory, Guid> _costHistoryRepository;
     private readonly IProductPriceCalculator _priceCalculator;
+    private readonly NoxStock.Licensing.ITenantLicenseAccessChecker _licenseAccessChecker;
 
     public ProductAppService(
         IRepository<Product, Guid> repository,
@@ -43,7 +44,8 @@ public class ProductAppService :
         IRepository<Document, Guid> documentRepository,
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
         IRepository<ProductCostHistory, Guid> costHistoryRepository,
-        IProductPriceCalculator priceCalculator)
+        IProductPriceCalculator priceCalculator,
+        NoxStock.Licensing.ITenantLicenseAccessChecker licenseAccessChecker)
         : base(repository)
     {
         _brandRepository = brandRepository;
@@ -53,6 +55,7 @@ public class ProductAppService :
         _businessPartnerRepository = businessPartnerRepository;
         _costHistoryRepository = costHistoryRepository;
         _priceCalculator = priceCalculator;
+        _licenseAccessChecker = licenseAccessChecker;
 
         GetPolicyName = NoxStockPermissions.Products.Default;
         GetListPolicyName = NoxStockPermissions.Products.Default;
@@ -61,10 +64,16 @@ public class ProductAppService :
         DeletePolicyName = NoxStockPermissions.Products.Delete;
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task<ProductDto> CreateAsync(CreateUpdateProductDto input)
     {
         CurrentTenant.RequireTenantId();
         NormalizePricingConfiguration(input);
+        ValidateFinancialConfiguration(input);
+        await EnsurePricingEntitlementsAsync(input);
+        await _licenseAccessChecker.EnsureLimitAsync(
+            NoxStock.Licensing.LicenseLimitNames.MaxProducts,
+            await Repository.GetCountAsync());
         await ValidateRelationsAsync(input);
         var result = await base.CreateAsync(input);
         await ReplaceOemCodesAsync(result.Id, input.OemCodes);
@@ -72,16 +81,19 @@ public class ProductAppService :
         return result;
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task<ProductDto> UpdateAsync(Guid id, CreateUpdateProductDto input)
     {
         CurrentTenant.RequireTenantId();
         NormalizePricingConfiguration(input);
+        ValidateFinancialConfiguration(input);
+        await EnsurePricingEntitlementsAsync(input);
         var existingProduct = await Repository.GetAsync(id);
         if (existingProduct.LastPurchaseCostHistoryId.HasValue &&
-            !string.Equals(existingProduct.PricingCurrencyCode, input.PricingCurrencyCode, StringComparison.OrdinalIgnoreCase))
+            !string.Equals(existingProduct.PurchaseCurrency, input.PurchaseCurrency, StringComparison.OrdinalIgnoreCase))
         {
             throw new BusinessException("NoxStock:PricingCurrencyLockedByApprovedCost")
-                .WithData("Currency", existingProduct.PricingCurrencyCode);
+                .WithData("Currency", existingProduct.PurchaseCurrency);
         }
         await ValidateRelationsAsync(input);
         var result = await base.UpdateAsync(id, input);
@@ -115,7 +127,7 @@ public class ProductAppService :
         productDto.CategoryName = result.category?.Name ?? string.Empty;
         productDto.OemCodes = await GetOemCodesAsync(id);
         await PopulateLastPurchaseContextAsync(productDto);
-        await PopulateSuggestedSaleAsync(result.product, productDto, productDto.SaleCurrency);
+        await PopulateSuggestedSaleAsync(result.product, productDto);
 
         return productDto;
     }
@@ -146,7 +158,7 @@ public class ProductAppService :
             .WhereIf(pricingMode == "manual", x => x.PricingMode == ProductPricingMode.Manual)
             .WhereIf(costStatus == "missing", x => !x.LastPurchaseCostCurrencyAmount.HasValue || x.LastPurchaseCostCurrencyAmount <= 0)
             .WhereIf(costStatus == "available", x => x.LastPurchaseCostCurrencyAmount.HasValue && x.LastPurchaseCostCurrencyAmount > 0)
-            .WhereIf(costStatus == "under-cost", x => x.PricingMode == ProductPricingMode.Manual && x.LastPurchaseCostCurrencyAmount.HasValue && x.LastPurchaseCostCurrencyAmount > 0 && x.SalePrice < x.LastPurchaseCostCurrencyAmount)
+            .WhereIf(costStatus == "under-cost", x => x.PricingMode == ProductPricingMode.Manual && x.LastPurchaseCostTryAmount.HasValue && x.LastPurchaseCostTryAmount > 0 && x.SalePrice < x.LastPurchaseCostTryAmount)
             .WhereIf(costStatus == "recent", x => x.LastPurchaseDate.HasValue && x.LastPurchaseDate >= recentCostThreshold);
 
         return queryable;
@@ -155,7 +167,6 @@ public class ProductAppService :
     public override async Task<PagedResultDto<ProductDto>> GetListAsync(ProductGetListInput input)
     {
         CurrentTenant.RequireTenantId();
-        var displayCurrency = NormalizeDisplayCurrency(input.DisplayCurrency);
         var queryable = await CreateFilteredQueryAsync(input);
 
         var totalCount = await AsyncExecuter.CountAsync(queryable);
@@ -176,21 +187,18 @@ public class ProductAppService :
         foreach (var x in queryResult)
         {
             var dto = ObjectMapper.Map<Product, ProductDto>(x.product);
-            if (dto.ProfitMarkupPercent <= 0)
-            {
-                dto.ProfitMarkupPercent = 30m;
-            }
             dto.BrandName = x.brand?.Name ?? string.Empty;
             dto.CategoryName = x.category?.Name ?? string.Empty;
             dto.OemCodes = await GetOemCodesAsync(x.product.Id);
             await PopulateLastPurchaseContextAsync(dto);
-            await PopulateSuggestedSaleAsync(x.product, dto, displayCurrency);
+            await PopulateSuggestedSaleAsync(x.product, dto);
             productDtos.Add(dto);
         }
 
         return new PagedResultDto<ProductDto>(totalCount, productDtos);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task DeleteAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -229,30 +237,59 @@ public class ProductAppService :
 
     private static void NormalizePricingConfiguration(CreateUpdateProductDto input)
     {
-        input.PricingCurrencyCode = NormalizeCurrency(string.IsNullOrWhiteSpace(input.PricingCurrencyCode)
-            ? input.SaleCurrency
-            : input.PricingCurrencyCode);
         input.PurchaseCurrency = NormalizeCurrency(input.PurchaseCurrency);
-        input.SaleCurrency = NormalizeCurrency(input.SaleCurrency);
-        input.Currency = NormalizeCurrency(input.Currency);
 
         if (input.UseCurrentExchangeRateForSale)
         {
             input.PricingMode = ProductPricingMode.DynamicCurrencyMarkup;
         }
 
-        if (input.ProfitMarkupPercent <= 0)
+        if (input.ProfitMarkupPercent < 0)
         {
-            input.ProfitMarkupPercent = 30m;
+            throw new BusinessException("NoxStock:InvalidProfitMarkupPercent");
         }
 
+        if (input.PurchaseListPrice <= 0 && input.PurchasePrice > 0)
+        {
+            input.PurchaseListPrice = input.PurchasePrice;
+        }
+        if (input.ExchangeRateAtPurchase <= 0 && input.PurchaseCurrency == "TRY")
+        {
+            input.ExchangeRateAtPurchase = 1m;
+        }
         input.UseCurrentExchangeRateForSale = input.PricingMode == ProductPricingMode.DynamicCurrencyMarkup;
         if (input.PricingMode == ProductPricingMode.DynamicCurrencyMarkup)
         {
             // Dynamic cost is sourced exclusively from the latest approved purchase line.
             input.PurchasePrice = 0m;
-            input.PurchaseCurrency = "TRY";
             input.SalePrice = 0m;
+        }
+    }
+
+    private static void ValidateFinancialConfiguration(CreateUpdateProductDto input)
+    {
+        var percentages = new[]
+        {
+            input.PurchaseDiscount1, input.PurchaseDiscount2,
+            input.PurchaseDiscount3, input.PurchaseDiscount4,
+            input.SalesDiscount1, input.SalesDiscount2,
+            input.SalesDiscount3, input.SalesDiscount4
+        };
+        if (percentages.Any(value => value is < 0m or > 100m))
+        {
+            throw new BusinessException("NoxStock:ProductDiscountOutOfRange");
+        }
+
+        if (input.VatRate is not (0 or 1 or 10 or 20))
+        {
+            throw new BusinessException("NoxStock:UnsupportedVatRate")
+                .WithData("VatRate", input.VatRate);
+        }
+
+        if (input.PurchaseListPrice < 0m || input.PurchasePrice < 0m ||
+            input.SalePrice < 0m || input.ExchangeRateAtPurchase <= 0m)
+        {
+            throw new BusinessException("NoxStock:InvalidProductPricingValue");
         }
     }
 
@@ -265,6 +302,21 @@ public class ProductAppService :
         }
 
         return normalized;
+    }
+
+    private async Task EnsurePricingEntitlementsAsync(CreateUpdateProductDto input)
+    {
+        if (input.PricingMode == ProductPricingMode.DynamicCurrencyMarkup)
+        {
+            await _licenseAccessChecker.EnsureFeatureAsync(
+                NoxStock.Licensing.LicenseFeatureNames.DynamicPricing);
+        }
+
+        if (input.PurchaseCurrency != "TRY")
+        {
+            await _licenseAccessChecker.EnsureFeatureAsync(
+                NoxStock.Licensing.LicenseFeatureNames.MultiCurrency);
+        }
     }
 
     private async Task<string?> GetOemCodesAsync(Guid productId)
@@ -298,21 +350,20 @@ public class ProductAppService :
         }
     }
 
-    private async Task PopulateSuggestedSaleAsync(Product product, ProductDto dto, string displayCurrency)
+    private async Task PopulateSuggestedSaleAsync(Product product, ProductDto dto)
     {
-        dto.SuggestedSaleCurrency = displayCurrency;
-
         try
         {
-            var calculation = await _priceCalculator.CalculateAsync(product, displayCurrency);
+            var calculation = await _priceCalculator.CalculateAsync(product);
             dto.IsSuggestedSaleAvailable = calculation.IsAvailable;
             dto.SuggestedSaleUnavailableReason = calculation.UnavailableReason;
             dto.SuggestedSaleUnitPrice = calculation.IsAvailable ? calculation.UnitPrice : null;
             dto.SuggestedSalePriceInTry = calculation.IsAvailable ? calculation.PriceInTry : null;
             dto.SuggestedSaleExchangeRate = calculation.ExchangeRate;
             dto.SuggestedSaleRateDate = calculation.RateDate;
-            dto.CurrentPricingCurrencyExchangeRate = calculation.PricingCurrencyExchangeRate;
-            dto.CurrentPricingCurrencyRateDate = calculation.PricingCurrencyRateDate;
+            dto.CurrentReferenceCurrencyExchangeRate = calculation.ReferenceCurrencyExchangeRate;
+            dto.CurrentReferenceCurrencyRateDate = calculation.ReferenceCurrencyRateDate;
+            dto.CurrentNetCostInTry = calculation.NetCostInTry;
             dto.ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice;
         }
         catch (BusinessException exception) when (exception.Code == "NoxStock:CurrentExchangeRateUnavailable")
@@ -320,12 +371,6 @@ public class ProductAppService :
             dto.IsSuggestedSaleAvailable = false;
             dto.SuggestedSaleUnavailableReason = exception.Code;
         }
-    }
-
-    private static string NormalizeDisplayCurrency(string? currency)
-    {
-        var normalized = string.IsNullOrWhiteSpace(currency) ? "TRY" : currency.Trim().ToUpperInvariant();
-        return normalized is "TRY" or "USD" or "EUR" ? normalized : "TRY";
     }
 
     private static string? NormalizeOemCodes(string? oemCodes)

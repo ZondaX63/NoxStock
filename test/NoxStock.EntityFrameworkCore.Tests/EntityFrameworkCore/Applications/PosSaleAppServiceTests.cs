@@ -47,7 +47,6 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         {
             Name = "POS Cash",
             Type = AccountType.Cash,
-            Currency = "TRY",
             Balance = 50,
             IsActive = true
         });
@@ -67,7 +66,7 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
 
         sale.Status.ShouldBe(NoxStock.Documents.DocumentStatus.Paid);
         replayedSale.Id.ShouldBe(sale.Id);
-        sale.GrandTotal.ShouldBe(250);
+        sale.GrandTotal.ShouldBe(300);
         sale.PaymentMethod.ShouldBe(PosPaymentMethod.Cash);
 
         var productAfterSale = await _productRepository.GetAsync(product.Id);
@@ -77,12 +76,12 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         var recentSales = await _posSaleAppService.GetRecentAsync();
 
         productAfterSale.Quantity.ShouldBe(3);
-        cashAfterSale.Balance.ShouldBe(300);
+        cashAfterSale.Balance.ShouldBe(350);
         stockMovements.Single().Type.ShouldBe(StockMovementType.PosSale);
         stockMovements.Single().Quantity.ShouldBe(-2);
         stockMovements.Count.ShouldBe(1);
         accountTransactions.Single().Type.ShouldBe(AccountTransactionType.Collection);
-        accountTransactions.Single().Amount.ShouldBe(250);
+        accountTransactions.Single().Amount.ShouldBe(300);
         accountTransactions.Count.ShouldBe(1);
         recentSales.Single(x => x.Id == sale.Id).PaymentMethod.ShouldBe(PosPaymentMethod.Cash);
 
@@ -98,7 +97,7 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         cashAfterCancel.Balance.ShouldBe(50);
         stockAfterCancel.Count(x => x.Type == StockMovementType.Reversal).ShouldBe(1);
         transactionsAfterCancel.Count(x => x.Type == AccountTransactionType.Reversal).ShouldBe(1);
-        transactionsAfterCancel.Single(x => x.Type == AccountTransactionType.Reversal).Amount.ShouldBe(-250);
+        transactionsAfterCancel.Single(x => x.Type == AccountTransactionType.Reversal).Amount.ShouldBe(-300);
     }
 
     [Fact]
@@ -109,7 +108,6 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         {
             Name = "POS Credit Customer",
             Type = BusinessPartnerType.Customer,
-            Currency = "TRY",
             CreditLimit = 1000
         });
 
@@ -121,13 +119,13 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         });
 
         sale.Status.ShouldBe(NoxStock.Documents.DocumentStatus.Approved);
-        sale.GrandTotal.ShouldBe(80);
+        sale.GrandTotal.ShouldBe(96);
 
         var customerAfterSale = await _businessPartnerRepository.GetAsync(customer.Id);
         var productAfterSale = await _productRepository.GetAsync(product.Id);
         var saleTransactions = await _accountTransactionRepository.GetListAsync(x => x.DocumentId == sale.Id);
 
-        customerAfterSale.Balance.ShouldBe(80);
+        customerAfterSale.Balance.ShouldBe(96);
         productAfterSale.Quantity.ShouldBe(3);
         saleTransactions.ShouldBeEmpty();
 
@@ -160,7 +158,7 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     }
 
     [Fact]
-    public async Task Should_Sell_Foreign_Currency_Product_In_Try_At_Current_Rate()
+    public async Task Should_Keep_Manual_Product_Sale_Price_Fixed_In_Try()
     {
         await WithUnitOfWorkAsync(async () =>
         {
@@ -191,37 +189,32 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             Quantity = 5,
             CriticalStockLevel = 1,
             TrackStock = true,
-            Currency = "USD",
             PurchaseCurrency = "USD",
-            SaleCurrency = "USD"
         });
         var cashAccount = await _accountAppService.CreateAsync(new CreateUpdateAccountDto
         {
             Name = "TRY POS Cash",
             Type = AccountType.Cash,
-            Currency = "TRY",
             IsActive = true
         });
 
         var lookup = await _posSaleAppService.GetProductsAsync(new PosProductLookupInputDto
         {
             Filter = product.Barcode,
-            Currency = "TRY"
         });
         lookup.Single().Currency.ShouldBe("TRY");
-        lookup.Single().SalePrice.ShouldBe(1200m);
+        lookup.Single().SalePrice.ShouldBe(30m);
 
         var sale = await _posSaleAppService.CreateAsync(new CreatePosSaleDto
         {
             OperationKey = "pos-try-currency-001",
-            Currency = "TRY",
             PaymentMethod = PosPaymentMethod.Cash,
             AccountId = cashAccount.Id,
             Items = { new CreatePosSaleItemDto { ProductId = product.Id, Quantity = 1 } }
         });
 
         sale.Currency.ShouldBe("TRY");
-        sale.GrandTotal.ShouldBe(1200m);
+        sale.GrandTotal.ShouldBe(36m);
     }
 
     [Fact]
@@ -232,7 +225,6 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         {
             Name = "Manual POS Cash",
             Type = AccountType.Cash,
-            Currency = "TRY",
             IsActive = true
         });
 
@@ -252,7 +244,7 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             }
         });
 
-        sale.GrandTotal.ShouldBe(99m);
+        sale.GrandTotal.ShouldBe(118.8m);
     }
 
     private async Task<ProductDto> CreateProductAsync(string sku, string barcode, decimal quantity, decimal salePrice, string? oemCodes = null)
@@ -270,9 +262,7 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             Quantity = quantity,
             CriticalStockLevel = 1,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY",
             OemCodes = oemCodes
         });
     }

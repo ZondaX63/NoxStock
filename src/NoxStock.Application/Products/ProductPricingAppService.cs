@@ -39,7 +39,7 @@ public class ProductPricingAppService : ApplicationService, IProductPricingAppSe
     {
         CurrentTenant.RequireTenantId();
         var product = await _productRepository.GetAsync(input.ProductId);
-        var calculation = await _priceCalculator.CalculateAsync(product, input.Currency);
+        var calculation = await _priceCalculator.CalculateAsync(product);
 
         var quote = new ProductPriceQuoteDto
         {
@@ -52,17 +52,36 @@ public class ProductPricingAppService : ApplicationService, IProductPricingAppSe
             ExchangeRate = calculation.ExchangeRate,
             RateDate = calculation.RateDate,
             UsesCurrentExchangeRate = calculation.UsesCurrentExchangeRate,
-            ProfitMarkupPercent = product.ProfitMarkupPercent > 0 ? product.ProfitMarkupPercent : 30m,
+            ProfitMarkupPercent = product.ProfitMarkupPercent,
             PurchasePrice = product.PurchasePrice,
+            PurchaseListPrice = product.PurchaseListPrice,
+            PurchaseDiscount1 = product.PurchaseDiscount1,
+            PurchaseDiscount2 = product.PurchaseDiscount2,
+            PurchaseDiscount3 = product.PurchaseDiscount3,
+            PurchaseDiscount4 = product.PurchaseDiscount4,
+            ExchangeRateAtPurchase = product.ExchangeRateAtPurchase,
             PurchaseCurrency = product.PurchaseCurrency,
             SalePrice = product.SalePrice,
-            SaleCurrency = product.SaleCurrency,
-            PricingCurrencyCode = product.PricingCurrencyCode,
+            SalesDiscount1 = product.SalesDiscount1,
+            SalesDiscount2 = product.SalesDiscount2,
+            SalesDiscount3 = product.SalesDiscount3,
+            SalesDiscount4 = product.SalesDiscount4,
+            VatRate = product.VatRate,
+            NetCostInTry = calculation.NetCostInTry,
+            ListSalePriceInTry = calculation.ListSalePriceInTry,
+            SalesDiscountAmountInTry = calculation.SalesDiscountAmountInTry,
+            VatAmountInTry = calculation.VatAmountInTry,
+            CustomerFinalPriceInTry = calculation.CustomerFinalPriceInTry,
+            EstimatedProfitInTry = calculation.EstimatedProfitInTry,
+            EstimatedNetMarginPercent = calculation.EstimatedNetMarginPercent,
+            RealizedMarkupPercent = calculation.RealizedMarkupPercent,
+            GrossProfitMarginPercent = calculation.GrossProfitMarginPercent,
+            ReferenceCurrencyCode = product.PurchaseCurrency,
             LastPurchaseCostCurrencyCode = product.LastPurchaseCostCurrencyCode,
             LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
             LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
-            PricingCurrencyExchangeRate = calculation.PricingCurrencyExchangeRate,
-            PricingCurrencyRateDate = calculation.PricingCurrencyRateDate,
+            ReferenceCurrencyExchangeRate = calculation.ReferenceCurrencyExchangeRate,
+            ReferenceCurrencyRateDate = calculation.ReferenceCurrencyRateDate,
             ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice,
             LastPurchaseDate = product.LastPurchaseDate,
             ProductCostHistoryId = calculation.ProductCostHistoryId,
@@ -123,8 +142,8 @@ public class ProductPricingAppService : ApplicationService, IProductPricingAppSe
             SourceCurrencyCode = history.SourceCurrencyCode,
             SourceExchangeRate = history.SourceExchangeRate,
             TryEquivalentNetUnitCost = history.TryEquivalentNetUnitCost,
-            PricingCurrencyCode = history.PricingCurrencyCode,
-            PricingCurrencyEquivalentCost = history.PricingCurrencyEquivalentCost,
+            ReferenceCurrencyCode = history.ReferenceCurrencyCode,
+            ReferenceCurrencyEquivalentCost = history.ReferenceCurrencyEquivalentCost,
             ChangeType = (int)history.ChangeType
         }).ToList();
     }

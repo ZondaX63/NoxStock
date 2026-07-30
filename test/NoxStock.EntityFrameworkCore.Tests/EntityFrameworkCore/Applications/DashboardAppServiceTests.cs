@@ -54,9 +54,7 @@ public class DashboardAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             Quantity = 10,
             CriticalStockLevel = 1,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
         });
 
         var today = DateTime.UtcNow.Date;
@@ -129,7 +127,7 @@ public class DashboardAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         await _documentWorkflowAppService.ApproveAsync(document.Id, new ApproveDocumentInputDto
         {
             AccountId = status is DocumentStatus.PartiallyPaid or DocumentStatus.Paid ? accountId : null,
-            PaymentAmount = status == DocumentStatus.PartiallyPaid ? 25 : status == DocumentStatus.Paid ? 100 : 0
+            PaymentAmount = status == DocumentStatus.PartiallyPaid ? 25 : status == DocumentStatus.Paid ? 120 : 0
         });
     }
 }

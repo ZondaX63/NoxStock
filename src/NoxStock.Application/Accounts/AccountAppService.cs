@@ -30,6 +30,7 @@ public class AccountAppService :
         DeletePolicyName = NoxStockPermissions.Accounts.Delete;
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task<AccountDto> CreateAsync(CreateUpdateAccountDto input)
     {
         var tenantId = CurrentTenant.RequireTenantId();
@@ -51,6 +52,7 @@ public class AccountAppService :
         return await MapToGetOutputDtoAsync(account);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override async Task<AccountDto> UpdateAsync(Guid id, CreateUpdateAccountDto input)
     {
         CurrentTenant.RequireTenantId();
@@ -67,6 +69,7 @@ public class AccountAppService :
     }
 
     [Authorize(NoxStockPermissions.Accounts.Transfer)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task TransferAsync(TransferDto input)
     {
         var tenantId = CurrentTenant.RequireTenantId();
@@ -118,6 +121,7 @@ public class AccountAppService :
         await Repository.UpdateAsync(toAccount);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task AddTransactionAsync(AddTransactionDto input)
     {
         var tenantId = CurrentTenant.RequireTenantId();
@@ -186,6 +190,7 @@ public class AccountAppService :
         return base.GetListAsync(input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task DeleteAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -48,11 +49,7 @@ public class EditModalModel : NoxStockPageModel
         var productDto = await _productAppService.GetAsync(Id);
         ProductSnapshot = productDto;
         Product = ObjectMapper.Map<ProductDto, CreateUpdateProductDto>(productDto);
-        if (Product.ProfitMarkupPercent <= 0)
-        {
-            Product.ProfitMarkupPercent = 30m;
-        }
-        PricingQuote = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto { ProductId = Id, Currency = "TRY" });
+        PricingQuote = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto { ProductId = Id });
         CostHistory = await _productPricingAppService.GetCostHistoryAsync(Id);
 
         var brandLookup = await _brandAppService.GetListAsync(new PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
@@ -66,7 +63,25 @@ public class EditModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        NormalizeIntegralProductFields();
         await _productAppService.UpdateAsync(Id, Product);
         return NoContent();
+    }
+
+    private void NormalizeIntegralProductFields()
+    {
+        NormalizeInteger("Product.VatRate", value => Product.VatRate = Math.Clamp(value, 0, 100));
+        NormalizeInteger("Product.PricingMode", value => Product.PricingMode = (ProductPricingMode)Math.Clamp(value, 0, 1));
+    }
+
+    private void NormalizeInteger(string key, Action<int> assign)
+    {
+        var raw = Request.Form[key].ToString();
+        if (string.IsNullOrWhiteSpace(raw)) return;
+        if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
+        {
+            ModelState.Remove(key);
+            assign((int)Math.Round(number, MidpointRounding.AwayFromZero));
+        }
     }
 }

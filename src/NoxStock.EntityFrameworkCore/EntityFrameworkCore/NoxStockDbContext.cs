@@ -8,6 +8,7 @@ using NoxStock.BusinessPartners;
 using NoxStock.Documents;
 using NoxStock.StockMovements;
 using NoxStock.ExchangeRates;
+using NoxStock.Licensing;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -49,6 +50,11 @@ public class NoxStockDbContext :
     public DbSet<Account> Accounts { get; set; }
     public DbSet<AccountTransaction> AccountTransactions { get; set; }
     public DbSet<StockMovement> StockMovements { get; set; }
+    public DbSet<LicensePlan> LicensePlans { get; set; }
+    public DbSet<TenantLicense> TenantLicenses { get; set; }
+    public DbSet<TenantLicenseFeature> TenantLicenseFeatures { get; set; }
+    public DbSet<TenantLicenseLimit> TenantLicenseLimits { get; set; }
+    public DbSet<TenantLicenseAuditLog> TenantLicenseAuditLogs { get; set; }
 
     #region Entities from the modules
 
@@ -128,10 +134,20 @@ public class NoxStockDbContext :
             b.Property(x => x.Unit).HasMaxLength(50).HasDefaultValue("Adet");
             b.Property(x => x.ShelfLocation).HasMaxLength(100);
             b.Property(x => x.PurchasePrice).HasColumnType("decimal(15,4)");
+            b.Property(x => x.PurchaseListPrice).HasColumnType("decimal(18,6)").HasDefaultValue(0m);
+            b.Property(x => x.PurchaseDiscount1).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.PurchaseDiscount2).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.PurchaseDiscount3).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.PurchaseDiscount4).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.ExchangeRateAtPurchase).HasColumnType("decimal(18,6)").HasDefaultValue(1m);
             b.Property(x => x.SalePrice).HasColumnType("decimal(15,4)");
+            b.Property(x => x.SalesDiscount1).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.SalesDiscount2).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.SalesDiscount3).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.SalesDiscount4).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.VatRate).HasDefaultValue(20);
             b.Property(x => x.ProfitMarkupPercent).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
             b.Property(x => x.UseCurrentExchangeRateForSale).HasDefaultValue(false);
-            b.Property(x => x.PricingCurrencyCode).IsRequired().HasMaxLength(3).HasDefaultValue("TRY");
             b.Property(x => x.PricingMode).HasDefaultValue(ProductPricingMode.Manual);
             b.Property(x => x.LastPurchaseCostCurrencyCode).HasMaxLength(3);
             b.Property(x => x.LastPurchaseCostCurrencyAmount).HasColumnType("decimal(18,6)");
@@ -139,9 +155,7 @@ public class NoxStockDbContext :
             b.Property(x => x.LastPurchaseExchangeRate).HasColumnType("decimal(18,6)");
             b.Property(x => x.Quantity).HasColumnType("decimal(15,4)");
             b.Property(x => x.CriticalStockLevel).HasColumnType("decimal(15,4)");
-            b.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("TRY");
-            b.Property(x => x.PurchaseCurrency).HasMaxLength(3).HasDefaultValue("TRY");
-            b.Property(x => x.SaleCurrency).HasMaxLength(3).HasDefaultValue("TRY");
+            b.Property(x => x.PurchaseCurrency).IsRequired().HasMaxLength(3).HasDefaultValue("TRY");
 
             b.HasOne<Brand>().WithMany().HasForeignKey(x => x.BrandId).IsRequired(false);
             b.HasOne<Category>().WithMany().HasForeignKey(x => x.CategoryId).IsRequired(false);
@@ -165,8 +179,8 @@ public class NoxStockDbContext :
             b.Property(x => x.SourceNetUnitCost).HasColumnType("decimal(18,6)");
             b.Property(x => x.SourceExchangeRate).HasColumnType("decimal(18,6)");
             b.Property(x => x.TryEquivalentNetUnitCost).HasColumnType("decimal(18,6)");
-            b.Property(x => x.PricingCurrencyCode).IsRequired().HasMaxLength(3);
-            b.Property(x => x.PricingCurrencyEquivalentCost).HasColumnType("decimal(18,6)");
+            b.Property(x => x.ReferenceCurrencyCode).IsRequired().HasMaxLength(3);
+            b.Property(x => x.ReferenceCurrencyEquivalentCost).HasColumnType("decimal(18,6)");
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
             b.HasOne<Document>().WithMany().HasForeignKey(x => x.SourceDocumentId).IsRequired();
             b.HasOne<DocumentItem>().WithMany().HasForeignKey(x => x.SourceDocumentItemId).IsRequired();
@@ -231,6 +245,14 @@ public class NoxStockDbContext :
             b.Property(x => x.UnitPrice).HasColumnType("decimal(18,4)");
             b.Property(x => x.VatRate).HasColumnType("decimal(5,2)");
             b.Property(x => x.DiscountRate).HasColumnType("decimal(5,2)");
+            b.Property(x => x.PurchaseDiscount1).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.PurchaseDiscount2).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.PurchaseDiscount3).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.PurchaseDiscount4).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.SalesDiscount1).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.SalesDiscount2).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.SalesDiscount3).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.SalesDiscount4).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
             b.Property(x => x.Total).HasColumnType("decimal(18,4)");
             b.Property(x => x.PriceCurrencyCode).HasMaxLength(3);
             b.Property(x => x.PriceExchangeRate).HasColumnType("decimal(18,6)");
@@ -239,9 +261,9 @@ public class NoxStockDbContext :
             b.Property(x => x.CostCurrencyAmount).HasColumnType("decimal(18,6)");
             b.Property(x => x.CostTryAmount).HasColumnType("decimal(18,6)");
             b.Property(x => x.AppliedMarkupPercent).HasColumnType("decimal(9,4)");
-            b.Property(x => x.ReferenceSaleCurrencyCode).HasMaxLength(3);
-            b.Property(x => x.ReferenceSaleUnitPrice).HasColumnType("decimal(18,6)");
-            b.Property(x => x.ReferenceSaleExchangeRate).HasColumnType("decimal(18,6)");
+            b.Property(x => x.ReferenceCurrencyCode).HasMaxLength(3);
+            b.Property(x => x.ReferenceUnitPrice).HasColumnType("decimal(18,6)");
+            b.Property(x => x.ReferenceExchangeRate).HasColumnType("decimal(18,6)");
             b.HasOne<Document>().WithMany(d => d.Items).HasForeignKey(x => x.DocumentId).IsRequired();
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
             b.HasOne<ProductCostHistory>().WithMany().HasForeignKey(x => x.ProductCostHistoryId).IsRequired(false);
@@ -291,6 +313,88 @@ public class NoxStockDbContext :
             b.Property(x => x.Description).HasMaxLength(500);
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
             b.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId).IsRequired(false);
+        });
+
+        builder.Entity<LicensePlan>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "LicensePlans", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Code).IsRequired().HasMaxLength(32);
+            b.Property(x => x.Name).IsRequired().HasMaxLength(100);
+            b.Property(x => x.Description).HasMaxLength(500);
+            b.HasIndex(x => x.Code)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
+        builder.Entity<TenantLicense>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "TenantLicenses", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.LicenseReference).IsRequired().HasMaxLength(100);
+            b.Property(x => x.InternalNote).HasMaxLength(1000);
+            b.Property(x => x.SuspensionReason).HasMaxLength(500);
+            b.HasOne<LicensePlan>()
+                .WithMany()
+                .HasForeignKey(x => x.LicensePlanId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+            b.HasOne<Tenant>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+            b.HasIndex(x => x.LicenseReference)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            b.HasIndex(x => x.TenantId)
+                .IsUnique()
+                .HasFilter("\"IsCurrent\" = TRUE AND \"IsDeleted\" = FALSE");
+            b.HasIndex(x => new { x.Status, x.ExpiresAtUtc });
+        });
+
+        builder.Entity<TenantLicenseFeature>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "TenantLicenseFeatures", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.FeatureName).IsRequired().HasMaxLength(64);
+            b.HasOne<TenantLicense>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantLicenseId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+            b.HasIndex(x => new { x.TenantLicenseId, x.FeatureName })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
+        builder.Entity<TenantLicenseLimit>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "TenantLicenseLimits", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.LimitName).IsRequired().HasMaxLength(64);
+            b.HasOne<TenantLicense>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantLicenseId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+            b.HasIndex(x => new { x.TenantLicenseId, x.LimitName })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
+        builder.Entity<TenantLicenseAuditLog>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "TenantLicenseAuditLogs", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Action).IsRequired().HasMaxLength(64);
+            b.Property(x => x.Details).HasMaxLength(2000);
+            b.HasOne<TenantLicense>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantLicenseId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.CreationTime });
         });
     }
 }

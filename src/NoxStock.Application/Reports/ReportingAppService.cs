@@ -175,8 +175,11 @@ public class ReportingAppService : ApplicationService, IReportingAppService
             .Select(group =>
             {
                 productsById.TryGetValue(group.Key, out var product);
-                var salesAmount = group.Sum(x => x.Total * GetDocumentRate(documentsById[x.DocumentId]));
-                var estimatedCost = group.Sum(x => x.Quantity * (costInTryByProductId.TryGetValue(x.ProductId, out var cost) ? cost : 0));
+                // Profitability is based on the sales-time snapshots, never
+                // today's product card cost or KDV-included document total.
+                var salesAmount = group.Sum(x =>
+                    x.Quantity * x.UnitPrice * (1m - x.DiscountRate / 100m));
+                var estimatedCost = group.Sum(x => x.Quantity * (x.CostTryAmount ?? 0m));
                 return new ProductProfitabilityReportItemDto
                 {
                     ProductId = group.Key,

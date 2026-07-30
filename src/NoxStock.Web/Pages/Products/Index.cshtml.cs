@@ -75,9 +75,7 @@ public class IndexModel : NoxStockPageModel
         {
             Sku = $"STK-{DateTime.UtcNow:yyyyMMddHHmmss}",
             Unit = defaultUnit,
-            Currency = defaultCurrency,
             PurchaseCurrency = defaultCurrency,
-            SaleCurrency = defaultCurrency,
             ProfitMarkupPercent = 30m,
             TrackStock = true
         };

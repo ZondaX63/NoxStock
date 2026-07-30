@@ -139,9 +139,7 @@ public class CommercialDocumentWorkflowAppServiceTests : NoxStockEntityFramework
             Quantity = 10,
             CriticalStockLevel = 1,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
         });
     }
 }

@@ -10,19 +10,14 @@
 <div class="products-workspace">
     <header class="products-workspace-header">
         <div>
-            <div class="products-eyebrow">STOK VE FİYATLANDIRMA</div>
             <h2>Ürünler</h2>
             <p>Envanteri, onaylı alış maliyetini ve satış fiyatı davranışını aynı çalışma alanından yönetin.</p>
         </div>
         <div class="products-header-actions">
             <div class="products-currency-control">
-                <label for="DisplayCurrency">Satış önerisi para birimi</label>
-                <select id="DisplayCurrency" aria-label="Satış önerisi para birimi">
-                    <option value="TRY">TRY (TL)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR</option>
-                </select>
-                <small id="DisplayCurrencyStatus">Güncel satış önerisini bu para biriminde gösterir.</small>
+                <label for="ShowReferenceCurrency">Döviz gösterimi</label>
+                <label class="pricing-override-toggle"><input id="ShowReferenceCurrency" type="checkbox" /><span>Referans dövizi göster</span></label>
+                <small>Satışlar her zaman TL; bu seçenek yalnızca kaynak döviz bilgisini gösterir.</small>
             </div>
             <button id="NewProductButton" type="button" class="products-primary-action">
                 <span class="material-icons-round" aria-hidden="true">add</span>
@@ -57,31 +52,32 @@
         </div>
     </section>
 
-    <section class="products-guidance" aria-label="Fiyatlandırma akışı">
-        <div><span class="material-icons-round" aria-hidden="true">receipt_long</span><p><strong>Alış onayı</strong> son maliyet snapshot'ını günceller.</p></div>
-        <span class="material-icons-round products-guidance-arrow" aria-hidden="true">east</span>
-        <div><span class="material-icons-round" aria-hidden="true">currency_exchange</span><p><strong>Dinamik ürün</strong> güncel kur ve markup ile öneri üretir.</p></div>
-        <span class="material-icons-round products-guidance-arrow" aria-hidden="true">east</span>
-        <div><span class="material-icons-round" aria-hidden="true">lock</span><p><strong>POS / fatura onayı</strong> fiyatı ve kuru belge satırında kilitler.</p></div>
-    </section>
-
     <section id="ProductEditor" class="product-editor-panel" hidden aria-labelledby="ProductEditorTitle">
         <div class="product-editor-header">
             <div>
                 <span class="products-eyebrow">YENİ KART</span>
                 <h3 id="ProductEditorTitle">Yeni ürün oluştur</h3>
-                <p>Kimlik, fiyat davranışı ve açılış stok bilgisini bir kez tanımlayın.</p>
+                <p>Kimlik, fiyat davranışı ve açılış stok bilgisini tek akışta tanımlayın.</p>
             </div>
-            <button id="CloseProductEditor" type="button" class="products-icon-button" title="Kapat" aria-label="Yeni ürün formunu kapat"><span class="material-icons-round" aria-hidden="true">close</span></button>
+            <div class="product-editor-header-actions">
+                <span class="product-keyboard-hint"><kbd>Esc</kbd> Vazgeç · <kbd>Ctrl</kbd> + <kbd>Enter</kbd> Kaydet</span>
+                <button id="CloseProductEditor" type="button" class="products-secondary-action product-editor-cancel"><span class="material-icons-round" aria-hidden="true">close</span>Vazgeç</button>
+                <button type="submit" form="ProductCreateForm" class="products-primary-action"><span class="material-icons-round" aria-hidden="true">save</span>Kaydet</button>
+            </div>
         </div>
-        <form method="post" asp-page-handler="Create" class="product-editor-form">
+        <nav class="product-editor-tabs" aria-label="Ürün kartı bölümleri">
+            <button type="button" class="product-editor-tab is-active" data-product-tab="identity"><span class="material-icons-round" aria-hidden="true">badge</span>Temel bilgiler</button>
+            <button type="button" class="product-editor-tab" data-product-tab="pricing"><span class="material-icons-round" aria-hidden="true">payments</span>Fiyat &amp; maliyet</button>
+            <button type="button" class="product-editor-tab" data-product-tab="stock"><span class="material-icons-round" aria-hidden="true">shelves</span>Stok &amp; raf</button>
+        </nav>
+        <form id="ProductCreateForm" method="post" asp-page-handler="Create" class="product-editor-form">
             <div asp-validation-summary="ModelOnly" class="products-validation" role="alert"></div>
             <div class="product-editor-grid">
-                <section class="product-editor-section product-editor-identity">
+                <section id="ProductSectionIdentity" class="product-editor-section product-editor-identity" data-product-section="identity">
                     <div class="product-editor-section-heading"><span class="material-icons-round" aria-hidden="true">badge</span><div><h4>Kart bilgileri</h4><p>Arama ve ürünün farklı marka alternatifleri için temel kayıt.</p></div></div>
                     <div class="product-form-grid product-form-grid-2">
                         <div class="product-field product-field-wide"><label asp-for="Product.Name">Ürün adı</label><input asp-for="Product.Name" class="input-field" autocomplete="off" /><span asp-validation-for="Product.Name"></span></div>
-                        <div class="product-field"><label asp-for="Product.Sku">Stok kodu</label><input asp-for="Product.Sku" class="input-field" autocomplete="off" /></div>
+                        <div class="product-field"><label asp-for="Product.Sku">Stok kodu</label><div class="product-code-input"><input asp-for="Product.Sku" class="input-field" autocomplete="off" /><button id="GenerateProductSku" type="button" title="Yeni stok kodu üret" aria-label="Otomatik stok kodu üret"><span class="material-icons-round" aria-hidden="true">auto_awesome</span></button></div></div>
                         <div class="product-field"><label asp-for="Product.Barcode">Barkod</label><input asp-for="Product.Barcode" class="input-field" inputmode="numeric" autocomplete="off" /></div>
                         <div class="product-field"><label asp-for="Product.CategoryId">Kategori</label><select asp-for="Product.CategoryId" asp-items="Model.Categories" class="input-field"></select></div>
                         <div class="product-field"><label asp-for="Product.BrandId">Marka</label><select asp-for="Product.BrandId" asp-items="Model.Brands" class="input-field"></select></div>
@@ -90,7 +86,7 @@
                     </div>
                 </section>
 
-                <section class="product-editor-section product-editor-pricing">
+                <section id="ProductSectionPricing" class="product-editor-section product-editor-pricing" data-product-section="pricing">
                     <div class="product-editor-section-heading"><span class="material-icons-round" aria-hidden="true">payments</span><div><h4>Fiyatlandırma</h4><p>Manuel fiyatı ya da maliyet bazlı dinamik satış davranışını seçin.</p></div></div>
                     <div class="product-pricing-mode-note">
                         <span class="material-icons-round" aria-hidden="true">info</span>
@@ -98,17 +94,42 @@
                     </div>
                     <div class="product-form-grid product-form-grid-2">
                         <div class="product-field"><label asp-for="Product.PricingMode">Fiyatlandırma modu</label><div class="product-pricing-mode-picker" data-pricing-mode-picker><button type="button" class="product-pricing-mode-option" data-pricing-mode="0"><span class="material-icons-round" aria-hidden="true">sell</span><span><strong>Manuel fiyat</strong><small>Satış fiyatını siz belirlersiniz.</small></span></button><button type="button" class="product-pricing-mode-option" data-pricing-mode="1"><span class="material-icons-round" aria-hidden="true">currency_exchange</span><span><strong>Döviz bazlı dinamik</strong><small>Güncel kur ve markup ile hesaplanır.</small></span></button></div><select asp-for="Product.PricingMode" class="product-pricing-mode-select" aria-hidden="true" tabindex="-1"><option value="0">Manuel fiyat</option><option value="1">Döviz bazlı dinamik</option></select></div>
-                        <div class="product-field"><label asp-for="Product.PricingCurrencyCode">Referans para birimi</label><select asp-for="Product.PricingCurrencyCode" class="input-field"><option>TRY</option><option>USD</option><option>EUR</option></select><small>İlk onaylı alışta TL maliyet bu para biriminde kilitlenir.</small></div>
                         <div class="product-field"><label asp-for="Product.ProfitMarkupPercent">Maliyet üzeri kâr ekleme oranı (Markup %)</label><input id="Product_ProfitMarkupPercent" name="Product.ProfitMarkupPercent" value="@Model.Product.ProfitMarkupPercent.ToString("0", CultureInfo.InvariantCulture)" type="number" min="0" step="1" class="input-field" /></div>
-                        <div class="product-field"><label asp-for="Product.SaleCurrency">Varsayılan ekran para birimi</label><select asp-for="Product.SaleCurrency" class="input-field"><option>TRY</option><option>USD</option><option>EUR</option></select><small>POS ve faturada TRY, USD veya EUR görünümüne çevrilebilir.</small></div>
-                        <div class="product-field product-pricing-context-field" data-pricing-manual-field="sale-price"><label asp-for="Product.SalePrice">Manuel satış fiyatı</label><input id="Product_SalePrice" name="Product.SalePrice" value="@Model.Product.SalePrice.ToString("0.####", CultureInfo.InvariantCulture)" type="number" step="any" min="0" class="input-field" /><small id="SaleTryEquivalent"></small><small class="product-pricing-context-help">Yalnızca manuel fiyat modunda kullanılır.</small></div>
-                        <div class="product-field product-pricing-context-field" data-pricing-manual-field="purchase"><label asp-for="Product.PurchasePrice">Manuel kart alış bilgisi</label><div class="product-money-input"><input id="Product_PurchasePrice" name="Product.PurchasePrice" value="@Model.Product.PurchasePrice.ToString("0.####", CultureInfo.InvariantCulture)" type="number" step="any" min="0" class="input-field" /><select asp-for="Product.PurchaseCurrency"><option>TRY</option><option>USD</option><option>EUR</option></select></div><small id="PurchaseTryEquivalent"></small><small class="product-pricing-context-help">Dinamik maliyet kaynağı değildir; maliyet yalnızca onaylı alış faturasından gelir.</small></div>
-                        <div class="product-field product-preview-field"><label>Yeni kart fiyat önizlemesi</label><button id="CalculateSalePrice" type="button" class="products-secondary-action"><span class="material-icons-round" aria-hidden="true">calculate</span>Hesaplamayı gör</button><small id="SaleCalculationInfo">Bu yalnızca kart oluşturma önizlemesidir; onaylı alış maliyeti oluşunca satış ekranları backend hesabını kullanır.</small></div>
+                        <div class="product-field product-pricing-context-field" data-pricing-manual-field="sale-price"><label asp-for="Product.SalePrice">Manuel satış fiyatı (TL)</label><input id="Product_SalePrice" name="Product.SalePrice" value="@Model.Product.SalePrice.ToString("0.####", CultureInfo.InvariantCulture)" type="number" step="any" min="0" class="input-field" /><small class="product-pricing-context-help">Yalnızca manuel fiyat modunda kullanılır; tüm satışlar TL'dir.</small></div>
+                        <div class="product-field product-pricing-context-field"><label asp-for="Product.PurchasePrice">Kart alış fiyatı / maliyet simülasyonu</label><div class="product-money-input"><input id="Product_PurchasePrice" name="Product.PurchasePrice" value="@Model.Product.PurchasePrice.ToString("0.####", CultureInfo.InvariantCulture)" type="number" step="any" min="0" class="input-field" /><select asp-for="Product.PurchaseCurrency"><option>TRY</option><option>USD</option><option>EUR</option></select></div><small id="PurchaseTryEquivalent"></small><small class="product-pricing-context-help">Dinamik maliyet kaynağı değildir; maliyet yalnızca onaylı alış faturasından gelir.</small></div>
+                        <div class="product-field product-field-wide">
+                            <label>Alış faturası kademeli iskonto simülasyonu</label>
+                            <div class="product-discount-matrix" data-discount-matrix="purchase">
+                                <label><span>İsk. 1</span><input type="number" min="0" max="100" step="0.01" value="0" class="input-field" aria-label="Alış iskontosu 1" /><b>%</b></label>
+                                <span class="material-icons-round" aria-hidden="true">east</span>
+                                <label><span>İsk. 2</span><input type="number" min="0" max="100" step="0.01" value="0" class="input-field" aria-label="Alış iskontosu 2" /><b>%</b></label>
+                                <span class="material-icons-round" aria-hidden="true">east</span>
+                                <label><span>İsk. 3</span><input type="number" min="0" max="100" step="0.01" value="0" class="input-field" aria-label="Alış iskontosu 3" /><b>%</b></label>
+                                <span class="material-icons-round" aria-hidden="true">east</span>
+                                <label><span>İsk. 4</span><input type="number" min="0" max="100" step="0.01" value="0" class="input-field" aria-label="Alış iskontosu 4" /><b>%</b></label>
+                            </div>
+                            <small>İndirimler sırayla uygulanır. Bu alan kart önizlemesidir; resmi maliyet onaylı alış faturasında oluşur.</small>
+                        </div>
+                        <div class="product-field product-field-wide">
+                            <label>Satış iskontosu simülasyonu</label>
+                            <div class="product-discount-matrix" data-discount-matrix="sale">
+                                <label><span>İsk. 1</span><input type="number" min="0" max="100" step="0.01" value="0" class="input-field" aria-label="Satış iskontosu 1" /><b>%</b></label>
+                                <span class="material-icons-round" aria-hidden="true">east</span>
+                                <label><span>İsk. 2</span><input type="number" min="0" max="100" step="0.01" value="0" class="input-field" aria-label="Satış iskontosu 2" /><b>%</b></label>
+                                <span class="material-icons-round" aria-hidden="true">east</span>
+                                <label><span>İsk. 3</span><input type="number" min="0" max="100" step="0.01" value="0" class="input-field" aria-label="Satış iskontosu 3" /><b>%</b></label>
+                                <span class="material-icons-round" aria-hidden="true">east</span>
+                                <label><span>İsk. 4</span><input type="number" min="0" max="100" step="0.01" value="0" class="input-field" aria-label="Satış iskontosu 4" /><b>%</b></label>
+                            </div>
+                            <small>Satış indiriminin kâr etkisini kaydetmeden önce kontrol edin.</small>
+                        </div>
+                        <div class="product-field"><label for="ProductPreviewVatRate">KDV oranı</label><select id="ProductPreviewVatRate" class="input-field"><option value="0">%0</option><option value="1">%1</option><option value="10">%10</option><option value="20" selected>%20</option></select><small>KDV dahil satış görünümünü hesaplar.</small></div>
+                        <div class="product-field product-preview-field"><label>Anlık hesaplama</label><button id="CalculateSalePrice" type="button" class="products-secondary-action"><span class="material-icons-round" aria-hidden="true">calculate</span>Dinamik modu seç</button><small id="SaleCalculationInfo">Sağdaki finansal özet her değişiklikte otomatik güncellenir.</small></div>
                     </div>
                     <input asp-for="Product.UseCurrentExchangeRateForSale" type="hidden" value="false" />
                 </section>
 
-                <section class="product-editor-section product-editor-stock">
+                <section id="ProductSectionStock" class="product-editor-section product-editor-stock" data-product-section="stock">
                     <div class="product-editor-section-heading"><span class="material-icons-round" aria-hidden="true">shelves</span><div><h4>Stok ve konum</h4><p>Açılış miktarı ile kritik seviye, ürün kartının başlangıç bilgisidir.</p></div></div>
                     <div class="product-form-grid product-form-grid-2">
                         <div class="product-field"><label asp-for="Product.Quantity">Açılış stoğu</label><input id="Product_Quantity" name="Product.Quantity" value="@Model.Product.Quantity.ToString("0", CultureInfo.InvariantCulture)" type="number" step="1" class="input-field" /></div>
@@ -119,13 +140,40 @@
                     <label class="product-checkbox"><input asp-for="Product.TrackStock" /> <span>Bu ürün için stok takibi yap</span></label>
                     <button type="submit" class="products-primary-action product-editor-submit"><span class="material-icons-round" aria-hidden="true">save</span>Ürün kartını oluştur</button>
                 </section>
+
+                <aside class="product-finance-hero" aria-live="polite" aria-label="Canlı maliyet ve kâr özeti">
+                    <div class="product-finance-hero-head">
+                        <div><span class="products-eyebrow">CANLI FİNANSAL ÖZET</span><h4>Fiyat tutarlılık kontrolü</h4></div>
+                        <span class="product-live-badge"><i></i>Canlı</span>
+                    </div>
+                    <div class="product-finance-main">
+                        <span>Net TL kart maliyeti</span>
+                        <strong id="ProductHeroNetCost">₺0,00</strong>
+                        <small id="ProductHeroCostMeta">Alış fiyatı ve kur bilgisini girin.</small>
+                    </div>
+                    <dl class="product-finance-breakdown">
+                        <div><dt>Liste satış</dt><dd id="ProductHeroListSale">₺0,00</dd></div>
+                        <div><dt>Satış iskontosu</dt><dd id="ProductHeroSaleDiscount">-₺0,00</dd></div>
+                        <div><dt>KDV hariç net satış</dt><dd id="ProductHeroNetSale">₺0,00</dd></div>
+                        <div><dt>KDV dahil fiyat</dt><dd id="ProductHeroVatSale">₺0,00</dd></div>
+                    </dl>
+                    <div class="product-finance-profit" data-profit-state="neutral">
+                        <span>Tahmini net kâr</span>
+                        <strong id="ProductHeroProfit">₺0,00</strong>
+                        <small id="ProductHeroMargin">%0,00 marj</small>
+                    </div>
+                    <div class="product-finance-integrity">
+                        <span class="material-icons-round" aria-hidden="true">verified_user</span>
+                        <p><strong>Muhasebe bütünlüğü korunur.</strong> Bu kart bir karar önizlemesidir. Gerçek geliş maliyeti onaylı alış faturasıyla, gerçek satış fiyatı belge satırında kilitlenir.</p>
+                    </div>
+                </aside>
             </div>
         </form>
     </section>
 
     <section class="products-list-shell" aria-labelledby="ProductsListTitle">
         <div class="products-list-heading">
-            <div><span class="products-eyebrow">ENVANTER</span><h3 id="ProductsListTitle">Ürün kataloğu</h3><p>Onaylı alış maliyeti, kilitli döviz karşılığı ve güncel satış önerisini aynı satırda izleyin.</p></div>
+            <div><span class="products-eyebrow">ENVANTER</span><h3 id="ProductsListTitle">Ürün kataloğu</h3> </div>
         </div>
         <div class="products-quick-filters" role="group" aria-label="Hızlı ürün filtreleri">
             <button type="button" class="products-quick-filter is-active" data-quick-filter="all"><span class="material-icons-round" aria-hidden="true">apps</span>Tümü</button>

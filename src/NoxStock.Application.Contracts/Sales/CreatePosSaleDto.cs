@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 
 namespace NoxStock.Sales;
 
 public class CreatePosSaleDto
 {
     public string? OperationKey { get; set; }
-    [StringLength(3)]
-    public string? Currency { get; set; }
     public PosPaymentMethod PaymentMethod { get; set; }
     public Guid? AccountId { get; set; }
     public Guid? BusinessPartnerId { get; set; }

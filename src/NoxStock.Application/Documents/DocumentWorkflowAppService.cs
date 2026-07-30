@@ -56,6 +56,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
     [Authorize(NoxStockPermissions.Documents.Approve)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task<DocumentDto> ApproveAsync(Guid id, ApproveDocumentInputDto input)
     {
         CurrentTenant.RequireTenantId();
@@ -125,6 +126,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
     [Authorize(NoxStockPermissions.Documents.Approve)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task<DocumentDto> RecordPaymentAsync(Guid id, RecordDocumentPaymentInputDto input)
     {
         CurrentTenant.RequireTenantId();
@@ -184,6 +186,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
     [Authorize(NoxStockPermissions.Documents.Cancel)]
     [UnitOfWork(true)]
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task<DocumentDto> CancelAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -259,11 +262,16 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
     private async Task LockSalesPricingSnapshotsAsync(Document document)
     {
+        if (!string.Equals(document.Currency, "TRY", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessException("NoxStock:SalesDocumentsRequireTry");
+        }
+
         ProductPriceCalculation? firstCalculation = null;
         foreach (var item in document.Items)
         {
             var product = await _productRepository.GetAsync(item.ProductId);
-            var calculation = await _productPriceCalculator.CalculateAsync(product, document.Currency);
+            var calculation = await _productPriceCalculator.CalculateAsync(product);
             firstCalculation ??= calculation;
 
             var usesDynamicPricing = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup;
@@ -273,26 +281,35 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
                     .WithData("ProductName", product.Name);
             }
 
-            if (usesDynamicPricing && !item.IsUnitPriceOverridden)
+            if (usesDynamicPricing && !item.IsUnitPriceOverridden && calculation.IsAvailable)
             {
-                item.UnitPrice = calculation.UnitPrice;
+                item.UnitPrice = calculation.ListSalePriceInTry;
+            }
+
+            ApplyProductSalesDiscountDefaults(item, product);
+            if (item.VatRate == 0m && product.VatRate > 0)
+            {
+                item.VatRate = product.VatRate;
             }
 
             item.PriceCurrencyCode = calculation.Currency;
             item.PriceExchangeRate = calculation.ExchangeRate;
-            item.PriceRateDate = calculation.PricingCurrencyRateDate ?? calculation.RateDate;
-            item.UnitPriceTry = RoundMoney(item.UnitPrice * calculation.ExchangeRate);
+            item.PriceRateDate = calculation.ReferenceCurrencyRateDate ?? calculation.RateDate;
+            item.UnitPriceTry = RoundMoney(item.UnitPrice);
             item.ProductCostHistoryId = calculation.ProductCostHistoryId ?? product.LastPurchaseCostHistoryId;
             item.PricingMode = item.IsUnitPriceOverridden ? ProductPricingMode.Manual : product.PricingMode;
             item.CostCurrencyCode = product.LastPurchaseCostCurrencyCode;
             item.CostCurrencyAmount = product.LastPurchaseCostCurrencyAmount;
-            item.CostTryAmount = product.LastPurchaseCostTryAmount;
+            item.CostTryAmount = calculation.NetCostInTry > 0m
+                ? calculation.NetCostInTry
+                : product.LastPurchaseCostTryAmount;
             item.AppliedMarkupPercent = calculation.MarkupPercent;
-            item.ReferenceSaleCurrencyCode = calculation.PricingCurrencyCode;
-            item.ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice;
-            item.ReferenceSaleExchangeRate = calculation.PricingCurrencyExchangeRate;
+            item.ReferenceCurrencyCode = calculation.ReferenceCurrencyCode;
+            item.ReferenceUnitPrice = calculation.ReferenceSaleUnitPrice;
+            item.ReferenceExchangeRate = calculation.ReferenceCurrencyExchangeRate;
             item.PricingSnapshotDate = Clock.Now;
 
+            item.DiscountRate = GetEffectiveSalesDiscountRate(item);
             var lineNet = item.Quantity * item.UnitPrice;
             var discount = lineNet * item.DiscountRate / 100m;
             var taxable = lineNet - discount;
@@ -301,7 +318,8 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
         if (firstCalculation is not null)
         {
-            document.ExchangeRate = firstCalculation.ExchangeRate;
+            document.Currency = "TRY";
+            document.ExchangeRate = 1m;
         }
 
         document.Subtotal = RoundMoney(document.Items.Sum(x => x.Quantity * x.UnitPrice));
@@ -317,58 +335,58 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
     private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
 
+    private static void ApplyProductSalesDiscountDefaults(DocumentItem item, Product product)
+    {
+        var hasLineDiscounts = item.SalesDiscount1 != 0m || item.SalesDiscount2 != 0m ||
+            item.SalesDiscount3 != 0m || item.SalesDiscount4 != 0m || item.DiscountRate != 0m;
+        if (hasLineDiscounts)
+        {
+            return;
+        }
+
+        item.SalesDiscount1 = product.SalesDiscount1;
+        item.SalesDiscount2 = product.SalesDiscount2;
+        item.SalesDiscount3 = product.SalesDiscount3;
+        item.SalesDiscount4 = product.SalesDiscount4;
+    }
+
+    private static decimal GetEffectiveSalesDiscountRate(DocumentItem item)
+    {
+        var hasDiscountChain = item.SalesDiscount1 != 0m || item.SalesDiscount2 != 0m ||
+            item.SalesDiscount3 != 0m || item.SalesDiscount4 != 0m;
+        if (!hasDiscountChain)
+        {
+            return item.DiscountRate;
+        }
+
+        var remainingFactor = (1m - item.SalesDiscount1 / 100m) *
+            (1m - item.SalesDiscount2 / 100m) *
+            (1m - item.SalesDiscount3 / 100m) *
+            (1m - item.SalesDiscount4 / 100m);
+        return RoundMoney((1m - remainingFactor) * 100m);
+    }
+
     private async Task RefreshPurchaseRatesAtApprovalAsync(Document document)
     {
-        var currencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "TRY",
-            document.Currency
-        };
-
+        // Currency snapshots are created while the dated draft is saved.
+        // Approval validates those snapshots but must not rewrite them with
+        // approval-day exchange rates.
         foreach (var item in document.Items)
         {
             var product = await _productRepository.GetAsync(item.ProductId);
-            currencies.Add(string.IsNullOrWhiteSpace(product.PricingCurrencyCode)
+            var referenceCurrency = string.IsNullOrWhiteSpace(product.PurchaseCurrency)
                 ? "TRY"
-                : product.PricingCurrencyCode.Trim().ToUpperInvariant());
-        }
-
-        foreach (var currency in currencies)
-        {
-            var rate = 1m;
-            var rateDate = Clock.Now;
-            if (!string.Equals(currency, "TRY", StringComparison.OrdinalIgnoreCase))
+                : product.PurchaseCurrency.Trim().ToUpperInvariant();
+            foreach (var currency in new[] { "TRY", document.Currency, referenceCurrency }
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                var currentRate = await _exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == currency);
-                if (currentRate is null || currentRate.Rate <= 0)
+                var snapshot = document.ExchangeRateSnapshots.FirstOrDefault(x =>
+                    string.Equals(x.CurrencyCode, currency, StringComparison.OrdinalIgnoreCase));
+                if (snapshot is null || snapshot.RateToTry <= 0m)
                 {
-                    throw new BusinessException("NoxStock:CurrentExchangeRateUnavailable")
+                    throw new BusinessException("NoxStock:DocumentExchangeRateSnapshotUnavailable")
                         .WithData("Currency", currency);
                 }
-
-                rate = currentRate.Rate;
-                rateDate = currentRate.RateDate;
-            }
-
-            var snapshot = document.ExchangeRateSnapshots.FirstOrDefault(x =>
-                string.Equals(x.CurrencyCode, currency, StringComparison.OrdinalIgnoreCase));
-            if (snapshot is null)
-            {
-                snapshot = new DocumentExchangeRateSnapshot(
-                    GuidGenerator.Create(), CurrentTenant.Id, document.Id, currency, rate, rateDate);
-                document.ExchangeRateSnapshots.Add(snapshot);
-                await _exchangeRateSnapshotRepository.InsertAsync(snapshot);
-            }
-            else
-            {
-                snapshot.RateToTry = rate;
-                snapshot.RateDate = rateDate;
-                await _exchangeRateSnapshotRepository.UpdateAsync(snapshot);
-            }
-
-            if (string.Equals(document.Currency, currency, StringComparison.OrdinalIgnoreCase))
-            {
-                document.ExchangeRate = rate;
             }
         }
     }

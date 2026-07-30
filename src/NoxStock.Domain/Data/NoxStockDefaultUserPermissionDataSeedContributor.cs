@@ -23,7 +23,12 @@ public class NoxStockDefaultUserPermissionDataSeedContributor : IDataSeedContrib
             await _permissionDataSeeder.SeedAsync(
                 RolePermissionValueProvider.ProviderName,
                 "admin",
-                ["NoxStock.AuditLogs"]);
+                [
+                    "NoxStock.AuditLogs",
+                    "NoxStock.Licenses",
+                    "NoxStock.Licenses.Manage",
+                    "NoxStock.Licenses.ViewAudit"
+                ]);
             return;
         }
 

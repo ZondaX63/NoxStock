@@ -15,29 +15,38 @@ namespace NoxStock.PrintLabels;
 public class LabelProductLookupAppService : ApplicationService, ILabelProductLookupAppService
 {
     private readonly IRepository<Product, Guid> _productRepository;
+    private readonly IProductPriceCalculator _priceCalculator;
 
-    public LabelProductLookupAppService(IRepository<Product, Guid> productRepository)
+    public LabelProductLookupAppService(
+        IRepository<Product, Guid> productRepository,
+        IProductPriceCalculator priceCalculator)
     {
         _productRepository = productRepository;
+        _priceCalculator = priceCalculator;
     }
 
     public async Task<List<LabelProductDto>> GetListAsync()
     {
         CurrentTenant.RequireTenantId();
         var products = await _productRepository.GetQueryableAsync();
-        var query = products
+        var productList = await AsyncExecuter.ToListAsync(products
             .OrderBy(x => x.Name)
-            .Take(2000)
-            .Select(x => new LabelProductDto
+            .Take(2000));
+        var result = new List<LabelProductDto>();
+        foreach (var product in productList)
+        {
+            var calculation = await _priceCalculator.CalculateAsync(product);
+            result.Add(new LabelProductDto
             {
-                Id = x.Id,
-                Name = x.Name,
-                Sku = x.Sku,
-                Barcode = x.Barcode,
-                SalePrice = x.SalePrice,
-                Currency = string.IsNullOrWhiteSpace(x.SaleCurrency) ? "TRY" : x.SaleCurrency
+                Id = product.Id,
+                Name = product.Name,
+                Sku = product.Sku,
+                Barcode = product.Barcode,
+                SalePrice = calculation.IsAvailable ? calculation.UnitPrice : 0m,
+                Currency = "TRY"
             });
+        }
 
-        return await AsyncExecuter.ToListAsync(query);
+        return result;
     }
 }

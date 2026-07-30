@@ -20,10 +20,20 @@ public class Product : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public string ShelfLocation { get; set; }
     
     public decimal PurchasePrice { get; set; }
+    public decimal PurchaseListPrice { get; set; }
+    public decimal PurchaseDiscount1 { get; set; }
+    public decimal PurchaseDiscount2 { get; set; }
+    public decimal PurchaseDiscount3 { get; set; }
+    public decimal PurchaseDiscount4 { get; set; }
+    public decimal ExchangeRateAtPurchase { get; set; } = 1m;
     public decimal SalePrice { get; set; }
+    public decimal SalesDiscount1 { get; set; }
+    public decimal SalesDiscount2 { get; set; }
+    public decimal SalesDiscount3 { get; set; }
+    public decimal SalesDiscount4 { get; set; }
+    public int VatRate { get; set; } = 20;
     public decimal ProfitMarkupPercent { get; set; } = 30m;
     public bool UseCurrentExchangeRateForSale { get; set; }
-    public string PricingCurrencyCode { get; set; } = "TRY";
     public ProductPricingMode PricingMode { get; set; }
     public string? LastPurchaseCostCurrencyCode { get; set; }
     public decimal? LastPurchaseCostCurrencyAmount { get; set; }
@@ -39,9 +49,7 @@ public class Product : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; }
     
-    public string Currency { get; set; }
-    public string PurchaseCurrency { get; set; }
-    public string SaleCurrency { get; set; }
+    public string PurchaseCurrency { get; set; } = "TRY";
 
     public ICollection<ProductOEMCode> OemCodes { get; set; }
 

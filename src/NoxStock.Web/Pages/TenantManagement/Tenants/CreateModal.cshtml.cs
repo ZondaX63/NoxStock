@@ -11,6 +11,10 @@ using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.Validation;
 using Volo.Abp.Auditing;
+using NoxStock.Licensing;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Linq;
 using AbpIdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace NoxStock.Web.Pages.TenantManagement.Tenants;
@@ -25,6 +29,8 @@ public class CreateModalModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
     private readonly IIdentityUserRepository _identityUserRepository;
     private readonly IdentityUserManager _identityUserManager;
     private readonly ILogger<CreateModalModel> _logger;
+    private readonly IHostLicenseAppService _licenseAppService;
+    private readonly IConfiguration _configuration;
 
     public CreateModalModel(
         ITenantManager tenantManager,
@@ -33,7 +39,9 @@ public class CreateModalModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
         ICurrentTenant currentTenant,
         IIdentityUserRepository identityUserRepository,
         IdentityUserManager identityUserManager,
-        ILogger<CreateModalModel> logger)
+        ILogger<CreateModalModel> logger,
+        IHostLicenseAppService licenseAppService,
+        IConfiguration configuration)
     {
         _tenantManager = tenantManager;
         _tenantRepository = tenantRepository;
@@ -42,6 +50,8 @@ public class CreateModalModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
         _identityUserRepository = identityUserRepository;
         _identityUserManager = identityUserManager;
         _logger = logger;
+        _licenseAppService = licenseAppService;
+        _configuration = configuration;
     }
 
     [BindProperty]
@@ -90,6 +100,30 @@ public class CreateModalModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
                     throw new UserFriendlyException(string.Join(" ", renameResult.Errors));
                 }
             }
+
+            var pilotPlan = (await _licenseAppService.GetPlansAsync())
+                .First(plan => plan.Code == "PILOT");
+            var trialDays = Math.Max(
+                1,
+                _configuration.GetValue("Licensing:DefaultTrialDays", 30));
+            var graceDays = Math.Max(
+                0,
+                _configuration.GetValue("Licensing:DefaultGracePeriodDays", 7));
+            var startsAtUtc = DateTime.UtcNow;
+            var expiresAtUtc = startsAtUtc.AddDays(trialDays);
+            await _licenseAppService.AssignAsync(new AssignTenantLicenseDto
+            {
+                TenantId = tenant.Id,
+                LicensePlanId = pilotPlan.Id,
+                Status = LicenseStatus.Trial,
+                StartsAtUtc = startsAtUtc,
+                ExpiresAtUtc = expiresAtUtc,
+                GracePeriodEndsAtUtc = graceDays > 0
+                    ? expiresAtUtc.AddDays(graceDays)
+                    : null,
+                LicenseReference = $"PILOT-{tenant.Id:N}",
+                InternalNote = "Şirket oluşturma akışında otomatik atandı."
+            });
 
             return new NoContentResult();
         }

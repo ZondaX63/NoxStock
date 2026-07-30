@@ -13,6 +13,14 @@ public class DocumentItemDto : FullAuditedEntityDto<Guid>
     public decimal UnitPrice { get; set; }
     public decimal VatRate { get; set; }
     public decimal DiscountRate { get; set; }
+    public decimal PurchaseDiscount1 { get; set; }
+    public decimal PurchaseDiscount2 { get; set; }
+    public decimal PurchaseDiscount3 { get; set; }
+    public decimal PurchaseDiscount4 { get; set; }
+    public decimal SalesDiscount1 { get; set; }
+    public decimal SalesDiscount2 { get; set; }
+    public decimal SalesDiscount3 { get; set; }
+    public decimal SalesDiscount4 { get; set; }
     public decimal Total { get; set; }
     public bool IsUnitPriceOverridden { get; set; }
     public string? PriceCurrencyCode { get; set; }
@@ -25,8 +33,8 @@ public class DocumentItemDto : FullAuditedEntityDto<Guid>
     public decimal? CostCurrencyAmount { get; set; }
     public decimal? CostTryAmount { get; set; }
     public decimal? AppliedMarkupPercent { get; set; }
-    public string? ReferenceSaleCurrencyCode { get; set; }
-    public decimal? ReferenceSaleUnitPrice { get; set; }
-    public decimal? ReferenceSaleExchangeRate { get; set; }
+    public string? ReferenceCurrencyCode { get; set; }
+    public decimal? ReferenceUnitPrice { get; set; }
+    public decimal? ReferenceExchangeRate { get; set; }
     public DateTime? PricingSnapshotDate { get; set; }
 }

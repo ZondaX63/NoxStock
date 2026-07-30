@@ -28,25 +28,28 @@ public class CreateUpdateProductDto
     public string ShelfLocation { get; set; }
     
     public decimal PurchasePrice { get; set; }
+    public decimal PurchaseListPrice { get; set; }
+    [Range(0, 100)] public decimal PurchaseDiscount1 { get; set; }
+    [Range(0, 100)] public decimal PurchaseDiscount2 { get; set; }
+    [Range(0, 100)] public decimal PurchaseDiscount3 { get; set; }
+    [Range(0, 100)] public decimal PurchaseDiscount4 { get; set; }
+    [Range(0, 1000000)] public decimal ExchangeRateAtPurchase { get; set; } = 1m;
     public decimal SalePrice { get; set; }
+    [Range(0, 100)] public decimal SalesDiscount1 { get; set; }
+    [Range(0, 100)] public decimal SalesDiscount2 { get; set; }
+    [Range(0, 100)] public decimal SalesDiscount3 { get; set; }
+    [Range(0, 100)] public decimal SalesDiscount4 { get; set; }
+    [Range(0, 100)] public int VatRate { get; set; } = 20;
     [Range(0, 10000)]
     public decimal ProfitMarkupPercent { get; set; } = 30m;
     public bool UseCurrentExchangeRateForSale { get; set; }
-    [StringLength(3)]
-    public string PricingCurrencyCode { get; set; } = "TRY";
     public ProductPricingMode PricingMode { get; set; }
     public decimal Quantity { get; set; }
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; } = true;
     
     [StringLength(3)]
-    public string Currency { get; set; } = "TRY";
-    
-    [StringLength(3)]
     public string PurchaseCurrency { get; set; } = "TRY";
-    
-    [StringLength(3)]
-    public string SaleCurrency { get; set; } = "TRY";
 
     [StringLength(1000)]
     public string? OemCodes { get; set; }

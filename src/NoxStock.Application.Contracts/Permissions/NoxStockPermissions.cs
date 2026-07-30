@@ -130,4 +130,11 @@ public static class NoxStockPermissions
     {
         public const string Refresh = GroupName + ".ExchangeRates.Refresh";
     }
+
+    public static class Licenses
+    {
+        public const string Default = GroupName + ".Licenses";
+        public const string Manage = Default + ".Manage";
+        public const string ViewAudit = Default + ".ViewAudit";
+    }
 }

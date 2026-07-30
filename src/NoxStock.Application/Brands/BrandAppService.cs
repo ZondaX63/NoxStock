@@ -41,18 +41,21 @@ public class BrandAppService :
         return base.GetListAsync(input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task<BrandDto> CreateAsync(CreateUpdateBrandDto input)
     {
         CurrentTenant.RequireTenantId();
         return base.CreateAsync(input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task<BrandDto> UpdateAsync(Guid id, CreateUpdateBrandDto input)
     {
         CurrentTenant.RequireTenantId();
         return base.UpdateAsync(id, input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task DeleteAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();

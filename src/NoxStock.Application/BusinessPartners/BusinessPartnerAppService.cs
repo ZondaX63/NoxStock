@@ -42,18 +42,21 @@ public class BusinessPartnerAppService :
         return base.GetListAsync(input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task<BusinessPartnerDto> CreateAsync(CreateUpdateBusinessPartnerDto input)
     {
         CurrentTenant.RequireTenantId();
         return base.CreateAsync(input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task<BusinessPartnerDto> UpdateAsync(Guid id, CreateUpdateBusinessPartnerDto input)
     {
         CurrentTenant.RequireTenantId();
         return base.UpdateAsync(id, input);
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public override Task DeleteAsync(Guid id)
     {
         CurrentTenant.RequireTenantId();
@@ -79,6 +82,7 @@ public class BusinessPartnerAppService :
         return query;
     }
 
+    [NoxStock.Licensing.TenantLicenseWrite]
     public async Task ProcessPaymentAsync(ProcessPaymentDto input)
     {
         CurrentTenant.RequireTenantId();

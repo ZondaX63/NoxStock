@@ -11,7 +11,7 @@ public class ProductCostHistoryDto
     public string SourceCurrencyCode { get; set; } = "TRY";
     public decimal SourceExchangeRate { get; set; }
     public decimal TryEquivalentNetUnitCost { get; set; }
-    public string PricingCurrencyCode { get; set; } = "TRY";
-    public decimal PricingCurrencyEquivalentCost { get; set; }
+    public string ReferenceCurrencyCode { get; set; } = "TRY";
+    public decimal ReferenceCurrencyEquivalentCost { get; set; }
     public int ChangeType { get; set; }
 }

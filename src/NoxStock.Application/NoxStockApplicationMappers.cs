@@ -72,13 +72,13 @@ public partial class NoxStockProductToProductDtoMapper : MapperBase<NoxStock.Pro
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.LastPurchaseSourceExchangeRate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.IsSuggestedSaleAvailable))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleUnavailableReason))]
-    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleCurrency))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleUnitPrice))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSalePriceInTry))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleExchangeRate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleRateDate))]
-    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentPricingCurrencyExchangeRate))]
-    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentPricingCurrencyRateDate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentReferenceCurrencyExchangeRate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentReferenceCurrencyRateDate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentNetCostInTry))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.ReferenceSaleUnitPrice))]
     public override partial NoxStock.Products.ProductDto Map(NoxStock.Products.Product source);
     
@@ -92,13 +92,13 @@ public partial class NoxStockProductToProductDtoMapper : MapperBase<NoxStock.Pro
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.LastPurchaseSourceExchangeRate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.IsSuggestedSaleAvailable))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleUnavailableReason))]
-    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleCurrency))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleUnitPrice))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSalePriceInTry))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleExchangeRate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.SuggestedSaleRateDate))]
-    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentPricingCurrencyExchangeRate))]
-    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentPricingCurrencyRateDate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentReferenceCurrencyExchangeRate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentReferenceCurrencyRateDate))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentNetCostInTry))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.ReferenceSaleUnitPrice))]
     public override partial void Map(NoxStock.Products.Product source, NoxStock.Products.ProductDto destination);
 }
@@ -190,9 +190,9 @@ public partial class NoxStockCreateUpdateDocumentItemDtoToDocumentItemMapper : M
     [MapperIgnoreTarget(nameof(DocumentItem.CostCurrencyAmount))]
     [MapperIgnoreTarget(nameof(DocumentItem.CostTryAmount))]
     [MapperIgnoreTarget(nameof(DocumentItem.AppliedMarkupPercent))]
-    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceSaleCurrencyCode))]
-    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceSaleUnitPrice))]
-    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceSaleExchangeRate))]
+    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceCurrencyCode))]
+    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceUnitPrice))]
+    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceExchangeRate))]
     [MapperIgnoreTarget(nameof(DocumentItem.PricingSnapshotDate))]
     public override partial DocumentItem Map(CreateUpdateDocumentItemDto source);
 
@@ -208,9 +208,9 @@ public partial class NoxStockCreateUpdateDocumentItemDtoToDocumentItemMapper : M
     [MapperIgnoreTarget(nameof(DocumentItem.CostCurrencyAmount))]
     [MapperIgnoreTarget(nameof(DocumentItem.CostTryAmount))]
     [MapperIgnoreTarget(nameof(DocumentItem.AppliedMarkupPercent))]
-    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceSaleCurrencyCode))]
-    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceSaleUnitPrice))]
-    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceSaleExchangeRate))]
+    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceCurrencyCode))]
+    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceUnitPrice))]
+    [MapperIgnoreTarget(nameof(DocumentItem.ReferenceExchangeRate))]
     [MapperIgnoreTarget(nameof(DocumentItem.PricingSnapshotDate))]
     public override partial void Map(CreateUpdateDocumentItemDto source, DocumentItem destination);
 }

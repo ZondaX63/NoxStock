@@ -446,9 +446,7 @@ public class TenantIsolationTests : NoxStockEntityFrameworkCoreTestBase, IAsyncL
             SalePrice = 20,
             Quantity = quantity,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
         };
     }
 

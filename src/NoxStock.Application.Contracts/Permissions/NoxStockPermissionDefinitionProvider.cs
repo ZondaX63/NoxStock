@@ -71,6 +71,19 @@ public class NoxStockPermissionDefinitionProvider : PermissionDefinitionProvider
             NoxStockPermissions.ExchangeRates.Refresh,
             L("Permission:ExchangeRates.Refresh"),
             multiTenancySide: MultiTenancySides.Host);
+
+        var licensesPermission = myGroup.AddPermission(
+            NoxStockPermissions.Licenses.Default,
+            L("Permission:Licenses"),
+            multiTenancySide: MultiTenancySides.Host);
+        licensesPermission.AddChild(
+            NoxStockPermissions.Licenses.Manage,
+            L("Permission:Licenses.Manage"),
+            multiTenancySide: MultiTenancySides.Host);
+        licensesPermission.AddChild(
+            NoxStockPermissions.Licenses.ViewAudit,
+            L("Permission:Licenses.ViewAudit"),
+            multiTenancySide: MultiTenancySides.Host);
     }
 
     private static PermissionDefinition AddCrudPermissions(

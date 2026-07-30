@@ -39,5 +39,8 @@ public class PermissionSideTests : NoxStockEntityFrameworkCoreTestBase
 
         var hostPermission = await _permissionDefinitionManager.GetAsync(NoxStockPermissions.ExchangeRates.Refresh);
         hostPermission.MultiTenancySide.ShouldBe(MultiTenancySides.Host);
+
+        var licensePermission = await _permissionDefinitionManager.GetAsync(NoxStockPermissions.Licenses.Manage);
+        licensePermission.MultiTenancySide.ShouldBe(MultiTenancySides.Host);
     }
 }

@@ -42,6 +42,7 @@
                 </button>
                 <div x-show="expanded" class="ml-4 mt-1 space-y-1">
                     <a href="~/TenantManagement/Tenants" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/tenantmanagement/tenants") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:Companies"]</a>
+                    <a href="~/host/licenses" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/host/licenses") || IsActive("/licensemanagement") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:LicensesAndPlans"]</a>
                     <a href="~/Identity/Users" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/identity") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:UsersAndRoles"]</a>
                     <a href="~/AuditLogs" class="flex items-center px-4 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 @(IsActive("/auditlogs") ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-slate-400 hover:bg-slate-800 hover:text-white")">@L["Menu:AuditLogs"]</a>
                 </div>

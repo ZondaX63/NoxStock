@@ -55,9 +55,7 @@ public class ReportingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             Quantity = 5,
             CriticalStockLevel = 5,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
         });
         var customer = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
         {
@@ -109,7 +107,7 @@ public class ReportingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         report.VatRates.Single(x => x.VatRate == 20).SalesVat.ShouldBe(20);
         report.VatRates.Single(x => x.VatRate == 20).PurchaseVat.ShouldBe(10);
         report.Aging.Single(x => x.Bucket == "0-30 gün").Receivables.ShouldBe(120);
-        report.ProductProfitability.Single(x => x.ProductId == product.Id).GrossProfitEstimate.ShouldBe(80);
+        report.ProductProfitability.Single(x => x.ProductId == product.Id).GrossProfitEstimate.ShouldBe(60);
         report.StockMovements.Single(x =>
             x.ProductName == product.Name && x.Type == StockMovementType.ManualOut).Quantity.ShouldBe(-1);
     }

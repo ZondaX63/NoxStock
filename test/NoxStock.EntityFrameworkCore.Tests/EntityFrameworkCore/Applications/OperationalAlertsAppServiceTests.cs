@@ -35,9 +35,7 @@ public class OperationalAlertsAppServiceTests : NoxStockEntityFrameworkCoreTestB
             Quantity = 0,
             CriticalStockLevel = 3,
             TrackStock = true,
-            Currency = "TRY",
             PurchaseCurrency = "TRY",
-            SaleCurrency = "TRY"
         });
 
         var summary = await _alertsAppService.GetSummaryAsync();
