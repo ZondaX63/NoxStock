@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 using Serilog;
 using Serilog.Events;
 
@@ -30,8 +32,17 @@ public class Program
                         .ReadFrom.Configuration(context.Configuration)
                         .ReadFrom.Services(services);
                 });
+            builder.Services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+                options.Providers.Add<BrotliCompressionProvider>();
+                options.Providers.Add<GzipCompressionProvider>();
+            });
+            builder.Services.Configure<BrotliCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
+            builder.Services.Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
             await builder.AddApplicationAsync<NoxStockWebModule>();
             var app = builder.Build();
+            app.UseResponseCompression();
             await app.InitializeApplicationAsync();
             await app.RunAsync();
             return 0;

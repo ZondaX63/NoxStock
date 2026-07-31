@@ -20,41 +20,7 @@
     <script>
         (function () {
             var savedTheme = localStorage.getItem('noxstock.theme') || (localStorage.getItem('darkMode') === 'true' ? 'dark' : 'light');
-            var root = document.documentElement;
-            root.classList.toggle('dark', savedTheme === 'dark');
-            root.classList.add('nox-page-loading');
-            var fallbackTimer;
-
-            function finishPageLoad() {
-                window.clearTimeout(fallbackTimer);
-                window.requestAnimationFrame(function () {
-                    window.requestAnimationFrame(function () {
-                        root.classList.remove('nox-page-loading');
-                    });
-                });
-            }
-
-            // Wait for blocking page assets as well as the HTML. The fallback
-            // keeps a slow/failed asset from leaving the whole application
-            // behind a loader indefinitely.
-            fallbackTimer = window.setTimeout(finishPageLoad, 1800);
-            window.addEventListener('load', finishPageLoad, { once: true });
-            window.addEventListener('pageshow', finishPageLoad);
-
-            // Show the loader before a normal internal navigation starts. This
-            // prevents the old page from flashing while the next Razor Page is
-            // being requested and rendered.
-            document.addEventListener('click', function (event) {
-                if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                var link = event.target.closest && event.target.closest('a[href]');
-                if (!link || link.target === '_blank' || link.hasAttribute('download') || link.dataset.bsToggle || link.dataset.toggle) return;
-                var href = link.getAttribute('href');
-                if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
-                var url;
-                try { url = new URL(link.href, window.location.href); } catch (_) { return; }
-                if (url.origin !== window.location.origin || (url.pathname === window.location.pathname && url.search === window.location.search)) return;
-                root.classList.add('nox-page-loading');
-            }, true);
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
         })();
     </script>
 
@@ -97,16 +63,6 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="font-sans antialiased transition-colors duration-200" x-data="{ sidebarOpen: false, darkMode: false }" x-init="darkMode = document.documentElement.classList.contains('dark'); $watch('darkMode', val => { localStorage.setItem('darkMode', val); localStorage.setItem('noxstock.theme', val ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', val); });">
-
-    <div id="NoxPageSkeleton" class="nox-page-skeleton" aria-hidden="true">
-        <div class="nox-page-skeleton-sidebar"><span class="nox-skeleton-logo"></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-        <div class="nox-page-skeleton-content">
-            <div class="nox-page-skeleton-topbar"><span></span><span></span><span></span></div>
-            <div class="nox-page-skeleton-heading"><span></span><span></span></div>
-            <div class="nox-page-skeleton-card"><span></span><span></span><span></span><span></span></div>
-            <div class="nox-page-skeleton-card nox-page-skeleton-card-short"><span></span><span></span><span></span></div>
-        </div>
-    </div>
 
     <div class="flex h-screen overflow-hidden">
 
