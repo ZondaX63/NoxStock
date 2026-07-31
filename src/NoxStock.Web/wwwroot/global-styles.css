@@ -1181,6 +1181,27 @@ textarea::placeholder {
 .products-search-help .material-icons-round { color: #6366f1; font-size: .85rem; }
 
 .products-table-wrap { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; border-top: 1px solid var(--nx-border); }
+.products-table-wrap[data-products-table-shell] { position: relative; min-height: 13rem; }
+.products-table-loading { position: absolute; inset: 2.85rem 0 0; z-index: 8; display: none; align-items: center; justify-content: center; gap: .6rem; min-height: 10rem; background: rgb(255 255 255 / 82%); color: #64748b; font-size: .78rem; font-weight: 700; backdrop-filter: blur(1px); }
+.products-table-loading.is-visible { display: flex; }
+.products-table-loading > span:first-child { width: 1.15rem; height: 1.15rem; border: 2px solid #c7d2fe; border-top-color: #4f46e5; border-radius: 50%; animation: nx-spin .7s linear infinite; }
+.dark .products-table-loading { background: rgb(15 23 42 / 78%); color: #cbd5e1; }
+.pos-loading-card { display: grid; min-height: 10.5rem; gap: .75rem; padding: 1rem; border: 1px solid #e2e8f0; border-radius: .6rem; background: #fff; }
+.pos-loading-card i,
+.pos-loading-row span { display: block; border-radius: .35rem; background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 37%, #eef2f7 63%); background-size: 400% 100%; animation: noxstock-skeleton 1.25s ease infinite; }
+.pos-loading-card i:nth-child(1) { width: 72%; height: 1rem; }
+.pos-loading-card i:nth-child(2) { width: 52%; height: .7rem; }
+.pos-loading-card i:nth-child(3) { width: 86%; height: .7rem; }
+.pos-loading-card i:nth-child(4) { width: 40%; height: 1.15rem; margin-top: auto; }
+.pos-loading-row td { padding: 1rem 1.25rem; }
+.pos-loading-row span { height: .68rem; margin: .42rem 0; }
+.pos-loading-row span:nth-child(1) { width: 28%; }
+.pos-loading-row span:nth-child(2) { width: 62%; }
+.pos-loading-row span:nth-child(3) { width: 42%; }
+@keyframes noxstock-skeleton { to { background-position: -400% 0; } }
+.dark .pos-loading-card { border-color: #334155; background: #1e293b; }
+.dark .pos-loading-card i,
+.dark .pos-loading-row span { background: linear-gradient(90deg, #334155 25%, #475569 37%, #334155 63%); background-size: 400% 100%; }
 .products-table-wrap .dataTables_wrapper,
 .products-table-wrap .dataTables_scroll { width: 100% !important; min-width: 0; max-width: 100%; }
 .products-table-wrap .dataTables_scrollHead,

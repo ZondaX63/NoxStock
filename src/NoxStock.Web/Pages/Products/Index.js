@@ -945,14 +945,26 @@ $(function () {
         });
     }
 
+    function setProductsTableLoading(isLoading) {
+        $('#ProductsTableLoading').toggleClass('is-visible', Boolean(isLoading));
+    }
+
+    $('#ProductsTable').on('processing.dt', function (event, settings, processing) {
+        setProductsTableLoading(processing);
+    }).on('xhr.dt', function () {
+        setProductsTableLoading(false);
+    });
+
     dataTable = $('#ProductsTable').DataTable(abp.libs.datatables.normalizeConfiguration({
         serverSide: true,
         paging: true,
+        processing: true,
         order: [[1, 'asc']],
         searching: false,
         autoWidth: false,
         scrollX: true,
         drawCallback: function () {
+            setProductsTableLoading(false);
             updateSummary();
             initColumnResizeHandles();
         },

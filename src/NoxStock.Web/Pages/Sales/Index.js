@@ -7,6 +7,37 @@ $(function () {
     var searchTimer;
     var operationKey = createOperationKey();
     var posQuantityStep = 1;
+    var productRequestSequence = 0;
+
+    function productLoadingMarkup() {
+        return Array.from({ length: 6 }, function () {
+            return '<div class="pos-loading-card" aria-hidden="true"><i></i><i></i><i></i><i></i></div>';
+        }).join('');
+    }
+
+    function recentSalesLoadingMarkup() {
+        return Array.from({ length: 3 }, function () {
+            return '<tr class="pos-loading-row" aria-hidden="true"><td colspan="6"><span></span><span></span><span></span></td></tr>';
+        }).join('');
+    }
+
+    function setProductsLoading() {
+        $('#PosProductGrid')
+            .attr('aria-busy', 'true')
+            .html(productLoadingMarkup());
+    }
+
+    function setCheckoutOptionsLoading() {
+        $('#PosAccount, #PosCustomer')
+            .prop('disabled', true)
+            .html('<option>Seçenekler yükleniyor…</option>');
+    }
+
+    function setRecentSalesLoading() {
+        $('#RecentPosSalesBody')
+            .attr('aria-busy', 'true')
+            .html(recentSalesLoadingMarkup());
+    }
 
     function createOperationKey() {
         return window.crypto && window.crypto.randomUUID
@@ -49,7 +80,7 @@ $(function () {
 
     function renderProducts() {
         var $grid = $('#PosProductGrid');
-        $grid.empty();
+        $grid.attr('aria-busy', 'false').empty();
         if (!products.length) {
             $grid.append('<div class="col-span-full flex min-h-72 flex-col items-center justify-center text-slate-400"><span class="material-icons-round text-5xl opacity-40">inventory_2</span><p class="mt-3 font-medium">Ürün bulunamadı.</p><p class="mt-1 text-sm">Barkod, ürün adı, stok kodu veya OEM ile arayın.</p></div>');
             return;
@@ -139,6 +170,7 @@ $(function () {
         var isCredit = paymentMethod === 3;
         $('#PosAccountField').toggleClass('hidden', isCredit);
         $('#PosCustomerRequired').toggleClass('hidden', !isCredit);
+        $('#PosAccount, #PosCustomer').prop('disabled', false);
     }
 
     function addToCart(product) {
@@ -172,14 +204,18 @@ $(function () {
 
     function loadProducts() {
         var filter = $('#PosSearch').val();
+        var requestSequence = ++productRequestSequence;
+        setProductsLoading();
         posService.getProducts({ filter: filter, maxResultCount: 30 }).then(function (items) {
+            if (requestSequence !== productRequestSequence) return;
             products = items.map(function (product) {
                 product.quantityAvailable = product.quantity;
                 return product;
             });
             renderProducts();
         }).catch(function () {
-            $('#PosProductGrid').html('<div class="col-span-full flex min-h-72 flex-col items-center justify-center text-amber-600"><span class="material-icons-round text-4xl">currency_exchange</span><p class="mt-3 font-medium">Kur bulunamadı, fiyat hesaplanamadı.</p><p class="mt-1 text-sm text-slate-500">Kur bilgisini yenileyip tekrar deneyin.</p></div>');
+            if (requestSequence !== productRequestSequence) return;
+            $('#PosProductGrid').attr('aria-busy', 'false').html('<div class="col-span-full flex min-h-72 flex-col items-center justify-center text-amber-600"><span class="material-icons-round text-4xl">currency_exchange</span><p class="mt-3 font-medium">Ürünler yüklenemedi.</p><p class="mt-1 text-sm text-slate-500">Bağlantıyı kontrol edip tekrar deneyin.</p></div>');
         });
     }
 
@@ -224,9 +260,14 @@ $(function () {
     }
 
     function loadCheckoutOptions() {
+        setCheckoutOptionsLoading();
         posService.getCheckoutOptions().then(function (options) {
             checkoutOptions = options;
             renderCheckoutOptions();
+        }).catch(function () {
+            $('#PosAccount, #PosCustomer')
+                .prop('disabled', false)
+                .html('<option value="">Seçenekler yüklenemedi</option>');
         });
     }
 
@@ -237,8 +278,9 @@ $(function () {
     }
 
     function loadRecentSales() {
+        setRecentSalesLoading();
         posService.getRecent().then(function (sales) {
-            var $body = $('#RecentPosSalesBody').empty();
+            var $body = $('#RecentPosSalesBody').attr('aria-busy', 'false').empty();
             if (!sales.length) {
                 $body.append('<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Henüz POS satışı yok.</td></tr>');
                 return;
@@ -248,6 +290,8 @@ $(function () {
                 var action = sale.status === 5 ? '-' : '<button type="button" class="pos-cancel-sale text-rose-600 hover:underline" data-sale-id="' + sale.id + '">İptal Et</button>';
                 $body.append('<tr><td class="px-5 py-3 font-semibold text-slate-800 dark:text-white">' + escapeHtml(sale.receiptNumber) + '</td><td class="px-5 py-3 text-slate-600 dark:text-slate-300">' + luxon.DateTime.fromISO(sale.date).toFormat('dd.MM.yyyy HH:mm') + '</td><td class="px-5 py-3 text-slate-600 dark:text-slate-300">' + escapeHtml(sale.businessPartnerName) + '</td><td class="px-5 py-3">' + paymentMethodText(sale.paymentMethod) + '<div class="mt-1">' + status + '</div></td><td class="px-5 py-3 text-right font-bold text-slate-800 dark:text-white">' + formatMoney(sale.grandTotal, sale.currency) + '</td><td class="px-5 py-3 text-right">' + action + '</td></tr>');
             });
+        }).catch(function () {
+            $('#RecentPosSalesBody').attr('aria-busy', 'false').html('<tr><td colspan="6" class="px-5 py-8 text-center text-amber-600">Son POS satışları yüklenemedi.</td></tr>');
         });
     }
 

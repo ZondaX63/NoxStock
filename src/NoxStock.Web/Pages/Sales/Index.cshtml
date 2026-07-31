@@ -35,7 +35,12 @@
                     <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">TRY satış</span>
                 </div>
             </div>
-            <div id="PosProductGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-5 min-h-96"></div>
+            <div id="PosProductGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-5 min-h-96" aria-busy="true" aria-label="Ürünler yükleniyor">
+                @for (var skeletonIndex = 0; skeletonIndex < 6; skeletonIndex++)
+                {
+                    <div class="pos-loading-card" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                }
+            </div>
         </div>
 
         <div class="card overflow-hidden mt-6">
@@ -57,7 +62,12 @@
                             <th class="py-3 px-5 text-xs font-semibold uppercase text-slate-500 text-right">İşlem</th>
                         </tr>
                     </thead>
-                    <tbody id="RecentPosSalesBody" class="divide-y divide-slate-100 dark:divide-slate-700 text-sm"></tbody>
+                    <tbody id="RecentPosSalesBody" class="divide-y divide-slate-100 dark:divide-slate-700 text-sm" aria-busy="true">
+                        @for (var skeletonIndex = 0; skeletonIndex < 3; skeletonIndex++)
+                        {
+                            <tr class="pos-loading-row" aria-hidden="true"><td colspan="6"><span></span><span></span><span></span></td></tr>
+                        }
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -84,11 +94,11 @@
 
             <div id="PosAccountField" class="mt-4">
                 <label for="PosAccount" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Kasa / Banka</label>
-                <select id="PosAccount" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white"></select>
+                <select id="PosAccount" disabled class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white"><option>Seçenekler yükleniyor…</option></select>
             </div>
             <div class="mt-4">
                 <label for="PosCustomer" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Müşteri <span id="PosCustomerRequired" class="hidden text-rose-600">(zorunlu)</span></label>
-                <select id="PosCustomer" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white"></select>
+                <select id="PosCustomer" disabled class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white"><option>Seçenekler yükleniyor…</option></select>
             </div>
             <div class="mt-4">
                 <label for="PosNote" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Not</label>
