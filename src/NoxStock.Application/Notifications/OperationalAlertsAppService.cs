@@ -33,18 +33,102 @@ public class OperationalAlertsAppService : ApplicationService, IOperationalAlert
     {
         CurrentTenant.RequireTenantId();
         var today = Clock.Now.Date;
-        var alerts = new System.Collections.Generic.List<OperationalAlertDto>();
         var products = await _productRepository.GetQueryableAsync();
         var documents = await _documentRepository.GetQueryableAsync();
         var partners = await _businessPartnerRepository.GetQueryableAsync();
+        var counts = await GetCountsAsync(products, documents, today);
+        var alerts = await GetAlertWindowAsync(products, documents, partners, today, 4);
+
+        return new OperationalAlertsSummaryDto
+        {
+            TotalCount = counts.Total,
+            CriticalCount = counts.Critical,
+            WarningCount = counts.Total - counts.Critical,
+            Alerts = alerts.Take(4).ToList()
+        };
+    }
+
+    public async Task<OperationalAlertsPageDto> GetPageAsync(OperationalAlertGetListInput input)
+    {
+        CurrentTenant.RequireTenantId();
+        var today = Clock.Now.Date;
+        var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 50);
+        var skipCount = Math.Clamp(input.SkipCount, 0, 10_000);
+        var windowSize = Math.Min(skipCount + maxResultCount, 10_050);
+        var products = await _productRepository.GetQueryableAsync();
+        var documents = await _documentRepository.GetQueryableAsync();
+        var partners = await _businessPartnerRepository.GetQueryableAsync();
+        var counts = await GetCountsAsync(products, documents, today);
+        var alerts = await GetAlertWindowAsync(products, documents, partners, today, windowSize);
+
+        return new OperationalAlertsPageDto
+        {
+            TotalCount = counts.Total,
+            CriticalCount = counts.Critical,
+            WarningCount = counts.Total - counts.Critical,
+            SkipCount = skipCount,
+            MaxResultCount = maxResultCount,
+            Alerts = alerts.Skip(skipCount).Take(maxResultCount).ToList()
+        };
+    }
+
+    private async Task<AlertCounts> GetCountsAsync(
+        IQueryable<Product> products,
+        IQueryable<Document> documents,
+        DateTime today)
+    {
+        var productCounts = await AsyncExecuter.FirstOrDefaultAsync(products
+            .Where(x => x.TrackStock && x.Quantity <= x.CriticalStockLevel)
+            .GroupBy(_ => 1)
+            .Select(group => new AlertCounts
+            {
+                Total = group.Count(),
+                Critical = group.Count(x => x.Quantity <= 0)
+            }));
+
+        var dueDocuments = GetDueDocumentsQuery(documents, today);
+        var documentCounts = await AsyncExecuter.FirstOrDefaultAsync(dueDocuments
+            .GroupBy(_ => 1)
+            .Select(group => new AlertCounts
+            {
+                Total = group.Count(),
+                Critical = group.Count(x => x.DueDate!.Value < today)
+            }));
+
+        return new AlertCounts
+        {
+            Total = (productCounts?.Total ?? 0) + (documentCounts?.Total ?? 0),
+            Critical = (productCounts?.Critical ?? 0) + (documentCounts?.Critical ?? 0)
+        };
+    }
+
+    private async Task<System.Collections.Generic.List<OperationalAlertDto>> GetAlertWindowAsync(
+        IQueryable<Product> products,
+        IQueryable<Document> documents,
+        IQueryable<BusinessPartner> partners,
+        DateTime today,
+        int windowSize)
+    {
+        if (windowSize <= 0)
+        {
+            return new System.Collections.Generic.List<OperationalAlertDto>();
+        }
 
         var criticalProducts = await AsyncExecuter.ToListAsync(products
             .Where(x => x.TrackStock && x.Quantity <= x.CriticalStockLevel)
-            .OrderBy(x => x.Quantity)
+            .OrderByDescending(x => x.Quantity <= 0)
+            .ThenBy(x => x.Quantity)
             .ThenBy(x => x.Name)
-            .Take(50));
+            .Take(windowSize)
+            .Select(product => new CriticalProductAlertRow
+            {
+                Name = product.Name,
+                Unit = product.Unit,
+                Quantity = product.Quantity,
+                CriticalStockLevel = product.CriticalStockLevel
+            }));
 
-        alerts.AddRange(criticalProducts.Select(product => new OperationalAlertDto
+        var alerts = criticalProducts.Select(product => new OperationalAlertDto
         {
             Type = "CriticalStock",
             Severity = product.Quantity <= 0 ? "Critical" : "Warning",
@@ -52,49 +136,81 @@ public class OperationalAlertsAppService : ApplicationService, IOperationalAlert
             Message = $"{product.Name} için mevcut stok {product.Quantity:0.##} {product.Unit}; kritik seviye {product.CriticalStockLevel:0.##}.",
             Link = "/Products",
             OccurredAt = today
-        }));
+        }).ToList();
 
-        var dueDocuments = await AsyncExecuter.ToListAsync(
+        var dueDocumentsQuery =
             from document in documents
             join partner in partners on document.BusinessPartnerId equals partner.Id
             where (document.Type == DocumentType.SaleInvoice || document.Type == DocumentType.PurchaseInvoice) &&
                   (document.Status == DocumentStatus.Approved || document.Status == DocumentStatus.PartiallyPaid) &&
                   document.DueDate.HasValue &&
                   document.GrandTotal > document.PaidAmount &&
-                  document.DueDate.Value.Date <= today.AddDays(7)
-            orderby document.DueDate ascending
-            select new
+                  document.DueDate.Value < today.AddDays(8)
+            orderby document.DueDate < today descending, document.DueDate ascending, document.DocNumber
+            select new DueDocumentAlertRow
             {
-                Document = document,
+                DocNumber = document.DocNumber,
+                Type = document.Type,
+                DueDate = document.DueDate!.Value,
                 PartnerName = partner.Name
-            });
+            };
+        var dueDocuments = await AsyncExecuter.ToListAsync(dueDocumentsQuery.Take(windowSize));
 
         alerts.AddRange(dueDocuments.Select(row =>
         {
-            var dueDate = row.Document.DueDate!.Value.Date;
+            var dueDate = row.DueDate.Date;
             var overdue = dueDate < today;
             var days = Math.Abs((dueDate - today).Days);
-            var direction = row.Document.Type == DocumentType.SaleInvoice ? "tahsilatı" : "ödemesi";
+            var direction = row.Type == DocumentType.SaleInvoice ? "tahsilatı" : "ödemesi";
             return new OperationalAlertDto
             {
                 Type = "DueDocument",
                 Severity = overdue ? "Critical" : "Warning",
                 Title = overdue ? "Vadesi geçmiş belge" : "Yaklaşan vade",
-                Message = $"{row.Document.DocNumber} - {row.PartnerName} belgesinin {direction} {(overdue ? $"{days} gün gecikti" : $"{days} gün içinde") }.",
+                Message = $"{row.DocNumber} - {row.PartnerName} belgesinin {direction} {(overdue ? $"{days} gün gecikti" : $"{days} gün içinde") }.",
                 Link = "/Invoices",
                 OccurredAt = dueDate
             };
         }));
 
-        return new OperationalAlertsSummaryDto
-        {
-            TotalCount = alerts.Count,
-            CriticalCount = alerts.Count(x => x.Severity == "Critical"),
-            WarningCount = alerts.Count(x => x.Severity == "Warning"),
-            Alerts = alerts
-                .OrderByDescending(x => x.Severity == "Critical")
-                .ThenBy(x => x.OccurredAt)
-                .ToList()
-        };
+        return alerts
+            .OrderByDescending(x => x.Severity == "Critical")
+            .ThenBy(x => x.OccurredAt)
+            .ThenBy(x => x.Title)
+            .Take(windowSize)
+            .ToList();
+    }
+
+    private static IQueryable<Document> GetDueDocumentsQuery(IQueryable<Document> documents, DateTime today)
+    {
+        var dueSoon = today.AddDays(8);
+        return documents.Where(document =>
+            (document.Type == DocumentType.SaleInvoice || document.Type == DocumentType.PurchaseInvoice) &&
+            (document.Status == DocumentStatus.Approved || document.Status == DocumentStatus.PartiallyPaid) &&
+            document.DueDate.HasValue &&
+            document.GrandTotal > document.PaidAmount &&
+            document.DueDate.Value < dueSoon);
+    }
+
+    private sealed class AlertCounts
+    {
+        public int Total { get; set; }
+        public int Critical { get; set; }
+    }
+
+    private sealed class CriticalProductAlertRow
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public decimal CriticalStockLevel { get; set; }
+    }
+
+    private sealed class DueDocumentAlertRow
+    {
+        public string DocNumber { get; set; } = string.Empty;
+        public DocumentType Type { get; set; }
+        public DateTime DueDate { get; set; }
+        public string PartnerName { get; set; } = string.Empty;
     }
 }

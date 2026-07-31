@@ -6,6 +6,7 @@ using NoxStock.BusinessPartners;
 using NoxStock.Documents;
 using NoxStock.ExchangeRates;
 using NoxStock.Products;
+using NoxStock.PrintLabels;
 using Shouldly;
 using Volo.Abp.Domain.Repositories;
 using Xunit;
@@ -20,6 +21,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     private readonly IDocumentAppService _documentAppService;
     private readonly IDocumentWorkflowAppService _documentWorkflowAppService;
     private readonly IRepository<ExchangeRate, Guid> _exchangeRateRepository;
+    private readonly ILabelProductLookupAppService _labelProductLookupAppService;
 
     public ProductPricingAppServiceTests()
     {
@@ -29,6 +31,38 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         _documentAppService = ServiceProvider.GetRequiredService<IDocumentAppService>();
         _documentWorkflowAppService = ServiceProvider.GetRequiredService<IDocumentWorkflowAppService>();
         _exchangeRateRepository = ServiceProvider.GetRequiredService<IRepository<ExchangeRate, Guid>>();
+        _labelProductLookupAppService = ServiceProvider.GetRequiredService<ILabelProductLookupAppService>();
+    }
+
+    [Fact]
+    public async Task Should_Bound_Label_Product_Search()
+    {
+        for (var index = 0; index < 35; index++)
+        {
+            await _productAppService.CreateAsync(new CreateUpdateProductDto
+            {
+                Name = $"LABEL-PERF-{index:00}",
+                Sku = $"LABEL-PERF-SKU-{index:00}",
+                Barcode = $"8690000099{index:00}",
+                Description = string.Empty,
+                Unit = "Adet",
+                ShelfLocation = string.Empty,
+                PurchaseCurrency = "TRY",
+                ExchangeRateAtPurchase = 1m,
+                SalePrice = 100m + index,
+                PricingMode = ProductPricingMode.Manual,
+                TrackStock = true
+            });
+        }
+
+        var results = await _labelProductLookupAppService.GetListAsync(new LabelProductLookupInput
+        {
+            Filter = "LABEL-PERF-",
+            MaxResultCount = 30
+        });
+
+        results.Count.ShouldBe(30);
+        results.ShouldAllBe(item => item.Name.StartsWith("LABEL-PERF-", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -282,6 +316,146 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         row.ReferenceSaleUnitPrice.ShouldBe(30m);
         row.CurrentReferenceCurrencyExchangeRate.ShouldBe(41m);
         row.LastPurchaseCostCurrencyAmount.ShouldBe(25m);
+    }
+
+    [Fact]
+    public async Task Should_Keep_Product_List_Query_Count_Bounded_As_Page_Size_Grows()
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            if (await _exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == "USD") is null)
+            {
+                await _exchangeRateRepository.InsertAsync(
+                    new ExchangeRate(Guid.NewGuid(), "USD", 40m, DateTime.UtcNow));
+            }
+        });
+
+        var prefix = "BATCH-" + Guid.NewGuid().ToString("N")[..8];
+        for (var index = 0; index < 12; index++)
+        {
+            await _productAppService.CreateAsync(new CreateUpdateProductDto
+            {
+                Name = $"Batch list product {index}",
+                Sku = $"{prefix}-{index:00}",
+                Barcode = $"86990000{index:0000}",
+                OemCodes = $"OEM-{prefix}-{index:00}",
+                Description = string.Empty,
+                Unit = "Adet",
+                ShelfLocation = "P1",
+                PurchaseListPrice = 10m,
+                PurchaseCurrency = "USD",
+                ExchangeRateAtPurchase = 40m,
+                SalePrice = 600m,
+                VatRate = 20,
+                PricingMode = ProductPricingMode.Manual,
+                ProfitMarkupPercent = 30m,
+                Quantity = 10m,
+                CriticalStockLevel = 1m,
+                TrackStock = true
+            });
+        }
+
+        SqlCommandCounter.Instance.Reset();
+        var list = await _productAppService.GetListAsync(new ProductGetListInput
+        {
+            Filter = prefix,
+            MaxResultCount = 20,
+            Sorting = "Name"
+        });
+
+        list.Items.Count.ShouldBe(12);
+        list.Items.ShouldAllBe(item => !string.IsNullOrWhiteSpace(item.OemCodes));
+        // The interceptor also sees ABP permission/UOW infrastructure reads. The
+        // important invariant is that a 12-row page stays bounded instead of
+        // returning to the former one-or-more SQL commands per product.
+        SqlCommandCounter.Instance.CommandCount.ShouldBeLessThanOrEqualTo(12);
+    }
+
+    [Fact]
+    public async Task Should_Search_Invoice_Product_Lookups_Without_Loading_Pricing_Details()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var product = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Invoice lookup product " + suffix,
+            Sku = "INV-LOOKUP-" + suffix,
+            Barcode = "8697" + suffix,
+            OemCodes = "OEM-" + suffix,
+            Description = string.Empty,
+            Unit = "Adet",
+            ShelfLocation = "L1",
+            PurchaseCurrency = "TRY",
+            ExchangeRateAtPurchase = 1m,
+            SalePrice = 100m,
+            VatRate = 20,
+            PricingMode = ProductPricingMode.Manual,
+            ProfitMarkupPercent = 30m,
+            Quantity = 7m,
+            TrackStock = true
+        });
+
+        SqlCommandCounter.Instance.Reset();
+        var result = await _productAppService.GetLookupListAsync(new ProductLookupInput
+        {
+            Filter = suffix,
+            MaxResultCount = 20
+        });
+
+        var row = result.Items.Single(item => item.Id == product.Id);
+        result.TotalCount.ShouldBeGreaterThanOrEqualTo(1);
+        row.Name.ShouldBe(product.Name);
+        row.Sku.ShouldBe(product.Sku);
+        row.Barcode.ShouldBe(product.Barcode);
+        row.Quantity.ShouldBe(7m);
+        SqlCommandCounter.Instance.CommandCount.ShouldBeLessThanOrEqualTo(7);
+    }
+
+    [Fact]
+    public async Task Should_Prioritize_Exact_Invoice_Barcode_Over_Substring_Matches()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var barcode = "8698" + suffix;
+        var exactProduct = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Exact barcode product " + suffix,
+            Sku = "EXACT-" + suffix,
+            Barcode = barcode,
+            Description = string.Empty,
+            Unit = "Adet",
+            ShelfLocation = string.Empty,
+            PurchaseCurrency = "TRY",
+            ExchangeRateAtPurchase = 1m,
+            SalePrice = 100m,
+            VatRate = 20,
+            PricingMode = ProductPricingMode.Manual,
+            Quantity = 1m,
+            TrackStock = true
+        });
+        await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Substring distractor " + barcode,
+            Sku = "DISTRACTOR-" + suffix,
+            Barcode = "777" + suffix,
+            Description = string.Empty,
+            Unit = "Adet",
+            ShelfLocation = string.Empty,
+            PurchaseCurrency = "TRY",
+            ExchangeRateAtPurchase = 1m,
+            SalePrice = 100m,
+            VatRate = 20,
+            PricingMode = ProductPricingMode.Manual,
+            Quantity = 1m,
+            TrackStock = true
+        });
+
+        var result = await _productAppService.GetLookupListAsync(new ProductLookupInput
+        {
+            Filter = barcode,
+            MaxResultCount = 20
+        });
+
+        result.TotalCount.ShouldBe(1);
+        result.Items.Single().Id.ShouldBe(exactProduct.Id);
     }
 
     private async Task ApprovePurchaseAsync(Guid productId, string currency, decimal unitPrice, string documentNumber)

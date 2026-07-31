@@ -261,7 +261,9 @@ public class NoxStockWebModule : AbpModule
                 bundle =>
                 {
                     bundle.AddFiles("/global-scripts.js");
+                    bundle.AddFiles("/frontend-metrics.js");
                     bundle.AddFiles("/currency-ticker.js");
+                    bundle.AddFiles("/topbar-alerts.js");
                     if (hostingEnvironment.IsDevelopment())
                     {
                         bundle.AddFiles("/dev-login-helper.js");
@@ -416,6 +418,7 @@ public class NoxStockWebModule : AbpModule
 
         app.UseCorrelationId();
         app.UseMiddleware<TenantPathMiddleware>();
+        app.UseMiddleware<PerformanceResponseHeadersMiddleware>();
         app.UseMiddleware<NoxStockExceptionHandlingMiddleware>();
         app.UseRouting();
         app.MapAbpStaticAssets();

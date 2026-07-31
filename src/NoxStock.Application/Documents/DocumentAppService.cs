@@ -164,6 +164,8 @@ public class DocumentAppService :
     public override async Task<PagedResultDto<DocumentDto>> GetListAsync(DocumentGetListInput input)
     {
         CurrentTenant.RequireTenantId();
+        input.SkipCount = Math.Clamp(input.SkipCount, 0, 10_000);
+        input.MaxResultCount = Math.Clamp(input.MaxResultCount, 1, 100);
         var query = await CreateFilteredQueryAsync(input);
         var totalCount = await AsyncExecuter.CountAsync(query);
 
@@ -291,25 +293,34 @@ public class DocumentAppService :
             ? "TRY"
             : string.IsNullOrWhiteSpace(input.Currency) ? "TRY" : input.Currency.Trim().ToUpperInvariant();
         var currentRate = await _priceCalculator.GetExchangeRateAsync(document.Currency);
-        // For purchase documents the entered document-date rate is the
-        // historical reference snapshot. It may be below 1 for currencies
-        // quoted against TRY, so only positivity—not an arbitrary >1 check—
-        // determines whether the user supplied a valid rate.
-        document.ExchangeRate = IsPurchaseDocument(type) && document.Currency != "TRY" && input.ExchangeRate > 0m
-            ? input.ExchangeRate
-            : currentRate;
+        // The DTO's neutral default is 1 for TRY. On a newly-created foreign
+        // purchase it means "rate not supplied", so use the document-date
+        // rate. A positive non-neutral value is an explicit historical override.
+        var hasExplicitPurchaseRate = IsPurchaseDocument(type) &&
+            document.Currency != "TRY" &&
+            input.ExchangeRate > 0m &&
+            (!isNewDocument || input.ExchangeRate != 1m);
+        document.ExchangeRate = hasExplicitPurchaseRate ? input.ExchangeRate : currentRate;
         document.Date = input.Date;
         document.DueDate = input.DueDate;
         document.Description = input.Description?.Trim();
         document.PaidAmount = isNewDocument ? 0 : document.PaidAmount;
 
+        var productIds = input.Items
+            .Select(item => item.ProductId)
+            .Distinct()
+            .ToList();
+        var productsById = (await _productRepository.GetListAsync(product => productIds.Contains(product.Id)))
+            .ToDictionary(product => product.Id);
+        if (productsById.Count != productIds.Count)
+        {
+            throw new BusinessException("NoxStock:InvalidProductReference");
+        }
+
+        var priceCalculationsByProductId = new Dictionary<Guid, ProductPriceCalculation>();
         foreach (var inputItem in input.Items)
         {
-            var product = await _productRepository.FindAsync(inputItem.ProductId);
-            if (product is null)
-            {
-                throw new BusinessException("NoxStock:InvalidProductReference");
-            }
+            var product = productsById[inputItem.ProductId];
 
             var unitPrice = inputItem.UnitPrice;
             ProductPriceCalculation? priceCalculation = null;
@@ -317,7 +328,11 @@ public class DocumentAppService :
                 product.UseCurrentExchangeRateForSale;
             if (IsSalesDocument(document.Type))
             {
-                priceCalculation = await _priceCalculator.CalculateAsync(product);
+                if (!priceCalculationsByProductId.TryGetValue(product.Id, out priceCalculation))
+                {
+                    priceCalculation = await _priceCalculator.CalculateAsync(product);
+                    priceCalculationsByProductId[product.Id] = priceCalculation;
+                }
                 if (usesDynamicPricing && !priceCalculation.IsAvailable)
                 {
                     throw new BusinessException(priceCalculation.UnavailableReason ?? "NoxStock:ProductApprovedPurchaseCostUnavailable")
@@ -331,12 +346,22 @@ public class DocumentAppService :
                     // and applied once when calculating the taxable amount.
                     unitPrice = priceCalculation.ListSalePriceInTry;
                 }
+                else if (unitPrice <= 0m)
+                {
+                    unitPrice = product.SalePrice;
+                }
 
                 ApplyProductSalesDiscountDefaults(inputItem, product);
                 if (inputItem.VatRate == 0m && product.VatRate > 0)
                 {
                     inputItem.VatRate = product.VatRate;
                 }
+            }
+            else if (IsPurchaseDocument(document.Type) && unitPrice <= 0m)
+            {
+                unitPrice = product.PurchaseListPrice > 0m
+                    ? product.PurchaseListPrice
+                    : product.PurchasePrice;
             }
 
             EnsureItemIsValid(inputItem);

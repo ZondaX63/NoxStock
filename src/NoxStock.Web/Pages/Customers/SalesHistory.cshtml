@@ -112,7 +112,7 @@
                     {
                         <div class="flex h-full w-12 flex-col justify-end text-center">
                             <span class="mb-1 truncate text-[10px] font-medium text-slate-500" title="@Model.FormatChartTotals(point)">@Model.FormatChartTotals(point)</span>
-                            <div class="w-full rounded-t bg-indigo-500 transition-all dark:bg-indigo-400" style="height: @Model.GetChartHeight(point)" title="@Model.FormatDateRange(point.StartDate, point.EndDate): @Model.FormatChartTotals(point)"></div>
+                            <div class="w-full rounded-t bg-indigo-500 dark:bg-indigo-400" style="height: @Model.GetChartHeight(point)" title="@Model.FormatDateRange(point.StartDate, point.EndDate): @Model.FormatChartTotals(point)"></div>
                             <span class="mt-2 text-[10px] text-slate-500">@point.StartDate.ToString("dd MMM")</span>
                         </div>
                     }

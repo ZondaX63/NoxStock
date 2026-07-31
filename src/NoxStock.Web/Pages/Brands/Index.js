@@ -6,6 +6,9 @@ $(function () {
     var dataTable = $('#BrandsTable').DataTable(
         abp.libs.datatables.normalizeConfiguration({
             serverSide: true,
+            stateSave: true,
+            stateDuration: -1,
+            searchDelay: 300,
             paging: true,
             order: [[1, "asc"]],
             searching: false,

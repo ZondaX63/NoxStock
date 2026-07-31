@@ -132,6 +132,70 @@ public class ProductAppService :
         return productDto;
     }
 
+    public async Task<PagedResultDto<ProductLookupDto>> GetLookupListAsync(ProductLookupInput input)
+    {
+        CurrentTenant.RequireTenantId();
+
+        var query = await Repository.GetQueryableAsync();
+        var filter = input.Filter?.Trim();
+        var normalizedFilter = filter?.ToLowerInvariant();
+        var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
+        var ids = input.Ids?.Distinct().ToList();
+
+        query = query.WhereIf(ids is { Count: > 0 }, product => ids!.Contains(product.Id));
+
+        long? exactCount = null;
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var exactQuery = query.Where(product =>
+                product.Sku == filter ||
+                product.Barcode == filter ||
+                (normalizedOemFilter.Length > 0 &&
+                 product.OemCodes.Any(code => code.SearchCode == normalizedOemFilter)));
+            exactCount = await AsyncExecuter.CountAsync(exactQuery);
+            query = exactCount > 0
+                ? exactQuery
+                : query.Where(product =>
+                product.Name.ToLower().Contains(normalizedFilter!) ||
+                product.Sku.ToLower().Contains(normalizedFilter!) ||
+                (product.Barcode != null && product.Barcode.ToLower().Contains(normalizedFilter!)) ||
+                (normalizedOemFilter.Length > 0 &&
+                 product.OemCodes.Any(code => code.SearchCode.Contains(normalizedOemFilter))));
+        }
+
+        var totalCount = exactCount is > 0
+            ? exactCount.Value
+            : await AsyncExecuter.CountAsync(query);
+        var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 50);
+        var skipCount = Math.Max(input.SkipCount, 0);
+        var rows = await AsyncExecuter.ToListAsync(query
+            .OrderBy(product => product.Name)
+            .ThenBy(product => product.Sku)
+            .Skip(skipCount)
+            .Take(maxResultCount)
+            .Select(product => new
+            {
+                product.Id,
+                product.Name,
+                product.Sku,
+                product.Barcode,
+                product.Unit,
+                product.Quantity
+            }));
+
+        return new PagedResultDto<ProductLookupDto>(
+            totalCount,
+            rows.Select(row => new ProductLookupDto
+            {
+                Id = row.Id,
+                Name = row.Name,
+                Sku = row.Sku,
+                Barcode = row.Barcode,
+                Unit = row.Unit,
+                Quantity = row.Quantity
+            }).ToList());
+    }
+
     protected override async Task<IQueryable<Product>> CreateFilteredQueryAsync(ProductGetListInput input)
     {
         var queryable = await Repository.GetQueryableAsync();
@@ -145,11 +209,6 @@ public class ProductAppService :
         queryable = queryable
             .WhereIf(input.BrandId.HasValue, x => x.BrandId == input.BrandId)
             .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
-            .WhereIf(!string.IsNullOrWhiteSpace(filter), x =>
-                x.Name.Contains(filter!) ||
-                x.Sku.Contains(filter!) ||
-                (x.Barcode != null && x.Barcode.Contains(filter!)) ||
-                (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode.Contains(normalizedOemFilter))))
             .WhereIf(stockStatus == "critical", x => x.TrackStock && x.Quantity > 0 && x.Quantity <= x.CriticalStockLevel)
             .WhereIf(stockStatus == "zero", x => x.Quantity <= 0)
             .WhereIf(stockStatus == "attention", x => x.Quantity <= 0 || (x.TrackStock && x.Quantity <= x.CriticalStockLevel))
@@ -161,12 +220,29 @@ public class ProductAppService :
             .WhereIf(costStatus == "under-cost", x => x.PricingMode == ProductPricingMode.Manual && x.LastPurchaseCostTryAmount.HasValue && x.LastPurchaseCostTryAmount > 0 && x.SalePrice < x.LastPurchaseCostTryAmount)
             .WhereIf(costStatus == "recent", x => x.LastPurchaseDate.HasValue && x.LastPurchaseDate >= recentCostThreshold);
 
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var exactQuery = queryable.Where(x =>
+                x.Sku == filter ||
+                x.Barcode == filter ||
+                (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode == normalizedOemFilter)));
+            queryable = await AsyncExecuter.CountAsync(exactQuery) > 0
+                ? exactQuery
+                : queryable.Where(x =>
+                    x.Name.Contains(filter!) ||
+                    x.Sku.Contains(filter!) ||
+                    (x.Barcode != null && x.Barcode.Contains(filter!)) ||
+                    (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode.Contains(normalizedOemFilter))));
+        }
+
         return queryable;
     }
 
     public override async Task<PagedResultDto<ProductDto>> GetListAsync(ProductGetListInput input)
     {
         CurrentTenant.RequireTenantId();
+        input.SkipCount = Math.Clamp(input.SkipCount, 0, 10_000);
+        input.MaxResultCount = Math.Clamp(input.MaxResultCount, 1, 100);
         var queryable = await CreateFilteredQueryAsync(input);
 
         var totalCount = await AsyncExecuter.CountAsync(queryable);
@@ -179,9 +255,37 @@ public class ProductAppService :
                     from brand in brands.DefaultIfEmpty()
                     join category in await _categoryRepository.GetQueryableAsync() on product.CategoryId equals category.Id into categories
                     from category in categories.DefaultIfEmpty()
-                    select new { product, brand, category };
+                    join history in await _costHistoryRepository.GetQueryableAsync()
+                        on product.LastPurchaseCostHistoryId equals (Guid?)history.Id into histories
+                    from history in histories.DefaultIfEmpty()
+                    join document in await _documentRepository.GetQueryableAsync()
+                        on product.LastPurchaseDocumentId equals (Guid?)document.Id into documents
+                    from document in documents.DefaultIfEmpty()
+                    join supplier in await _businessPartnerRepository.GetQueryableAsync()
+                        on product.LastPurchaseSupplierId equals (Guid?)supplier.Id into suppliers
+                    from supplier in suppliers.DefaultIfEmpty()
+                    select new
+                    {
+                        product,
+                        brand,
+                        category,
+                        LastPurchaseSourceCurrencyCode = history != null ? history.SourceCurrencyCode : null,
+                        LastPurchaseSourceNetUnitCost = history != null ? (decimal?)history.SourceNetUnitCost : null,
+                        LastPurchaseSourceExchangeRate = history != null ? (decimal?)history.SourceExchangeRate : null,
+                        LastPurchaseDocumentNumber = document != null ? document.DocNumber : null,
+                        LastPurchaseSupplierName = supplier != null ? supplier.Name : null
+                    };
 
         var queryResult = await AsyncExecuter.ToListAsync(query);
+        var productIds = queryResult.Select(x => x.product.Id).ToList();
+        var oemCodesByProductId = productIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await AsyncExecuter.ToListAsync((await _productOemCodeRepository.GetQueryableAsync())
+                    .Where(code => productIds.Contains(code.ProductId))))
+                .GroupBy(code => code.ProductId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => string.Join(", ", group.Select(code => code.OemCode)));
 
         var productDtos = new List<ProductDto>();
         foreach (var x in queryResult)
@@ -189,8 +293,12 @@ public class ProductAppService :
             var dto = ObjectMapper.Map<Product, ProductDto>(x.product);
             dto.BrandName = x.brand?.Name ?? string.Empty;
             dto.CategoryName = x.category?.Name ?? string.Empty;
-            dto.OemCodes = await GetOemCodesAsync(x.product.Id);
-            await PopulateLastPurchaseContextAsync(dto);
+            dto.OemCodes = oemCodesByProductId.GetValueOrDefault(x.product.Id);
+            dto.LastPurchaseSourceCurrencyCode = x.LastPurchaseSourceCurrencyCode;
+            dto.LastPurchaseSourceNetUnitCost = x.LastPurchaseSourceNetUnitCost;
+            dto.LastPurchaseSourceExchangeRate = x.LastPurchaseSourceExchangeRate;
+            dto.LastPurchaseDocumentNumber = x.LastPurchaseDocumentNumber;
+            dto.LastPurchaseSupplierName = x.LastPurchaseSupplierName;
             await PopulateSuggestedSaleAsync(x.product, dto);
             productDtos.Add(dto);
         }

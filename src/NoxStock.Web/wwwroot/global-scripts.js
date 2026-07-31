@@ -38,6 +38,36 @@ $(function () {
     }
 });
 
+// Opt-in guard for full-page commands. The lock is applied only after other form
+// handlers have had a chance to reject invalid input, so ABP/client validation stays intact.
+(function () {
+    document.addEventListener('submit', function (event) {
+        var form = event.target;
+        if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-nx-submit-lock')) {
+            return;
+        }
+
+        if (form.dataset.nxSubmitting === 'true') {
+            event.preventDefault();
+            return;
+        }
+
+        form.dataset.nxSubmitting = 'true';
+        window.setTimeout(function () {
+            if (event.defaultPrevented) {
+                delete form.dataset.nxSubmitting;
+                return;
+            }
+
+            form.setAttribute('aria-busy', 'true');
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (button) {
+                button.disabled = true;
+                button.classList.add('nx-submit-pending');
+            });
+        }, 0);
+    });
+})();
+
 // Capture browser and AJAX failures in the server logs and show the user a useful, traceable notice.
 (function () {
     var reportedErrorCount = 0;

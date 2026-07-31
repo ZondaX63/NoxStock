@@ -37,6 +37,7 @@
         }
         @if (!Model.Report.Accounts.Any()) { <tr><td colspan="6" class="report-empty">Kayıt bulunamadı.</td></tr> }
         </tbody></table></div>
+        <partial name="_ReportPager" model="@(new NoxStock.Web.Pages.Reports.ReportPagerModel(Model.Report.AccountsPaging, Model.PageUrl(nameof(Model.AccountsPage), Model.Report.AccountsPaging.PageNumber - 1), Model.PageUrl(nameof(Model.AccountsPage), Model.Report.AccountsPaging.PageNumber + 1)))" />
     </section>
 
     <section class="report-section">
@@ -48,6 +49,7 @@
         }
         @if (!Model.Report.BusinessPartners.Any()) { <tr><td colspan="5" class="report-empty">Kayıt bulunamadı.</td></tr> }
         </tbody></table></div>
+        <partial name="_ReportPager" model="@(new NoxStock.Web.Pages.Reports.ReportPagerModel(Model.Report.BusinessPartnersPaging, Model.PageUrl(nameof(Model.BusinessPartnersPage), Model.Report.BusinessPartnersPaging.PageNumber - 1), Model.PageUrl(nameof(Model.BusinessPartnersPage), Model.Report.BusinessPartnersPaging.PageNumber + 1)))" />
     </section>
 
     <section class="report-section">
@@ -73,7 +75,7 @@
 </div>
 
 <section class="report-section mt-6">
-    <div class="report-section-head"><h3>Ürün Kârlılığı</h3><span>Tahmini maliyet, ürün kartındaki güncel alış fiyatına göre hesaplanır.</span></div>
+    <div class="report-section-head"><h3>Ürün Kârlılığı</h3><span>Maliyet, satış anında belge satırına kilitlenen KDV hariç maliyet snapshot'ından hesaplanır.</span></div>
     <div class="overflow-x-auto"><table class="report-table"><thead><tr><th>Ürün</th><th class="text-right">Satılan</th><th class="text-right">Satış</th><th class="text-right">Tahmini maliyet</th><th class="text-right">Brüt kâr</th><th class="text-right">Marj</th></tr></thead><tbody>
     @foreach (var item in Model.Report.ProductProfitability)
     {
@@ -81,6 +83,7 @@
     }
     @if (!Model.Report.ProductProfitability.Any()) { <tr><td colspan="6" class="report-empty">Seçili dönemde satış bulunamadı.</td></tr> }
     </tbody></table></div>
+    <partial name="_ReportPager" model="@(new NoxStock.Web.Pages.Reports.ReportPagerModel(Model.Report.ProductProfitabilityPaging, Model.PageUrl(nameof(Model.ProductProfitabilityPage), Model.Report.ProductProfitabilityPaging.PageNumber - 1), Model.PageUrl(nameof(Model.ProductProfitabilityPage), Model.Report.ProductProfitabilityPaging.PageNumber + 1)))" />
 </section>
 
 <div class="grid gap-6 xl:grid-cols-2 mt-6">
@@ -93,10 +96,11 @@
         }
         @if (!Model.Report.Stocks.Any()) { <tr><td colspan="4" class="report-empty">Kayıt bulunamadı.</td></tr> }
         </tbody></table></div>
+        <partial name="_ReportPager" model="@(new NoxStock.Web.Pages.Reports.ReportPagerModel(Model.Report.StocksPaging, Model.PageUrl(nameof(Model.StocksPage), Model.Report.StocksPaging.PageNumber - 1), Model.PageUrl(nameof(Model.StocksPage), Model.Report.StocksPaging.PageNumber + 1)))" />
     </section>
 
     <section class="report-section">
-        <div class="report-section-head"><h3>Stok Hareketleri</h3><span>Son 100 hareket</span></div>
+        <div class="report-section-head"><h3>Stok Hareketleri</h3><span>Seçili dönemdeki hareketler</span></div>
         <div class="max-h-[32rem] overflow-auto"><table class="report-table"><thead><tr><th>Tarih</th><th>Ürün</th><th>Tip</th><th class="text-right">Miktar</th><th class="text-right">Bakiye</th></tr></thead><tbody>
         @foreach (var item in Model.Report.StockMovements)
         {
@@ -104,5 +108,6 @@
         }
         @if (!Model.Report.StockMovements.Any()) { <tr><td colspan="5" class="report-empty">Seçili dönemde hareket yok.</td></tr> }
         </tbody></table></div>
+        <partial name="_ReportPager" model="@(new NoxStock.Web.Pages.Reports.ReportPagerModel(Model.Report.StockMovementsPaging, Model.PageUrl(nameof(Model.StockMovementsPage), Model.Report.StockMovementsPaging.PageNumber - 1), Model.PageUrl(nameof(Model.StockMovementsPage), Model.Report.StockMovementsPaging.PageNumber + 1)))" />
     </section>
 </div>

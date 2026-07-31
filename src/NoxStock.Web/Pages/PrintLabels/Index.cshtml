@@ -1,5 +1,4 @@
 @page
-@using System.Text.Json
 @model NoxStock.Web.Pages.PrintLabels.IndexModel
 @{
     Layout = "_AppLayout";
@@ -35,11 +34,9 @@
     <div id="LabelPreview" class="label-preview-grid p-5"></div>
 </section>
 
-<script id="LabelProductsData" type="application/json">@Html.Raw(JsonSerializer.Serialize(Model.Products, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }))</script>
-
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="~/libs/jsbarcode/JsBarcode.all.min.js" asp-append-version="true"></script>
+    <script src="~/libs/qrcodejs/qrcode.min.js" asp-append-version="true"></script>
     <abp-script src="/Pages/PrintLabels/Index.js" />
 }
 

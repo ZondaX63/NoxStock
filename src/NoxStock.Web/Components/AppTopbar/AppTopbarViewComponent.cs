@@ -3,45 +3,29 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Users;
-using NoxStock.Notifications;
 using NoxStock.Permissions;
-using NoxStock.Licensing;
 
 namespace NoxStock.Web.Components.AppTopbar;
 
 public class AppTopbarViewComponent : AbpViewComponent
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IOperationalAlertsAppService _alertsAppService;
     private readonly IAuthorizationService _authorizationService;
-    private readonly ITenantLicenseAccessChecker _licenseAccessChecker;
 
     public AppTopbarViewComponent(
         ICurrentUser currentUser,
-        IOperationalAlertsAppService alertsAppService,
-        IAuthorizationService authorizationService,
-        ITenantLicenseAccessChecker licenseAccessChecker)
+        IAuthorizationService authorizationService)
     {
         _currentUser = currentUser;
-        _alertsAppService = alertsAppService;
         _authorizationService = authorizationService;
-        _licenseAccessChecker = licenseAccessChecker;
     }
 
     public virtual async Task<IViewComponentResult> InvokeAsync()
     {
         var canReadNotifications = _currentUser.IsAuthenticated &&
+            _currentUser.TenantId.HasValue &&
             (await _authorizationService.IsGrantedAsync(NoxStockPermissions.Notifications.Default));
-        var summary = canReadNotifications
-            ? await _alertsAppService.GetSummaryAsync()
-            : new OperationalAlertsSummaryDto();
-        var model = new AppTopbarViewModel
-        {
-            AlertsSummary = summary,
-            License = _currentUser.TenantId.HasValue
-                ? await _licenseAccessChecker.GetCurrentAsync()
-                : null
-        };
+        var model = new AppTopbarViewModel { CanReadNotifications = canReadNotifications };
         return View("~/Components/AppTopbar/Default.cshtml", model);
     }
 }

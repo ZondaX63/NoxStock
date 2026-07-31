@@ -1,6 +1,9 @@
 $(function () {
-    var products = JSON.parse(document.getElementById('LabelProductsData').textContent || '[]');
+    var lookupService = noxStock.printLabels.labelProductLookup;
+    var products = [];
     var queue = [];
+    var searchTimer = null;
+    var searchSequence = 0;
 
     function escapeHtml(value) { return $('<div>').text(value || '').html(); }
     function money(value, currency) { return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(value || 0); }
@@ -8,11 +11,23 @@ $(function () {
     function addQuantity() { return Math.max(1, Math.min(100, Number($('#LabelAddQuantity').val()) || 1)); }
 
     function renderProducts() {
-        var filter = ($('#LabelSearch').val() || '').toLocaleLowerCase('tr-TR');
-        var matches = products.filter(function (product) { return !filter || [product.name, product.sku, product.barcode].some(function (value) { return (value || '').toLocaleLowerCase('tr-TR').indexOf(filter) >= 0; }); }).slice(0, 100);
         var $body = $('#LabelProductResults').empty();
-        if (!matches.length) { $body.append('<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">Ürün bulunamadı.</td></tr>'); return; }
-        matches.forEach(function (product) { $body.append('<tr class="border-b border-slate-100 dark:border-slate-700"><td class="px-4 py-2"><button type="button" class="label-add-product rounded-md p-1 text-indigo-600 hover:bg-indigo-50" data-id="' + product.id + '" title="Etikete ekle"><span class="material-icons-round text-base">add_circle</span></button></td><td class="px-4 py-2 font-medium text-slate-800 dark:text-white">' + escapeHtml(product.name) + '</td><td class="px-4 py-2 text-xs text-slate-500">' + escapeHtml(product.barcode || product.sku) + '</td><td class="px-4 py-2 text-right font-semibold">' + money(product.salePrice, product.currency) + '</td></tr>'); });
+        if (!products.length) { $body.append('<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">Ürün bulunamadı.</td></tr>'); return; }
+        products.forEach(function (product) { $body.append('<tr class="border-b border-slate-100 dark:border-slate-700"><td class="px-4 py-2"><button type="button" class="label-add-product rounded-md p-1 text-indigo-600 hover:bg-indigo-50" data-id="' + product.id + '" title="Etikete ekle"><span class="material-icons-round text-base">add_circle</span></button></td><td class="px-4 py-2 font-medium text-slate-800 dark:text-white">' + escapeHtml(product.name) + '</td><td class="px-4 py-2 text-xs text-slate-500">' + escapeHtml(product.barcode || product.sku) + '</td><td class="px-4 py-2 text-right font-semibold">' + money(product.salePrice, product.currency) + '</td></tr>'); });
+    }
+
+    function loadProducts() {
+        var sequence = ++searchSequence;
+        $('#LabelProductResults').html('<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">Ürünler aranıyor…</td></tr>');
+        lookupService.getList({ filter: $('#LabelSearch').val() || null, maxResultCount: 30 }).then(function (items) {
+            if (sequence !== searchSequence) return;
+            products = items || [];
+            renderProducts();
+        }).catch(function () {
+            if (sequence !== searchSequence) return;
+            products = [];
+            $('#LabelProductResults').html('<tr><td colspan="4" class="px-4 py-8 text-center text-rose-500">Ürünler yüklenemedi.</td></tr>');
+        });
     }
 
     function renderQueue() {
@@ -32,12 +47,15 @@ $(function () {
     }
 
     function addProduct(id) { var product = products.find(function (item) { return item.id === id; }); if (!product) return; var entry = queue.find(function (item) { return item.product.id === id; }); if (entry) entry.quantity += addQuantity(); else queue.push({ product: product, quantity: addQuantity() }); renderQueue(); }
-    $('#LabelSearch').on('input', renderProducts);
+    $('#LabelSearch').on('input', function () {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(loadProducts, 300);
+    });
     $('#LabelProductResults').on('click', '.label-add-product', function () { addProduct($(this).data('id')); });
     $('#LabelQueue').on('click', '.label-quantity', function () { var id = $(this).data('id'); var entry = queue.find(function (item) { return item.product.id === id; }); if (!entry) return; entry.quantity += Number($(this).data('change')); if (entry.quantity <= 0) queue = queue.filter(function (item) { return item.product.id !== id; }); renderQueue(); });
     $('#LabelQueue').on('click', '.label-remove', function () { var id = $(this).data('id'); queue = queue.filter(function (item) { return item.product.id !== id; }); renderQueue(); });
     $('#LabelFormat, #LabelShowName, #LabelShowPrice').on('change', renderPreview);
     $('#PrintLabelsButton').on('click', function () { if (!queue.length) { abp.notify.warn('Yazdırmak için en az bir ürün ekleyin.'); return; } window.print(); });
-    renderProducts();
+    loadProducts();
     renderQueue();
 });

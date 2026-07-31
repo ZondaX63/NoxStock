@@ -33,7 +33,7 @@ ENV PATH="${PATH}:/app/tools"
 
 # Ön yüz kütüphanelerini çakışmaları ve lock kilitlenmelerini engelleyerek sıfırdan indiriyoruz
 RUN npm install -g yarn \
-    && yarn install --ignore-engines \
+    && yarn install --ignore-engines --frozen-lockfile --ignore-scripts \
     && abp install-libs
 
 # Projeyi derleme aşamasına alıyoruz

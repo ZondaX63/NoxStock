@@ -13,6 +13,9 @@ $(function () {
 
     var table = $('#OffersTable').DataTable(abp.libs.datatables.normalizeConfiguration({
         serverSide: true,
+        stateSave: true,
+        stateDuration: -1,
+        searchDelay: 300,
         paging: true,
         order: [[3, 'desc']],
         searching: false,

@@ -6,5 +6,5 @@ namespace NoxStock.PrintLabels;
 
 public interface ILabelProductLookupAppService : IApplicationService
 {
-    Task<List<LabelProductDto>> GetListAsync();
+    Task<List<LabelProductDto>> GetListAsync(LabelProductLookupInput input);
 }

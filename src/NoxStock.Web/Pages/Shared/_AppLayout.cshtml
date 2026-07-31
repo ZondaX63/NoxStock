@@ -24,14 +24,13 @@
         })();
     </script>
 
-    <!-- Outfit Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link href="~/libs/fontsource/outfit/400.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/libs/fontsource/outfit/500.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/libs/fontsource/outfit/600.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/libs/fontsource/outfit/700.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/libs/material-icons/round.css" rel="stylesheet" asp-append-version="true" />
 
-    <!-- Alpine.js for lightweight interactions (Modals, Dropdowns) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="~/libs/alpinejs/cdn.min.js" asp-append-version="true"></script>
 
     <style>
         /* Custom scrollbar */
@@ -97,7 +96,7 @@
              x-transition:leave="transition-opacity ease-linear duration-300"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm lg:hidden"
+             class="fixed inset-0 z-20 bg-black/50 lg:hidden"
              @@click="sidebarOpen = false"
              style="display: none;">
         </div>

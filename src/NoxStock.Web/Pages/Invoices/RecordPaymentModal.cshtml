@@ -9,7 +9,9 @@
     var outstandingAmount = Model.Document.GrandTotal - Model.Document.PaidAmount;
 }
 
-<form asp-page="/Invoices/RecordPaymentModal" method="post">
+<form asp-page="/Invoices/RecordPaymentModal" method="post"
+      data-account-lookup-url="@Url.Page("/Invoices/RecordPaymentModal", "AccountLookup", new { documentId = Model.DocumentId })"
+      data-document-currency="@Model.Document.Currency">
     <abp-modal>
         <abp-modal-header title="@title"></abp-modal-header>
         <abp-modal-body>
@@ -37,7 +39,14 @@
 
             <div class="mb-4">
                 <label asp-for="Payment.AccountId" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Kasa / Banka</label>
+                <div class="relative mb-2">
+                    <span class="material-icons-round pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-slate-400">search</span>
+                    <input type="search" data-account-search autocomplete="off"
+                           placeholder="Kasa veya banka hesabı ara"
+                           class="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
                 <select asp-for="Payment.AccountId" asp-items="Model.Accounts" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 dark:bg-slate-800 dark:border-slate-600 dark:text-white" required></select>
+                <p data-account-search-status class="mt-1 text-xs text-slate-500" aria-live="polite"></p>
                 <span asp-validation-for="Payment.AccountId" class="text-sm text-red-600 mt-1 block"></span>
             </div>
 

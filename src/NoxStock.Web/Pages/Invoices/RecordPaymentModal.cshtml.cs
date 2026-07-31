@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using NoxStock.Accounts;
 using NoxStock.Documents;
-using Volo.Abp.Application.Dtos;
 
 namespace NoxStock.Web.Pages.Invoices;
 
@@ -45,7 +43,23 @@ public class RecordPaymentModalModel : NoxStockPageModel
             Amount = Document.GrandTotal - Document.PaidAmount,
             PaymentDate = DateTime.Now
         };
-        await LoadAccountsAsync();
+        ResetAccountOptions();
+    }
+
+    public async Task<JsonResult> OnGetAccountLookupAsync(string? filter, string? currency)
+    {
+        var result = await _accountAppService.GetLookupListAsync(new AccountLookupInput
+        {
+            Filter = filter,
+            Currency = currency,
+            MaxResultCount = 20
+        });
+
+        return new JsonResult(new
+        {
+            items = result.Items,
+            totalCount = result.TotalCount
+        });
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -53,7 +67,7 @@ public class RecordPaymentModalModel : NoxStockPageModel
         await LoadDocumentAsync();
         if (!ModelState.IsValid)
         {
-            await LoadAccountsAsync();
+            await LoadSelectedAccountAsync();
             return Page();
         }
 
@@ -74,18 +88,27 @@ public class RecordPaymentModalModel : NoxStockPageModel
         Document = await _documentAppService.GetAsync(DocumentId);
     }
 
-    private async Task LoadAccountsAsync()
+    private void ResetAccountOptions()
     {
-        var accountLookup = await _accountAppService.GetListAsync(new PagedAndSortedResultRequestDto
+        Accounts = new List<SelectListItem>
         {
-            MaxResultCount = 1000
-        });
+            new("Kasa/Banka Seçiniz...", string.Empty)
+        };
+    }
 
-        Accounts = accountLookup.Items
-            .Where(x => x.IsActive)
-            .Select(x => new SelectListItem($"{x.Name} - {x.Balance} {x.Currency}", x.Id.ToString()))
-            .ToList();
-        Accounts.Insert(0, new SelectListItem("Kasa/Banka Seçiniz...", string.Empty));
+    private async Task LoadSelectedAccountAsync()
+    {
+        ResetAccountOptions();
+        if (Payment.AccountId == Guid.Empty)
+        {
+            return;
+        }
+
+        var account = await _accountAppService.GetAsync(Payment.AccountId);
+        Accounts.Add(new SelectListItem(
+            $"{account.Name} - {account.Balance} {account.Currency}",
+            account.Id.ToString(),
+            selected: true));
     }
 
     public class RecordPaymentInput

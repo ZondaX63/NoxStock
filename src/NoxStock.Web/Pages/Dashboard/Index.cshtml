@@ -101,7 +101,7 @@
                     {
                         <div class="h-full flex-1 min-w-0 flex flex-col justify-end items-center gap-2">
                             <span class="text-xs font-medium text-slate-500 whitespace-nowrap">@Model.FormatCompactMoney(point.Total)</span>
-                            <div class="w-full max-w-12 rounded-t bg-indigo-500 dark:bg-indigo-400 transition-all" style="height: @Model.GetSalesTrendHeight(point.Total)" title="@point.Label: @Model.FormatMoney(point.Total)"></div>
+                            <div class="w-full max-w-12 rounded-t bg-indigo-500 dark:bg-indigo-400" style="height: @Model.GetSalesTrendHeight(point.Total)" title="@point.Label: @Model.FormatMoney(point.Total)"></div>
                             <span class="text-xs text-slate-500 uppercase">@point.Label</span>
                         </div>
                     }

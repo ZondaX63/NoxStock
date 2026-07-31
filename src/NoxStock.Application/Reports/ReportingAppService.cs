@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Authorization;
 using NoxStock.Accounts;
 using NoxStock.BusinessPartners;
 using NoxStock.Documents;
+using NoxStock.MultiTenancy;
 using NoxStock.Permissions;
 using NoxStock.Products;
 using NoxStock.StockMovements;
-using NoxStock.MultiTenancy;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 
@@ -25,7 +25,6 @@ public class ReportingAppService : ApplicationService, IReportingAppService
     private readonly IRepository<Account, Guid> _accountRepository;
     private readonly IRepository<AccountTransaction, Guid> _accountTransactionRepository;
     private readonly IRepository<StockMovement, Guid> _stockMovementRepository;
-    private readonly IProductPriceCalculator _priceCalculator;
 
     public ReportingAppService(
         IRepository<Document, Guid> documentRepository,
@@ -34,8 +33,7 @@ public class ReportingAppService : ApplicationService, IReportingAppService
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
         IRepository<Account, Guid> accountRepository,
         IRepository<AccountTransaction, Guid> accountTransactionRepository,
-        IRepository<StockMovement, Guid> stockMovementRepository,
-        IProductPriceCalculator priceCalculator)
+        IRepository<StockMovement, Guid> stockMovementRepository)
     {
         _documentRepository = documentRepository;
         _documentItemRepository = documentItemRepository;
@@ -44,259 +42,500 @@ public class ReportingAppService : ApplicationService, IReportingAppService
         _accountRepository = accountRepository;
         _accountTransactionRepository = accountTransactionRepository;
         _stockMovementRepository = stockMovementRepository;
-        _priceCalculator = priceCalculator;
     }
 
     public async Task<ReportSnapshotDto> GetSnapshotAsync(ReportRequestDto input)
     {
         CurrentTenant.RequireTenantId();
-        var dateTo = (input.DateTo?.Date ?? Clock.Now.Date).AddDays(1);
-        var dateFrom = input.DateFrom?.Date ?? dateTo.AddMonths(-1);
-        if (dateFrom >= dateTo)
+        var dateToExclusive = (input.DateTo?.Date ?? Clock.Now.Date).AddDays(1);
+        var dateFrom = input.DateFrom?.Date ?? dateToExclusive.AddMonths(-1);
+        if (dateFrom >= dateToExclusive)
         {
-            dateFrom = dateTo.AddDays(-1);
+            dateFrom = dateToExclusive.AddDays(-1);
+        }
+        if ((dateToExclusive - dateFrom).TotalDays > 366)
+        {
+            dateFrom = dateToExclusive.AddDays(-366);
         }
 
-        var documents = await AsyncExecuter.ToListAsync((await _documentRepository.GetQueryableAsync())
-            .Where(x => x.Date >= dateFrom && x.Date < dateTo));
-        var products = await AsyncExecuter.ToListAsync(await _productRepository.GetQueryableAsync());
-        var partners = await AsyncExecuter.ToListAsync(await _businessPartnerRepository.GetQueryableAsync());
-        var accounts = await AsyncExecuter.ToListAsync(await _accountRepository.GetQueryableAsync());
-        var transactions = await AsyncExecuter.ToListAsync((await _accountTransactionRepository.GetQueryableAsync())
-            .Where(x => x.TransactionDate >= dateFrom && x.TransactionDate < dateTo));
-        var movements = await AsyncExecuter.ToListAsync((await _stockMovementRepository.GetQueryableAsync())
-            .Where(x => x.MovementDate >= dateFrom && x.MovementDate < dateTo));
+        var pageSize = Math.Clamp(input.PageSize, 10, 100);
+        var accountsPage = NormalizePage(input.AccountsPage);
+        var partnersPage = NormalizePage(input.BusinessPartnersPage);
+        var profitabilityPage = NormalizePage(input.ProductProfitabilityPage);
+        var stocksPage = NormalizePage(input.StocksPage);
+        var movementsPage = NormalizePage(input.StockMovementsPage);
 
-        var completedDocuments = documents.Where(IsCommerciallyCompleted).ToList();
-        var completedDocumentIds = completedDocuments.Select(x => x.Id).ToList();
-        var documentItems = completedDocumentIds.Count == 0
-            ? new List<DocumentItem>()
-            : await AsyncExecuter.ToListAsync((await _documentItemRepository.GetQueryableAsync())
-                .Where(x => completedDocumentIds.Contains(x.DocumentId)));
+        var documents = await _documentRepository.GetQueryableAsync();
+        var documentItems = await _documentItemRepository.GetQueryableAsync();
+        var products = await _productRepository.GetQueryableAsync();
+        var partners = await _businessPartnerRepository.GetQueryableAsync();
+        var accounts = await _accountRepository.GetQueryableAsync();
+        var accountTransactions = await _accountTransactionRepository.GetQueryableAsync();
+        var stockMovements = await _stockMovementRepository.GetQueryableAsync();
 
-        var salesDocuments = completedDocuments.Where(x => x.Type is DocumentType.SaleInvoice or DocumentType.PosSale).ToList();
-        var purchaseDocuments = completedDocuments.Where(x => x.Type == DocumentType.PurchaseInvoice).ToList();
-        var salesDocumentIds = salesDocuments.Select(x => x.Id).ToHashSet();
-        var purchaseDocumentIds = purchaseDocuments.Select(x => x.Id).ToHashSet();
-        var documentsById = completedDocuments.ToDictionary(x => x.Id);
-        var productsById = products.ToDictionary(x => x.Id);
-        var costInTryByProductId = new Dictionary<Guid, decimal>();
-        foreach (var product in products)
-        {
-            var purchaseCurrency = string.IsNullOrWhiteSpace(product.PurchaseCurrency) ? "TRY" : product.PurchaseCurrency;
-            costInTryByProductId[product.Id] = product.PurchasePrice * await _priceCalculator.GetExchangeRateAsync(purchaseCurrency);
-        }
+        var completedDocuments = documents.Where(document =>
+            document.Date >= dateFrom && document.Date < dateToExclusive &&
+            (document.Status == DocumentStatus.Approved ||
+             document.Status == DocumentStatus.PartiallyPaid ||
+             document.Status == DocumentStatus.Paid ||
+             document.Status == DocumentStatus.Completed));
+        var salesDocuments = completedDocuments.Where(document =>
+            document.Type == DocumentType.SaleInvoice || document.Type == DocumentType.PosSale);
+        var purchaseDocuments = completedDocuments.Where(document =>
+            document.Type == DocumentType.PurchaseInvoice);
+        var periodTransactions = accountTransactions.Where(transaction =>
+            transaction.TransactionDate >= dateFrom && transaction.TransactionDate < dateToExclusive);
+        var periodMovements = stockMovements.Where(movement =>
+            movement.MovementDate >= dateFrom && movement.MovementDate < dateToExclusive);
 
-        var stockRows = products
-            .OrderBy(x => x.Name)
-            .Select(x => new StockReportItemDto
+        var documentSummary = await AsyncExecuter.FirstOrDefaultAsync(completedDocuments
+            .GroupBy(_ => 1)
+            .Select(group => new DocumentSummaryRow
             {
-                ProductId = x.Id,
-                Name = x.Name,
-                Sku = x.Sku,
-                Unit = x.Unit,
-                Quantity = x.Quantity,
-                CriticalStockLevel = x.CriticalStockLevel,
-                PurchasePrice = costInTryByProductId[x.Id],
-                CostValue = x.Quantity * costInTryByProductId[x.Id],
-                IsCritical = x.TrackStock && x.Quantity <= x.CriticalStockLevel
-            })
-            .ToList();
+                Sales = group
+                    .Where(document => document.Type == DocumentType.SaleInvoice || document.Type == DocumentType.PosSale)
+                    .Sum(document => document.GrandTotal *
+                        (document.Currency == "TRY" || document.ExchangeRate <= 0 ? 1m : document.ExchangeRate)),
+                Purchases = group
+                    .Where(document => document.Type == DocumentType.PurchaseInvoice)
+                    .Sum(document => document.GrandTotal *
+                        (document.Currency == "TRY" || document.ExchangeRate <= 0 ? 1m : document.ExchangeRate))
+            })) ?? new DocumentSummaryRow();
 
-        var movementRows = movements
-            .OrderByDescending(x => x.MovementDate)
-            .Take(100)
-            .Select(x => new StockMovementReportItemDto
+        var transactionSummary = await AsyncExecuter.FirstOrDefaultAsync(periodTransactions
+            .GroupBy(_ => 1)
+            .Select(group => new TransactionSummaryRow
             {
-                Date = x.MovementDate,
-                ProductName = productsById.TryGetValue(x.ProductId, out var product) ? product.Name : "Silinmiş ürün",
-                Type = x.Type,
-                Quantity = x.Quantity,
-                BalanceAfter = x.BalanceAfter,
-                Description = x.Description
-            })
-            .ToList();
+                CashIn = group
+                    .Where(transaction =>
+                        transaction.Type == AccountTransactionType.Opening ||
+                        transaction.Type == AccountTransactionType.Income ||
+                        transaction.Type == AccountTransactionType.TransferIn ||
+                        transaction.Type == AccountTransactionType.Collection)
+                    .Sum(transaction => transaction.Amount < 0 ? -transaction.Amount : transaction.Amount),
+                CashOut = group
+                    .Where(transaction =>
+                        transaction.Type == AccountTransactionType.Expense ||
+                        transaction.Type == AccountTransactionType.TransferOut ||
+                        transaction.Type == AccountTransactionType.Payment)
+                    .Sum(transaction => transaction.Amount < 0 ? -transaction.Amount : transaction.Amount),
+                OtherSigned = group
+                    .Where(transaction =>
+                        transaction.Type != AccountTransactionType.Opening &&
+                        transaction.Type != AccountTransactionType.Income &&
+                        transaction.Type != AccountTransactionType.TransferIn &&
+                        transaction.Type != AccountTransactionType.Collection &&
+                        transaction.Type != AccountTransactionType.Expense &&
+                        transaction.Type != AccountTransactionType.TransferOut &&
+                        transaction.Type != AccountTransactionType.Payment)
+                    .Sum(transaction => transaction.Amount),
+                Income = group
+                    .Where(transaction => transaction.Type == AccountTransactionType.Income)
+                    .Sum(transaction => transaction.Amount < 0 ? -transaction.Amount : transaction.Amount),
+                Expense = group
+                    .Where(transaction => transaction.Type == AccountTransactionType.Expense)
+                    .Sum(transaction => transaction.Amount < 0 ? -transaction.Amount : transaction.Amount)
+            })) ?? new TransactionSummaryRow();
 
-        var accountRows = accounts
-            .OrderBy(x => x.Name)
-            .Select(account =>
+        var partnerSummary = await AsyncExecuter.FirstOrDefaultAsync(partners
+            .GroupBy(_ => 1)
+            .Select(group => new PartnerSummaryRow
             {
-                var accountTransactions = transactions.Where(x => x.AccountId == account.Id).ToList();
-                var signed = accountTransactions.Select(GetSignedAmount).ToList();
-                return new AccountReportItemDto
-                {
-                    AccountId = account.Id,
-                    Name = account.Name,
-                    Type = account.Type,
-                    Currency = account.Currency,
-                    Balance = account.Balance,
-                    Inflow = signed.Where(x => x > 0).Sum(),
-                    Outflow = -signed.Where(x => x < 0).Sum(),
-                    NetFlow = signed.Sum()
-                };
-            })
-            .ToList();
+                Receivables = group.Where(partner => partner.Balance > 0).Sum(partner => partner.Balance),
+                Payables = group.Where(partner => partner.Balance < 0).Sum(partner => -partner.Balance)
+            })) ?? new PartnerSummaryRow();
 
-        var partnerRows = partners
-            .OrderBy(x => x.Name)
-            .Select(partner => new BusinessPartnerReportItemDto
+        var productSummary = await AsyncExecuter.FirstOrDefaultAsync(products
+            .GroupBy(_ => 1)
+            .Select(group => new ProductSummaryRow
+            {
+                InventoryCostValue = group.Sum(product => product.Quantity *
+                    (product.LastPurchaseCostTryAmount ??
+                     product.PurchasePrice *
+                     (product.PurchaseCurrency == "TRY"
+                         ? 1m
+                         : product.ExchangeRateAtPurchase > 0 ? product.ExchangeRateAtPurchase : 1m))),
+                CriticalStockCount = group.Count(product =>
+                    product.TrackStock && product.Quantity <= product.CriticalStockLevel)
+            })) ?? new ProductSummaryRow();
+
+        var flowGroups = periodTransactions
+            .GroupBy(transaction => transaction.AccountId)
+            .Select(group => new AccountFlowRow
+            {
+                AccountId = group.Key,
+                Inflow = group
+                    .Where(transaction =>
+                        transaction.Type == AccountTransactionType.Opening ||
+                        transaction.Type == AccountTransactionType.Income ||
+                        transaction.Type == AccountTransactionType.TransferIn ||
+                        transaction.Type == AccountTransactionType.Collection)
+                    .Sum(transaction => transaction.Amount < 0 ? -transaction.Amount : transaction.Amount),
+                Outflow = group
+                    .Where(transaction =>
+                        transaction.Type == AccountTransactionType.Expense ||
+                        transaction.Type == AccountTransactionType.TransferOut ||
+                        transaction.Type == AccountTransactionType.Payment)
+                    .Sum(transaction => transaction.Amount < 0 ? -transaction.Amount : transaction.Amount),
+                OtherSigned = group
+                    .Where(transaction =>
+                        transaction.Type != AccountTransactionType.Opening &&
+                        transaction.Type != AccountTransactionType.Income &&
+                        transaction.Type != AccountTransactionType.TransferIn &&
+                        transaction.Type != AccountTransactionType.Collection &&
+                        transaction.Type != AccountTransactionType.Expense &&
+                        transaction.Type != AccountTransactionType.TransferOut &&
+                        transaction.Type != AccountTransactionType.Payment)
+                    .Sum(transaction => transaction.Amount)
+            });
+
+        var accountRows = await AsyncExecuter.ToListAsync((
+            from account in accounts
+            join flow in flowGroups on account.Id equals flow.AccountId into accountFlows
+            from flow in accountFlows.DefaultIfEmpty()
+            orderby account.Name, account.Id
+            select new AccountReportItemDto
+            {
+                AccountId = account.Id,
+                Name = account.Name,
+                Type = account.Type,
+                Currency = account.Currency,
+                Balance = account.Balance,
+                Inflow = flow.Inflow ?? 0m,
+                Outflow = flow.Outflow ?? 0m,
+                NetFlow = (flow.Inflow ?? 0m) - (flow.Outflow ?? 0m) + (flow.OtherSigned ?? 0m)
+            })
+            .Skip((accountsPage - 1) * pageSize)
+            .Take(pageSize + 1));
+        var accountPaging = FinalizePage(accountRows, accountsPage, pageSize);
+
+        var partnerDocumentGroups = completedDocuments
+            .Where(document =>
+                document.Type == DocumentType.SaleInvoice ||
+                document.Type == DocumentType.PosSale ||
+                document.Type == DocumentType.PurchaseInvoice)
+            .GroupBy(document => document.BusinessPartnerId)
+            .Select(group => new PartnerDocumentRow
+            {
+                BusinessPartnerId = group.Key,
+                Sales = group
+                    .Where(document => document.Type == DocumentType.SaleInvoice || document.Type == DocumentType.PosSale)
+                    .Sum(document => document.GrandTotal *
+                        (document.Currency == "TRY" || document.ExchangeRate <= 0 ? 1m : document.ExchangeRate)),
+                Purchases = group
+                    .Where(document => document.Type == DocumentType.PurchaseInvoice)
+                    .Sum(document => document.GrandTotal *
+                        (document.Currency == "TRY" || document.ExchangeRate <= 0 ? 1m : document.ExchangeRate))
+            });
+
+        var partnerRowsQuery =
+            from partner in partners
+            join documentTotals in partnerDocumentGroups
+                on partner.Id equals documentTotals.BusinessPartnerId into partnerDocuments
+            from documentTotals in partnerDocuments.DefaultIfEmpty()
+            select new BusinessPartnerReportItemDto
             {
                 BusinessPartnerId = partner.Id,
                 Name = partner.Name,
                 Type = partner.Type,
                 Currency = partner.Currency,
                 Balance = partner.Balance,
-                Sales = salesDocuments.Where(x => x.BusinessPartnerId == partner.Id).Sum(GetReportAmount),
-                Purchases = purchaseDocuments.Where(x => x.BusinessPartnerId == partner.Id).Sum(GetReportAmount)
-            })
-            .Where(x => x.Balance != 0 || x.Sales != 0 || x.Purchases != 0)
-            .ToList();
+                Sales = documentTotals.Sales ?? 0m,
+                Purchases = documentTotals.Purchases ?? 0m
+            };
+        // Keep the left join server-side and page the complete partner directory. Filtering
+        // projected nullable aggregate members is not translated consistently by SQLite and
+        // PostgreSQL providers; bounded paging still prevents an unbounded materialization.
+        var partnerRows = await AsyncExecuter.ToListAsync(partnerRowsQuery
+            .OrderBy(row => row.Name)
+            .ThenBy(row => row.BusinessPartnerId)
+            .Skip((partnersPage - 1) * pageSize)
+            .Take(pageSize + 1));
+        var partnerPaging = FinalizePage(partnerRows, partnersPage, pageSize);
 
-        var vatRows = documentItems
-            .GroupBy(item => item.VatRate)
-            .OrderBy(x => x.Key)
-            .Select(group =>
+        var vatAggregates = await AsyncExecuter.ToListAsync(
+            from item in documentItems
+            join document in completedDocuments on item.DocumentId equals document.Id
+            where document.Type == DocumentType.SaleInvoice ||
+                  document.Type == DocumentType.PosSale ||
+                  document.Type == DocumentType.PurchaseInvoice
+            group new { item, document } by item.VatRate into vatGroup
+            orderby vatGroup.Key
+            select new VatAggregateRow
             {
-                var salesVat = group.Where(x => salesDocumentIds.Contains(x.DocumentId)).Sum(item => GetVatAmount(item) * GetDocumentRate(documentsById[item.DocumentId]));
-                var purchaseVat = group.Where(x => purchaseDocumentIds.Contains(x.DocumentId)).Sum(item => GetVatAmount(item) * GetDocumentRate(documentsById[item.DocumentId]));
-                return new VatReportItemDto
+                VatRate = vatGroup.Key,
+                SalesVat = vatGroup
+                    .Where(row => row.document.Type == DocumentType.SaleInvoice || row.document.Type == DocumentType.PosSale)
+                    .Sum(row =>
+                        row.item.Quantity * row.item.UnitPrice *
+                        (1m - row.item.DiscountRate / 100m) * row.item.VatRate / 100m *
+                        (row.document.Currency == "TRY" || row.document.ExchangeRate <= 0 ? 1m : row.document.ExchangeRate)),
+                PurchaseVat = vatGroup
+                    .Where(row => row.document.Type == DocumentType.PurchaseInvoice)
+                    .Sum(row =>
+                        row.item.Quantity * row.item.UnitPrice *
+                        (1m - row.item.DiscountRate / 100m) * row.item.VatRate / 100m *
+                        (row.document.Currency == "TRY" || row.document.ExchangeRate <= 0 ? 1m : row.document.ExchangeRate))
+            });
+        var vatRows = vatAggregates.Select(row => new VatReportItemDto
+        {
+            VatRate = row.VatRate,
+            SalesVat = row.SalesVat,
+            PurchaseVat = row.PurchaseVat,
+            NetVat = row.SalesVat - row.PurchaseVat
+        }).ToList();
+
+        var profitabilityAggregates =
+            from item in documentItems
+            join document in salesDocuments on item.DocumentId equals document.Id
+            join product in products on item.ProductId equals product.Id into itemProducts
+            from product in itemProducts.DefaultIfEmpty()
+            group item by new
+            {
+                item.ProductId,
+                Name = product == null ? "Silinmiş ürün" : product.Name,
+                Sku = product == null ? "-" : product.Sku
+            }
+            into productGroup
+            select new ProfitabilityAggregateRow
+            {
+                ProductId = productGroup.Key.ProductId,
+                Name = productGroup.Key.Name,
+                Sku = productGroup.Key.Sku,
+                SoldQuantity = productGroup.Sum(item => item.Quantity),
+                SalesAmount = productGroup.Sum(item =>
+                    item.Quantity * item.UnitPrice * (1m - item.DiscountRate / 100m)),
+                EstimatedCost = productGroup.Sum(item =>
+                    item.Quantity * (item.CostTryAmount ?? 0m))
+            };
+
+        var grossProfitEstimate = await AsyncExecuter.SumAsync(profitabilityAggregates
+            .Select(row => row.SalesAmount - row.EstimatedCost));
+        var profitabilityAggregateRows = await AsyncExecuter.ToListAsync(profitabilityAggregates
+            .OrderByDescending(row => row.SalesAmount - row.EstimatedCost)
+            .ThenBy(row => row.Name)
+            .Skip((profitabilityPage - 1) * pageSize)
+            .Take(pageSize + 1));
+        var profitabilityRows = profitabilityAggregateRows.Select(row => new ProductProfitabilityReportItemDto
+        {
+            ProductId = row.ProductId,
+            Name = row.Name,
+            Sku = row.Sku,
+            SoldQuantity = row.SoldQuantity,
+            SalesAmount = row.SalesAmount,
+            EstimatedCost = row.EstimatedCost,
+            GrossProfitEstimate = row.SalesAmount - row.EstimatedCost,
+            GrossMarginPercent = row.SalesAmount == 0m
+                ? 0m
+                : Math.Round((row.SalesAmount - row.EstimatedCost) / row.SalesAmount * 100m, 2)
+        }).ToList();
+        var profitabilityPaging = FinalizePage(profitabilityRows, profitabilityPage, pageSize);
+
+        var stockRows = await AsyncExecuter.ToListAsync(products
+            .OrderBy(product => product.Name)
+            .ThenBy(product => product.Id)
+            .Skip((stocksPage - 1) * pageSize)
+            .Take(pageSize + 1)
+            .Select(product => new StockReportItemDto
+            {
+                ProductId = product.Id,
+                Name = product.Name,
+                Sku = product.Sku,
+                Unit = product.Unit,
+                Quantity = product.Quantity,
+                CriticalStockLevel = product.CriticalStockLevel,
+                PurchasePrice = product.LastPurchaseCostTryAmount ??
+                    product.PurchasePrice *
+                    (product.PurchaseCurrency == "TRY"
+                        ? 1m
+                        : product.ExchangeRateAtPurchase > 0 ? product.ExchangeRateAtPurchase : 1m),
+                CostValue = product.Quantity *
+                    (product.LastPurchaseCostTryAmount ??
+                     product.PurchasePrice *
+                     (product.PurchaseCurrency == "TRY"
+                         ? 1m
+                         : product.ExchangeRateAtPurchase > 0 ? product.ExchangeRateAtPurchase : 1m)),
+                IsCritical = product.TrackStock && product.Quantity <= product.CriticalStockLevel
+            }));
+        var stockPaging = FinalizePage(stockRows, stocksPage, pageSize);
+
+        var movementRows = await AsyncExecuter.ToListAsync((
+            from movement in periodMovements
+            join product in products on movement.ProductId equals product.Id into movementProducts
+            from product in movementProducts.DefaultIfEmpty()
+            orderby movement.MovementDate descending, movement.Id descending
+            select new StockMovementReportItemDto
+            {
+                Date = movement.MovementDate,
+                ProductName = product == null ? "Silinmiş ürün" : product.Name,
+                Type = movement.Type,
+                Quantity = movement.Quantity,
+                BalanceAfter = movement.BalanceAfter,
+                Description = movement.Description
+            })
+            .Skip((movementsPage - 1) * pageSize)
+            .Take(pageSize + 1));
+        var movementPaging = FinalizePage(movementRows, movementsPage, pageSize);
+
+        var today = Clock.Now.Date;
+        var agingAggregates = await AsyncExecuter.ToListAsync(documents
+            .Where(document =>
+                (document.Type == DocumentType.SaleInvoice || document.Type == DocumentType.PurchaseInvoice) &&
+                (document.Status == DocumentStatus.Approved || document.Status == DocumentStatus.PartiallyPaid) &&
+                document.GrandTotal > document.PaidAmount)
+            .Select(document => new
+            {
+                Bucket = !document.DueDate.HasValue || document.DueDate.Value >= today
+                    ? 0
+                    : document.DueDate.Value >= today.AddDays(-30)
+                        ? 1
+                        : document.DueDate.Value >= today.AddDays(-60)
+                            ? 2
+                            : document.DueDate.Value >= today.AddDays(-90) ? 3 : 4,
+                document.Type,
+                Amount = (document.GrandTotal - document.PaidAmount) *
+                    (document.Currency == "TRY" || document.ExchangeRate <= 0 ? 1m : document.ExchangeRate)
+            })
+            .GroupBy(row => row.Bucket)
+            .Select(group => new AgingAggregateRow
+            {
+                Bucket = group.Key,
+                Receivables = group
+                    .Where(row => row.Type == DocumentType.SaleInvoice)
+                    .Sum(row => row.Amount),
+                Payables = group
+                    .Where(row => row.Type == DocumentType.PurchaseInvoice)
+                    .Sum(row => row.Amount)
+            }));
+        var agingLabels = new[] { "Vadesi gelmemiş", "0-30 gün", "31-60 gün", "61-90 gün", "90+ gün" };
+        var agingRows = Enumerable.Range(0, agingLabels.Length)
+            .Select(bucket =>
+            {
+                var aggregate = agingAggregates.FirstOrDefault(row => row.Bucket == bucket);
+                return new AgingReportItemDto
                 {
-                    VatRate = group.Key,
-                    SalesVat = salesVat,
-                    PurchaseVat = purchaseVat,
-                    NetVat = salesVat - purchaseVat
+                    Bucket = agingLabels[bucket],
+                    Receivables = aggregate?.Receivables ?? 0m,
+                    Payables = aggregate?.Payables ?? 0m
                 };
             })
             .ToList();
-
-        var profitabilityRows = documentItems
-            .Where(x => salesDocumentIds.Contains(x.DocumentId))
-            .GroupBy(x => x.ProductId)
-            .Select(group =>
-            {
-                productsById.TryGetValue(group.Key, out var product);
-                // Profitability is based on the sales-time snapshots, never
-                // today's product card cost or KDV-included document total.
-                var salesAmount = group.Sum(x =>
-                    x.Quantity * x.UnitPrice * (1m - x.DiscountRate / 100m));
-                var estimatedCost = group.Sum(x => x.Quantity * (x.CostTryAmount ?? 0m));
-                return new ProductProfitabilityReportItemDto
-                {
-                    ProductId = group.Key,
-                    Name = product?.Name ?? "Silinmiş ürün",
-                    Sku = product?.Sku ?? "-",
-                    SoldQuantity = group.Sum(x => x.Quantity),
-                    SalesAmount = salesAmount,
-                    EstimatedCost = estimatedCost,
-                    GrossProfitEstimate = salesAmount - estimatedCost,
-                    GrossMarginPercent = salesAmount == 0 ? 0 : Math.Round((salesAmount - estimatedCost) / salesAmount * 100, 2)
-                };
-            })
-            .OrderByDescending(x => x.GrossProfitEstimate)
-            .Take(50)
-            .ToList();
-
-        var aging = CreateAgingRows(await GetOpenInvoicesAsync(), Clock.Now.Date);
-        var signedTransactions = transactions.Select(GetSignedAmount).ToList();
-        var income = transactions.Where(x => x.Type == AccountTransactionType.Income).Sum(x => Math.Abs(x.Amount));
-        var expense = transactions.Where(x => x.Type == AccountTransactionType.Expense).Sum(x => Math.Abs(x.Amount));
 
         return new ReportSnapshotDto
         {
             DateFrom = dateFrom,
-            DateTo = dateTo.AddDays(-1),
+            DateTo = dateToExclusive.AddDays(-1),
             Summary = new ReportSummaryDto
             {
-                Sales = salesDocuments.Sum(GetReportAmount),
-                Purchases = purchaseDocuments.Sum(GetReportAmount),
-                GrossProfitEstimate = profitabilityRows.Sum(x => x.GrossProfitEstimate),
-                CashIn = signedTransactions.Where(x => x > 0).Sum(),
-                CashOut = -signedTransactions.Where(x => x < 0).Sum(),
-                NetCashFlow = signedTransactions.Sum(),
-                Income = income,
-                Expense = expense,
-                Receivables = partners.Where(x => x.Balance > 0).Sum(x => x.Balance),
-                Payables = partners.Where(x => x.Balance < 0).Sum(x => -x.Balance),
-                InventoryCostValue = stockRows.Sum(x => x.CostValue),
-                CriticalStockCount = stockRows.Count(x => x.IsCritical)
+                Sales = documentSummary.Sales,
+                Purchases = documentSummary.Purchases,
+                GrossProfitEstimate = grossProfitEstimate,
+                CashIn = transactionSummary.CashIn,
+                CashOut = transactionSummary.CashOut,
+                NetCashFlow = transactionSummary.CashIn - transactionSummary.CashOut + transactionSummary.OtherSigned,
+                Income = transactionSummary.Income,
+                Expense = transactionSummary.Expense,
+                Receivables = partnerSummary.Receivables,
+                Payables = partnerSummary.Payables,
+                InventoryCostValue = productSummary.InventoryCostValue,
+                CriticalStockCount = productSummary.CriticalStockCount
             },
             Stocks = stockRows,
             StockMovements = movementRows,
             Accounts = accountRows,
             BusinessPartners = partnerRows,
             VatRates = vatRows,
-            Aging = aging,
-            ProductProfitability = profitabilityRows
+            Aging = agingRows,
+            ProductProfitability = profitabilityRows,
+            AccountsPaging = accountPaging,
+            BusinessPartnersPaging = partnerPaging,
+            ProductProfitabilityPaging = profitabilityPaging,
+            StocksPaging = stockPaging,
+            StockMovementsPaging = movementPaging
         };
     }
 
-    private async Task<List<Document>> GetOpenInvoicesAsync()
-    {
-        return await AsyncExecuter.ToListAsync((await _documentRepository.GetQueryableAsync())
-            .Where(x => (x.Type == DocumentType.SaleInvoice || x.Type == DocumentType.PurchaseInvoice) &&
-                        (x.Status == DocumentStatus.Approved || x.Status == DocumentStatus.PartiallyPaid)));
-    }
+    private static int NormalizePage(int pageNumber) => Math.Clamp(pageNumber, 1, 10_000);
 
-    private static bool IsCommerciallyCompleted(Document document)
+    private static ReportPageInfoDto FinalizePage<T>(List<T> rows, int pageNumber, int pageSize)
     {
-        return document.Status is DocumentStatus.Approved or DocumentStatus.PartiallyPaid or DocumentStatus.Paid or DocumentStatus.Completed;
-    }
-
-    private static decimal GetVatAmount(DocumentItem item)
-    {
-        var net = item.Quantity * item.UnitPrice * (1 - item.DiscountRate / 100);
-        return net * item.VatRate / 100;
-    }
-
-    private static decimal GetDocumentRate(Document document)
-    {
-        return string.Equals(document.Currency, "TRY", StringComparison.OrdinalIgnoreCase) || document.ExchangeRate <= 0
-            ? 1
-            : document.ExchangeRate;
-    }
-
-    private static decimal GetReportAmount(Document document)
-    {
-        return document.GrandTotal * GetDocumentRate(document);
-    }
-
-    private static decimal GetReportOutstandingAmount(Document document)
-    {
-        return (document.GrandTotal - document.PaidAmount) * GetDocumentRate(document);
-    }
-
-    private static decimal GetSignedAmount(AccountTransaction transaction)
-    {
-        var amount = Math.Abs(transaction.Amount);
-        return transaction.Type switch
+        var hasNext = rows.Count > pageSize;
+        if (hasNext)
         {
-            AccountTransactionType.Opening or AccountTransactionType.Income or AccountTransactionType.TransferIn or AccountTransactionType.Collection => amount,
-            AccountTransactionType.Expense or AccountTransactionType.TransferOut or AccountTransactionType.Payment => -amount,
-            _ => transaction.Amount
-        };
-    }
-
-    private static List<AgingReportItemDto> CreateAgingRows(List<Document> documents, DateTime today)
-    {
-        var buckets = new[] { "Vadesi gelmemiş", "0-30 gün", "31-60 gün", "61-90 gün", "90+ gün" };
-        return buckets.Select(bucket => new AgingReportItemDto
-        {
-            Bucket = bucket,
-            Receivables = documents.Where(x => x.Type == DocumentType.SaleInvoice && GetAgingBucket(x.DueDate, today) == bucket)
-                .Sum(GetReportOutstandingAmount),
-            Payables = documents.Where(x => x.Type == DocumentType.PurchaseInvoice && GetAgingBucket(x.DueDate, today) == bucket)
-                .Sum(GetReportOutstandingAmount)
-        }).ToList();
-    }
-
-    private static string GetAgingBucket(DateTime? dueDate, DateTime today)
-    {
-        if (!dueDate.HasValue || dueDate.Value.Date >= today)
-        {
-            return "Vadesi gelmemiş";
+            rows.RemoveRange(pageSize, rows.Count - pageSize);
         }
 
-        var days = (today - dueDate.Value.Date).Days;
-        return days <= 30 ? "0-30 gün" : days <= 60 ? "31-60 gün" : days <= 90 ? "61-90 gün" : "90+ gün";
+        return new ReportPageInfoDto
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            HasNext = hasNext
+        };
+    }
+
+    private sealed class DocumentSummaryRow
+    {
+        public decimal Sales { get; set; }
+        public decimal Purchases { get; set; }
+    }
+
+    private sealed class TransactionSummaryRow
+    {
+        public decimal CashIn { get; set; }
+        public decimal CashOut { get; set; }
+        public decimal OtherSigned { get; set; }
+        public decimal Income { get; set; }
+        public decimal Expense { get; set; }
+    }
+
+    private sealed class PartnerSummaryRow
+    {
+        public decimal Receivables { get; set; }
+        public decimal Payables { get; set; }
+    }
+
+    private sealed class ProductSummaryRow
+    {
+        public decimal InventoryCostValue { get; set; }
+        public int CriticalStockCount { get; set; }
+    }
+
+    private sealed class AccountFlowRow
+    {
+        public Guid AccountId { get; set; }
+        public decimal? Inflow { get; set; }
+        public decimal? Outflow { get; set; }
+        public decimal? OtherSigned { get; set; }
+    }
+
+    private sealed class PartnerDocumentRow
+    {
+        public Guid BusinessPartnerId { get; set; }
+        public decimal? Sales { get; set; }
+        public decimal? Purchases { get; set; }
+    }
+
+    private sealed class VatAggregateRow
+    {
+        public decimal VatRate { get; set; }
+        public decimal SalesVat { get; set; }
+        public decimal PurchaseVat { get; set; }
+    }
+
+    private sealed class ProfitabilityAggregateRow
+    {
+        public Guid ProductId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public decimal SoldQuantity { get; set; }
+        public decimal SalesAmount { get; set; }
+        public decimal EstimatedCost { get; set; }
+    }
+
+    private sealed class AgingAggregateRow
+    {
+        public int Bucket { get; set; }
+        public decimal Receivables { get; set; }
+        public decimal Payables { get; set; }
     }
 }

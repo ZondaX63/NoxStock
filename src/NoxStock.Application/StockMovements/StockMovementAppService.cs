@@ -35,6 +35,8 @@ public class StockMovementAppService : ReadOnlyAppService<StockMovement, StockMo
     public override async Task<PagedResultDto<StockMovementDto>> GetListAsync(StockMovementGetListInput input)
     {
         CurrentTenant.RequireTenantId();
+        input.SkipCount = Math.Clamp(input.SkipCount, 0, 10_000);
+        input.MaxResultCount = Math.Clamp(input.MaxResultCount, 1, 100);
         var query = await CreateFilteredQueryAsync(input);
 
         var totalCount = await AsyncExecuter.CountAsync(query);

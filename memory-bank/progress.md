@@ -1,5 +1,52 @@
 # Progress
 
+## 2026-07-31 - Frontend Performance Workstream Completion
+
+- Completed source implementation for phases P0-P5 while keeping the production image-build/deployment phase deferred as requested. The only unchecked P0 items are real Oracle VM cold/warm evidence, because those values cannot be truthfully produced from the development workstation.
+- Added dynamic `Server-Timing` and correlation headers, opt-in Web Vitals/resource/long-task capture, a cold/warm authenticated navigation script, and explicit 1 OCPU / 6 GB budgets.
+- Pinned and self-hosted the runtime frontend assets, enabled immutable caching only for fingerprinted static files, preserved private caching for authenticated/ABP bootstrap responses, removed broad paint-heavy effects, and retained component-local loading instead of a global skeleton.
+- Bounded operational alerts and paged notifications; consolidated/cached Dashboard reads; replaced report over-materialization with database aggregates and independent detail paging. Historical report profit now uses the locked sale-line cost snapshot and KDV-excluded net sale.
+- Main DataTables retain session state and debounce search. Product, POS, invoice, account-payment, customer, and label lookups use exact-first/bounded remote paths with stale-response protection where applicable. Etiket Yazdır no longer prices 2,000 products during initial HTML rendering.
+- Verification completed: Web build and EF test-project build succeed with zero errors; the complete EntityFrameworkCore integration suite passes 73/73; production npm dependency audit reports zero vulnerabilities; all project JavaScript passes Node 22 syntax validation; `git diff --check` passes. The full suite found and closed two currency-edge regressions: neutral foreign-purchase input no longer replaces the dated rate snapshot, and rate reuse is limited to one Unit of Work so later requests observe changed live rates.
+
+## 2026-07-31 - Exact Product and Payment Account Lookup
+
+- Added an exact-first SKU, barcode, and normalized OEM path to catalogue, invoice, and POS searches. Shared exact OEM codes still return all matching brand alternatives; broad substring search remains the fallback.
+- Added reversible non-unique tenant-first SKU/barcode indexes through migration `20260731160000_Optimize_Product_Exact_Lookups`. Existing duplicate data and future uniqueness policy are unaffected.
+- Removed the final 1,000-account Razor bootstrap from the invoice payment modal. Active accounts now load in 20-row, document-currency-matched remote results with 250 ms debounce, stale-response sequencing, bounded caching, and validation-state preservation.
+- Verification: focused lookup tests pass 5/5, complete ProductPricing/POS classes pass 16/16, and Web build succeeds with 0 errors. Target PostgreSQL plan recapture and authenticated browser smoke remain pending.
+
+## 2026-07-31 - Frontend Performance Invoice Lookup Batch
+
+- Removed the 1,000-product and 1,000-business-partner bootstrap queries/options from invoice create/edit. New pages now render only placeholders; draft editing and validation failures render only selected values.
+- Added a lightweight server-side product lookup projection and bounded Razor Page lookup handlers. Product and partner searches return at most 20 rows to the browser, use a 250 ms debounce, ignore stale responses, and keep a small page-lifetime query cache.
+- Preserved exact barcode/SKU/name and tax-number/name Enter selection, backend price quote loading, four purchase/sales discounts, current-rate behavior, selected draft values, and the in-context quick-product creation panel.
+- Invoice HTML and new-row template size are now independent of total product and customer counts. No migration or financial calculation rule changed.
+- Verification: Web builds with 0 errors using `-m:1`; the focused EF lookup test passes 1/1 with a six-command regression ceiling; `git diff --check` passes. Executable JavaScript syntax validation remains pending because this workstation has no JS runtime.
+
+## 2026-07-31 - Frontend Performance POS Customer Lookup
+
+- Removed the unbounded customer array from POS checkout bootstrap; initial checkout loading now fetches only active account choices and saved defaults.
+- Added tenant/license-protected, TRY-only POS customer search by name, tax number, or phone. The client uses 250 ms debounce, stale-response sequencing, 20-row results, a bounded page cache, exact Enter selection, and selected-option preservation.
+- Preserved cash/bank walk-in sales and the required selected customer for current-account sales. No schema, price, VAT, discount, stock, or payment rule changed.
+- Verification: Web build succeeds with 0 errors; focused POS and host/tenant-boundary tests pass 7/7.
+
+## 2026-07-31 - Frontend Performance Document Save Batching
+
+- Replaced document create/update product lookup per line with one tenant-filtered batch and reused the same server pricing calculation when a product appears on multiple lines.
+- Removed the Razor Page loop that fetched full product detail for each zero-price submission. Equivalent manual-sale, dynamic-sale, and purchase fallback pricing now lives in the authoritative document application service.
+- Preserved manual override, four-stage discounts, VAT, dynamic rate, cost-history, and approval snapshot semantics; no migration was required.
+- Verification: Product pricing and document-integrity regression tests pass 11/11.
+
+## 2026-07-31 - Frontend Performance First Batch
+
+- Added `frontendPerformanceOptimization.md` with browser-first performance rules, measured priorities, phased TODOs, acceptance targets, and an explicit deferral of production image-build work.
+- Removed live operational-alert queries from the shared Razor layout. The notification shell now renders immediately, loads its authorized summary during browser idle time, and caches it for 30 seconds by tenant path and user without caching tenant HTML.
+- Added a 15-minute browser cache for the global USD/EUR ticker, retained hourly refresh, localized its status messages, and removed the duplicate Outfit Google Fonts import. The remaining external font/icon/Alpine assets are recorded for a later self-hosted pass.
+- Replaced Product list row-by-row OEM, cost-history, purchase-document, supplier, and repeated-rate reads with one joined page projection, one OEM batch, and request-local currency reuse. POS lookup now batch-loads cost histories and shares the request-local currency cache.
+- Added a 12-row Product list SQL regression test. Focused Product/POS EF tests pass 7/7; the page uses 11 intercepted commands including ABP permission/UOW reads instead of scaling with row count. Web builds successfully with existing warnings. JSON parsing and `git diff --check` pass.
+- Web authorization test execution is blocked on this workstation by the missing `Microsoft.AspNetCore.App 10.0.0` runtime. JavaScript syntax execution is also pending because Node.js is not installed locally.
+
 ## 2026-07-24 - SaaS Licensing Foundation
 
 - Added host-owned `LicensePlan`, `TenantLicense`, feature, limit, and audit entities with migration `20260724154448_Add_SaaS_Licensing`; PILOT/CUSTOM plans and existing-tenant PILOT trials seed idempotently.

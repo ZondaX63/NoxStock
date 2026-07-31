@@ -1,11 +1,32 @@
 @page
+@using NoxStock.Licensing
+@using System.Linq
 @model NoxStock.Web.Pages.Settings.IndexModel
 @{
     Layout = "_AppLayout";
     ViewData["Title"] = "Firma Ayarları";
+    var license = Model.License;
+    string StatusText(LicenseStatus? status) => status switch
+    {
+        LicenseStatus.Trial => "Deneme",
+        LicenseStatus.Active => "Aktif",
+        LicenseStatus.GracePeriod => "Ek süre",
+        LicenseStatus.PastDue => "Ödeme bekliyor",
+        LicenseStatus.Suspended => "Askıya alındı",
+        LicenseStatus.Expired => "Süresi doldu",
+        LicenseStatus.Cancelled => "İptal edildi",
+        _ => "Lisans bulunamadı"
+    };
+    string LimitText(string name) => name switch
+    {
+        "MaxUsers" => "Kullanıcı limiti",
+        "MaxProducts" => "Ürün limiti",
+        "MaxBranches" => "Şube limiti",
+        _ => name
+    };
 }
 
-<form method="post" id="CompanySettingsForm">
+<form method="post" id="CompanySettingsForm" data-nx-submit-lock>
     <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Firma Ayarları</h2>
@@ -22,6 +43,23 @@
     }
 
     <div asp-validation-summary="ModelOnly" class="mb-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+    <section class="mb-6 overflow-hidden rounded-lg border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-slate-50 shadow-sm dark:border-indigo-900/70 dark:from-indigo-950/30 dark:via-slate-900 dark:to-slate-900">
+        <div class="flex flex-col gap-4 border-b border-indigo-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-indigo-900/60 sm:px-6">
+            <div class="flex items-start gap-3"><span class="material-icons-round mt-0.5 text-2xl text-indigo-600 dark:text-indigo-300">workspace_premium</span><div><p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">Lisansım</p><h3 class="mt-1 text-lg font-bold text-slate-800 dark:text-white">Plan, erişim ve kullanım limitleri</h3><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Lisansınızın çalışma alanına uyguladığı hakları buradan takip edin.</p></div></div>
+            <span class="inline-flex w-fit items-center rounded-full px-3 py-1.5 text-xs font-bold @(license?.CanWrite == true ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300")">@StatusText(license?.Status)</span>
+        </div>
+        <div class="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4 sm:p-6">
+            <div class="rounded-md border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Lisans türü</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(string.IsNullOrWhiteSpace(license?.PlanCode) ? "-" : license.PlanCode)</p></div>
+            <div class="rounded-md border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Yazma erişimi</p><p class="mt-2 text-lg font-bold @(license?.CanWrite == true ? "text-emerald-600" : "text-rose-600")">@(license?.CanWrite == true ? "Açık" : "Kapalı")</p></div>
+            <div class="rounded-md border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Geçerlilik</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(license?.ExpiresAtUtc?.ToLocalTime().ToString("dd.MM.yyyy") ?? "-" )</p></div>
+            <div class="rounded-md border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Ek süre sonu</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(license?.GracePeriodEndsAtUtc?.ToLocalTime().ToString("dd.MM.yyyy") ?? "-" )</p></div>
+        </div>
+        <div class="grid gap-4 border-t border-indigo-100 p-5 lg:grid-cols-2 dark:border-indigo-900/60 sm:p-6">
+            <div><h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">Plan limitleri</h4><div class="mt-3 grid gap-2 sm:grid-cols-3">@if (license?.Limits?.Any() == true) { foreach (var limit in license.Limits.OrderBy(item => item.Key)) { <div class="rounded-md border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800"><span class="block text-xs text-slate-500">@LimitText(limit.Key)</span><strong class="mt-1 block text-sm text-slate-800 dark:text-white">@(limit.Value?.ToString("N0") ?? "Sınırsız")</strong></div> } } else { <p class="text-sm text-slate-500">Tanımlı limit bulunmuyor.</p> }</div></div>
+            <div><h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">Özellik erişimleri</h4><div class="mt-3 flex flex-wrap gap-2">@if (license?.Features?.Any() == true) { foreach (var feature in license.Features.OrderBy(item => item.Key)) { <span class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold @(feature.Value ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400")"><span class="material-icons-round text-sm">@(feature.Value ? "check_circle" : "block")</span>@feature.Key</span> } } else { <p class="text-sm text-slate-500">Bu plan için ayrı özellik tanımı bulunmuyor.</p> }</div></div>
+        </div>
+    </section>
 
     <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <section class="border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6">

@@ -18,7 +18,7 @@
     <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">@description</p>
 </div>
 
-<form method="post" class="space-y-5">
+<form method="post" class="space-y-5" data-nx-submit-lock>
     <input asp-for="ReturnUrl" type="hidden" />
     <input asp-for="ReturnUrlHash" type="hidden" />
     
@@ -51,7 +51,7 @@
     <div class="flex items-center justify-between mt-6">
         <label class="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer group">
             <div class="relative flex items-center justify-center">
-                <input asp-for="LoginInput.RememberMe" class="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded-md bg-white/50 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer" />
+                <input asp-for="LoginInput.RememberMe" class="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded-md bg-white/50 checked:bg-indigo-600 checked:border-indigo-600 transition-colors cursor-pointer" />
                 <span class="material-icons-round text-white text-sm absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity">check</span>
             </div>
             <span class="group-hover:text-slate-900 transition-colors">@L["Auth:RememberMe"]</span>

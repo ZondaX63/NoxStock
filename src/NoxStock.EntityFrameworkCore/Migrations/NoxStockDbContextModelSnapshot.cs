@@ -1366,6 +1366,10 @@ namespace NoxStock.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("TenantId", "Barcode");
+
+                    b.HasIndex("TenantId", "Sku");
+
                     b.ToTable("AppProducts", (string)null);
                 });
 

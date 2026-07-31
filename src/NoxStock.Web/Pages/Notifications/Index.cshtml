@@ -58,6 +58,18 @@
                     </a>
                 }
             </div>
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="flex items-center justify-between border-t border-slate-200 px-5 py-4 text-sm dark:border-slate-700" aria-label="Bildirim sayfaları">
+                    <span class="text-slate-500">Sayfa @Model.PageNumber / @Model.TotalPages</span>
+                    <span class="flex gap-2">
+                        <a asp-page="/Notifications/Index" asp-route-pageNumber="@(Model.PageNumber - 1)"
+                           class="rounded-md border border-slate-200 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 @(Model.PageNumber <= 1 ? "pointer-events-none opacity-40" : "")">Önceki</a>
+                        <a asp-page="/Notifications/Index" asp-route-pageNumber="@(Model.PageNumber + 1)"
+                           class="rounded-md border border-slate-200 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 @(Model.PageNumber >= Model.TotalPages ? "pointer-events-none opacity-40" : "")">Sonraki</a>
+                    </span>
+                </nav>
+            }
         }
     </section>
 </div>

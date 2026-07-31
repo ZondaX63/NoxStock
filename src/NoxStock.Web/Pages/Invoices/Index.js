@@ -1,7 +1,87 @@
 $(function () {
     var documentService = noxStock.documents.document;
     var documentWorkflowService = noxStock.documents.documentWorkflow;
-    var recordPaymentModal = new abp.ModalManager(abp.appPath + 'Invoices/RecordPaymentModal');
+
+    abp.modals.RecordPaymentModal = function () {
+        return {
+            initModal: function (publicApi) {
+                var $modal = publicApi.getModal();
+                var $form = $modal.find('form[data-account-lookup-url]');
+                var $search = $form.find('[data-account-search]');
+                var $select = $form.find('#Payment_AccountId');
+                var $status = $form.find('[data-account-search-status]');
+                var lookupUrl = $form.data('account-lookup-url');
+                var currency = String($form.data('document-currency') || 'TRY');
+                var timer = null;
+                var sequence = 0;
+                var cache = new Map();
+
+                function accountLabel(account) {
+                    return account.name + ' - ' + Number(account.balance || 0).toLocaleString('tr-TR') + ' ' + account.currency;
+                }
+
+                function renderAccounts(accounts) {
+                    var selectedValue = $select.val();
+                    var selectedText = $select.find('option:selected').text();
+                    $select.empty().append($('<option>', { value: '', text: 'Kasa/Banka Seçiniz...' }));
+
+                    if (selectedValue) {
+                        $select.append($('<option>', { value: selectedValue, text: selectedText, selected: true }));
+                    }
+
+                    accounts.forEach(function (account) {
+                        if (String(account.id) === String(selectedValue)) return;
+                        $select.append($('<option>', { value: account.id, text: accountLabel(account) }));
+                    });
+                }
+
+                function loadAccounts() {
+                    var filter = String($search.val() || '').trim();
+                    var cacheKey = currency + '|' + filter.toLocaleLowerCase('tr-TR');
+                    if (cache.has(cacheKey)) {
+                        renderAccounts(cache.get(cacheKey));
+                        $status.text(cache.get(cacheKey).length ? '' : 'Eşleşen aktif hesap bulunamadı.');
+                        return;
+                    }
+
+                    var requestSequence = ++sequence;
+                    $status.text('Hesaplar yükleniyor...');
+                    fetch(lookupUrl + '&currency=' + encodeURIComponent(currency) + '&filter=' + encodeURIComponent(filter), {
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                        .then(function (response) {
+                            if (!response.ok) throw new Error('Account lookup failed');
+                            return response.json();
+                        })
+                        .then(function (result) {
+                            if (requestSequence !== sequence) return;
+                            var accounts = result.items || [];
+                            if (cache.size >= 30) cache.delete(cache.keys().next().value);
+                            cache.set(cacheKey, accounts);
+                            renderAccounts(accounts);
+                            $status.text(accounts.length ? '' : 'Eşleşen aktif hesap bulunamadı.');
+                        })
+                        .catch(function () {
+                            if (requestSequence === sequence) {
+                                $status.text('Hesaplar yüklenemedi. Lütfen tekrar deneyin.');
+                            }
+                        });
+                }
+
+                $search.on('input', function () {
+                    window.clearTimeout(timer);
+                    timer = window.setTimeout(loadAccounts, 250);
+                });
+                loadAccounts();
+            }
+        };
+    };
+
+    var recordPaymentModal = new abp.ModalManager({
+        viewUrl: abp.appPath + 'Invoices/RecordPaymentModal',
+        modalClass: 'RecordPaymentModal'
+    });
 
     function recordOf(data) {
         return data && (data.record || data);
@@ -13,6 +93,9 @@ $(function () {
 
     var dataTable = $('#InvoicesTable').DataTable(abp.libs.datatables.normalizeConfiguration({
         serverSide: true,
+        stateSave: true,
+        stateDuration: -1,
+        searchDelay: 300,
         paging: true,
         order: [[4, "desc"]],
         searching: false,

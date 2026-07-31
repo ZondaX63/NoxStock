@@ -34,6 +34,8 @@ public class AccountTransactionAppService : ReadOnlyAppService<AccountTransactio
     public override Task<PagedResultDto<AccountTransactionDto>> GetListAsync(AccountTransactionGetListInput input)
     {
         CurrentTenant.RequireTenantId();
+        input.SkipCount = Math.Clamp(input.SkipCount, 0, 10_000);
+        input.MaxResultCount = Math.Clamp(input.MaxResultCount, 1, 100);
         return base.GetListAsync(input);
     }
 }

@@ -25,13 +25,35 @@ public class LabelProductLookupAppService : ApplicationService, ILabelProductLoo
         _priceCalculator = priceCalculator;
     }
 
-    public async Task<List<LabelProductDto>> GetListAsync()
+    public async Task<List<LabelProductDto>> GetListAsync(LabelProductLookupInput input)
     {
         CurrentTenant.RequireTenantId();
-        var products = await _productRepository.GetQueryableAsync();
-        var productList = await AsyncExecuter.ToListAsync(products
+        var query = await _productRepository.GetQueryableAsync();
+        var filter = input.Filter?.Trim();
+        var normalizedFilter = filter?.ToLowerInvariant();
+        var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
+
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var exactQuery = query.Where(product =>
+                product.Sku == filter ||
+                product.Barcode == filter ||
+                (normalizedOemFilter.Length > 0 &&
+                 product.OemCodes.Any(code => code.SearchCode == normalizedOemFilter)));
+            query = await AsyncExecuter.AnyAsync(exactQuery)
+                ? exactQuery
+                : query.Where(product =>
+                    product.Name.ToLower().Contains(normalizedFilter!) ||
+                    product.Sku.ToLower().Contains(normalizedFilter!) ||
+                    (product.Barcode != null && product.Barcode.ToLower().Contains(normalizedFilter!)) ||
+                    (normalizedOemFilter.Length > 0 &&
+                     product.OemCodes.Any(code => code.SearchCode.Contains(normalizedOemFilter))));
+        }
+
+        var productList = await AsyncExecuter.ToListAsync(query
             .OrderBy(x => x.Name)
-            .Take(2000));
+            .ThenBy(x => x.Sku)
+            .Take(Math.Clamp(input.MaxResultCount, 1, 30)));
         var result = new List<LabelProductDto>();
         foreach (var product in productList)
         {

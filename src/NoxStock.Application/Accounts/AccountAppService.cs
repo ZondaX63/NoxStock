@@ -187,7 +187,39 @@ public class AccountAppService :
     public override Task<PagedResultDto<AccountDto>> GetListAsync(PagedAndSortedResultRequestDto input)
     {
         CurrentTenant.RequireTenantId();
+        input.SkipCount = Math.Clamp(input.SkipCount, 0, 10_000);
+        input.MaxResultCount = Math.Clamp(input.MaxResultCount, 1, 100);
         return base.GetListAsync(input);
+    }
+
+    public async Task<PagedResultDto<AccountLookupDto>> GetLookupListAsync(AccountLookupInput input)
+    {
+        CurrentTenant.RequireTenantId();
+        await CheckGetListPolicyAsync();
+
+        var filter = input.Filter?.Trim().ToLowerInvariant();
+        var currency = input.Currency?.Trim().ToUpperInvariant();
+        var query = (await Repository.GetQueryableAsync())
+            .Where(account => account.IsActive)
+            .WhereIf(!string.IsNullOrWhiteSpace(currency), account => account.Currency == currency)
+            .WhereIf(!string.IsNullOrWhiteSpace(filter), account => account.Name.ToLower().Contains(filter!));
+
+        var totalCount = await AsyncExecuter.CountAsync(query);
+        var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 30);
+        var rows = await AsyncExecuter.ToListAsync(query
+            .OrderBy(account => account.Name)
+            .Skip(Math.Max(input.SkipCount, 0))
+            .Take(maxResultCount)
+            .Select(account => new AccountLookupDto
+            {
+                Id = account.Id,
+                Name = account.Name,
+                Type = account.Type,
+                Currency = account.Currency,
+                Balance = account.Balance
+            }));
+
+        return new PagedResultDto<AccountLookupDto>(totalCount, rows);
     }
 
     [NoxStock.Licensing.TenantLicenseWrite]

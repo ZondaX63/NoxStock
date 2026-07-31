@@ -214,6 +214,7 @@ public class TenantIsolationTests : NoxStockEntityFrameworkCoreTestBase, IAsyncL
             await AssertTenantRequiredAsync(() => _productAppService.GetListAsync(new ProductGetListInput()));
             await AssertTenantRequiredAsync(() => _documentAppService.GetListAsync(new DocumentGetListInput()));
             await AssertTenantRequiredAsync(() => _posSaleAppService.GetCheckoutOptionsAsync());
+            await AssertTenantRequiredAsync(() => _posSaleAppService.GetCustomersAsync(new PosCustomerLookupInputDto()));
             await AssertTenantRequiredAsync(() => _reportingAppService.GetSnapshotAsync(new ReportRequestDto()));
             await AssertTenantRequiredAsync(() => _dashboardAppService.GetSummaryAsync());
             await AssertTenantRequiredAsync(() => _companySettingsAppService.GetAsync());

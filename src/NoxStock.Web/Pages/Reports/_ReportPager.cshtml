@@ -1,0 +1,26 @@
+@model NoxStock.Web.Pages.Reports.ReportPagerModel
+
+@if (Model.Page.HasPrevious || Model.Page.HasNext)
+{
+    <nav class="report-pager" aria-label="Rapor sayfalama">
+        <span>Sayfa @Model.Page.PageNumber</span>
+        <span>
+            @if (Model.Page.HasPrevious)
+            {
+                <a href="@Model.PreviousUrl" rel="prev">Önceki</a>
+            }
+            else
+            {
+                <span class="is-disabled">Önceki</span>
+            }
+            @if (Model.Page.HasNext)
+            {
+                <a href="@Model.NextUrl" rel="next">Sonraki</a>
+            }
+            else
+            {
+                <span class="is-disabled">Sonraki</span>
+            }
+        </span>
+    </nav>
+}

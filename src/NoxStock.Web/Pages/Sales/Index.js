@@ -2,12 +2,15 @@ $(function () {
     var posService = noxStock.sales.posSale;
     var cart = [];
     var products = [];
-    var checkoutOptions = { accounts: [], customers: [] };
+    var checkoutOptions = { accounts: [] };
     var paymentMethod = 1;
     var searchTimer;
     var operationKey = createOperationKey();
     var posQuantityStep = 1;
     var productRequestSequence = 0;
+    var customerRequestSequence = 0;
+    var customerSearchTimer;
+    var customerLookupCache = new Map();
 
     function productLoadingMarkup() {
         return Array.from({ length: 6 }, function () {
@@ -28,7 +31,7 @@ $(function () {
     }
 
     function setCheckoutOptionsLoading() {
-        $('#PosAccount, #PosCustomer')
+        $('#PosAccount')
             .prop('disabled', true)
             .html('<option>Seçenekler yükleniyor…</option>');
     }
@@ -161,16 +164,79 @@ $(function () {
             $account.val(preferredAccount.id);
         }
 
-        var $customer = $('#PosCustomer').empty();
-        $customer.append('<option value="">Perakende müşteri</option>');
-        checkoutOptions.customers.filter(function (customer) { return customer.currency === 'TRY'; }).forEach(function (customer) {
-            $customer.append('<option value="' + customer.id + '">' + escapeHtml(customer.name) + ' (' + formatMoney(customer.balance, customer.currency) + ')</option>');
-        });
-
         var isCredit = paymentMethod === 3;
         $('#PosAccountField').toggleClass('hidden', isCredit);
         $('#PosCustomerRequired').toggleClass('hidden', !isCredit);
-        $('#PosAccount, #PosCustomer').prop('disabled', false);
+        $('#PosAccount, #PosCustomer, #PosCustomerSearch').prop('disabled', false);
+    }
+
+    function customerLabel(customer) {
+        return customer.name +
+            (customer.taxNumber ? ' · ' + customer.taxNumber : '') +
+            ' (' + formatMoney(customer.balance, customer.currency) + ')';
+    }
+
+    function renderCustomerOptions(customers) {
+        var $select = $('#PosCustomer');
+        var selectedValue = String($select.val() || '');
+        var selectedText = selectedValue ? $select.find('option:selected').text() : '';
+        $select.empty().append(new Option('Perakende müşteri', ''));
+        (customers || []).forEach(function (customer) {
+            $select.append(new Option(customerLabel(customer), customer.id));
+        });
+        if (selectedValue && !$select.find('option[value="' + selectedValue + '"]').length) {
+            $select.append(new Option(selectedText, selectedValue));
+        }
+        $select.val(selectedValue);
+    }
+
+    function searchCustomers(selectBestMatch) {
+        var query = String($('#PosCustomerSearch').val() || '').trim();
+        var cacheKey = query.toLocaleLowerCase('tr-TR');
+        var requestSequence = ++customerRequestSequence;
+        $('#PosCustomerSearchStatus').text('Aranıyor...');
+
+        var request = customerLookupCache.has(cacheKey)
+            ? Promise.resolve(customerLookupCache.get(cacheKey))
+            : posService.getCustomers({ filter: query, skipCount: 0, maxResultCount: 20 }).then(function (result) {
+                if (customerLookupCache.size >= 30) {
+                    customerLookupCache.delete(customerLookupCache.keys().next().value);
+                }
+                customerLookupCache.set(cacheKey, result);
+                return result;
+            });
+
+        return request.then(function (result) {
+            if (requestSequence !== customerRequestSequence) {
+                return [];
+            }
+            var customers = result.items || [];
+            renderCustomerOptions(customers);
+            $('#PosCustomerSearch').data('lookupLoaded', true);
+            $('#PosCustomerSearchStatus').text(customers.length
+                ? customers.length + (Number(result.totalCount || 0) > customers.length ? '+ sonuç bulundu; aramayı daraltabilirsiniz.' : ' sonuç bulundu.')
+                : 'Eşleşen müşteri bulunamadı.');
+
+            if (selectBestMatch && customers.length) {
+                var normalizedQuery = query.toLocaleLowerCase('tr-TR');
+                var exactMatch = customers.find(function (customer) {
+                    return [customer.name, customer.taxNumber, customer.phone].some(function (value) {
+                        return String(value || '').trim().toLocaleLowerCase('tr-TR') === normalizedQuery;
+                    });
+                });
+                var selectedCustomer = exactMatch || (customers.length === 1 ? customers[0] : null);
+                if (selectedCustomer) {
+                    $('#PosCustomer').val(selectedCustomer.id).trigger('change');
+                    $('#PosCustomerSearch').val('');
+                }
+            }
+            return customers;
+        }).catch(function () {
+            if (requestSequence === customerRequestSequence) {
+                $('#PosCustomerSearchStatus').text('Müşteri araması şu anda yapılamıyor. Tekrar deneyin.');
+            }
+            return [];
+        });
     }
 
     function addToCart(product) {
@@ -265,7 +331,7 @@ $(function () {
             checkoutOptions = options;
             renderCheckoutOptions();
         }).catch(function () {
-            $('#PosAccount, #PosCustomer')
+            $('#PosAccount')
                 .prop('disabled', false)
                 .html('<option value="">Seçenekler yüklenemedi</option>');
         });
@@ -315,6 +381,24 @@ $(function () {
         }
     });
 
+    $('#PosCustomerSearch').on('input', function () {
+        window.clearTimeout(customerSearchTimer);
+        customerSearchTimer = window.setTimeout(function () {
+            searchCustomers(false);
+        }, 250);
+    }).on('focus', function () {
+        if (!$(this).data('lookupLoaded') && !String($(this).val() || '').trim()) {
+            searchCustomers(false);
+        }
+    }).on('keydown', function (event) {
+        if (event.key !== 'Enter') {
+            return;
+        }
+        event.preventDefault();
+        window.clearTimeout(customerSearchTimer);
+        searchCustomers(true);
+    });
+
     $('#PosProductGrid').on('click', '.pos-product-card', function () {
         var product = products.find(function (item) { return item.id === $(this).data('product-id'); }.bind(this));
         if (product) addToCart(product);
@@ -346,6 +430,9 @@ $(function () {
         $('#PosPaymentMethods .pos-payment-method').removeClass('border-indigo-600 bg-indigo-600 text-white').addClass('border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300');
         $(this).removeClass('border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300').addClass('border-indigo-600 bg-indigo-600 text-white');
         renderCheckoutOptions();
+        if (paymentMethod === 3 && !$('#PosCustomerSearch').data('lookupLoaded')) {
+            searchCustomers(false);
+        }
     });
 
     $('#CompletePosSaleButton').click(function () {

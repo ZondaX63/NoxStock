@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
 namespace NoxStock.Products;
@@ -10,4 +12,5 @@ public interface IProductAppService :
         ProductGetListInput,
         CreateUpdateProductDto>
 {
+    Task<PagedResultDto<ProductLookupDto>> GetLookupListAsync(ProductLookupInput input);
 }

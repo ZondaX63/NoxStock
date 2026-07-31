@@ -4,9 +4,12 @@ $(function () {
     var currency = $('#InvoiceCurrency').val() || $('#InvoiceForm').data('currency') || 'TRY';
     var useProductPricing = String($('#InvoiceForm').data('use-product-pricing')) === 'true';
     var usePurchaseCosting = String($('#InvoiceForm').data('use-purchase-costing')) === 'true';
+    var productLookupUrl = String($('#InvoiceForm').data('product-lookup-url') || '');
+    var businessPartnerLookupUrl = String($('#InvoiceForm').data('business-partner-lookup-url') || '');
     var rates = {};
     var l = abp.localization.getResource('NoxStock');
     var quickProductRow = null;
+    var lookupCache = new Map();
     $('#QuickProductSave').text(l('InvoiceQuickProductSave'));
 
     function escapeHtml(value) {
@@ -41,6 +44,134 @@ $(function () {
             if (!$(this).find('option[value="' + product.id + '"]').length) {
                 $(this).append(new Option(label, product.id));
             }
+        });
+    }
+
+    function fetchLookup(url, query) {
+        var normalizedQuery = String(query || '').trim();
+        var cacheKey = url + '|' + normalizedQuery.toLocaleLowerCase('tr-TR');
+        if (lookupCache.has(cacheKey)) {
+            return Promise.resolve(lookupCache.get(cacheKey));
+        }
+
+        var separator = url.indexOf('?') >= 0 ? '&' : '?';
+        return fetch(url + separator + 'filter=' + encodeURIComponent(normalizedQuery) + '&maxResultCount=20', {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' }
+        }).then(function (response) {
+            if (!response.ok) {
+                return Promise.reject(new Error('Lookup request failed: ' + response.status));
+            }
+            return response.json();
+        }).then(function (result) {
+            if (lookupCache.size >= 50) {
+                lookupCache.delete(lookupCache.keys().next().value);
+            }
+            lookupCache.set(cacheKey, result);
+            return result;
+        });
+    }
+
+    function replaceLookupOptions($select, items, emptyText) {
+        var selectedValue = String($select.val() || '');
+        var selectedText = selectedValue ? $select.find('option:selected').text() : '';
+        $select.empty().append(new Option(emptyText, ''));
+
+        (items || []).forEach(function (item) {
+            $select.append(new Option(item.text || item.name || '', item.id));
+        });
+
+        if (selectedValue && !$select.find('option[value="' + selectedValue + '"]').length) {
+            $select.append(new Option(selectedText, selectedValue));
+        }
+        $select.val(selectedValue);
+    }
+
+    function searchProducts($input, selectBestMatch) {
+        var $row = $input.closest('.item-row');
+        var $select = $row.find('.product-select');
+        var $status = $row.find('.product-search-status');
+        var query = String($input.val() || '').trim();
+        var requestId = Number($row.data('lookupRequestId') || 0) + 1;
+        $row.data('lookupRequestId', requestId);
+        $status.text('Aranıyor...');
+
+        return fetchLookup(productLookupUrl, query).then(function (result) {
+            if (Number($row.data('lookupRequestId')) !== requestId) {
+                return [];
+            }
+
+            var items = result.items || [];
+            replaceLookupOptions($select, items, 'Ürün seçiniz...');
+            $row.data('productLookupLoaded', true);
+            $status.text(items.length
+                ? items.length + (Number(result.totalCount || 0) > items.length ? '+ sonuç bulundu; aramayı daraltabilirsiniz.' : ' sonuç bulundu.')
+                : 'Eşleşen ürün bulunamadı. Yeni ürün oluşturabilirsiniz.');
+
+            if (selectBestMatch && items.length) {
+                var normalizedQuery = query.toLocaleLowerCase('tr-TR');
+                var exactMatch = items.find(function (item) {
+                    return [item.barcode, item.sku, item.name].some(function (value) {
+                        return String(value || '').trim().toLocaleLowerCase('tr-TR') === normalizedQuery;
+                    });
+                });
+                var selectedItem = exactMatch || (items.length === 1 ? items[0] : null);
+                if (selectedItem) {
+                    $select.val(selectedItem.id).trigger('change');
+                    $input.val('');
+                }
+            }
+
+            return items;
+        }).catch(function () {
+            if (Number($row.data('lookupRequestId')) === requestId) {
+                $status.text('Ürün araması şu anda yapılamıyor. Tekrar deneyin.');
+            }
+            return [];
+        });
+    }
+
+    function searchBusinessPartners(selectBestMatch) {
+        var $input = $('#BusinessPartnerSearch');
+        var $select = $('#InvoiceBusinessPartner');
+        var $status = $('#BusinessPartnerSearchStatus');
+        var query = String($input.val() || '').trim();
+        var requestId = Number($input.data('lookupRequestId') || 0) + 1;
+        $input.data('lookupRequestId', requestId);
+        $status.text('Aranıyor...');
+
+        return fetchLookup(businessPartnerLookupUrl, query).then(function (result) {
+            if (Number($input.data('lookupRequestId')) !== requestId) {
+                return [];
+            }
+
+            var items = result.items || [];
+            replaceLookupOptions($select, items, 'Seçiniz...');
+            $input.data('lookupLoaded', true);
+            $status.text(items.length
+                ? items.length + (Number(result.totalCount || 0) > items.length ? '+ sonuç bulundu; aramayı daraltabilirsiniz.' : ' sonuç bulundu.')
+                : 'Eşleşen cari bulunamadı.');
+
+            if (selectBestMatch && items.length) {
+                var normalizedQuery = query.toLocaleLowerCase('tr-TR');
+                var exactMatch = items.find(function (item) {
+                    return [item.taxNumber, item.name].some(function (value) {
+                        return String(value || '').trim().toLocaleLowerCase('tr-TR') === normalizedQuery;
+                    });
+                });
+                var selectedItem = exactMatch || (items.length === 1 ? items[0] : null);
+                if (selectedItem) {
+                    $select.val(selectedItem.id).trigger('change');
+                    $input.val('');
+                }
+            }
+
+            return items;
+        }).catch(function () {
+            if (Number($input.data('lookupRequestId')) === requestId) {
+                $status.text('Cari araması şu anda yapılamıyor. Tekrar deneyin.');
+            }
+            return [];
         });
     }
 
@@ -294,15 +425,22 @@ $(function () {
     });
 
     $tbody.on('input', '.product-search', function () {
-        var query = String($(this).val() || '').trim().toLocaleLowerCase('tr-TR');
-        var $select = $(this).closest('.invoice-product-picker').find('.product-select');
-        $select.find('option').each(function () {
-            if (!this.value) {
-                this.hidden = false;
-                return;
-            }
-            this.hidden = query.length > 0 && String(this.text || '').toLocaleLowerCase('tr-TR').indexOf(query) === -1;
-        });
+        var $input = $(this);
+        var previousTimer = $input.data('lookupTimer');
+        if (previousTimer) {
+            window.clearTimeout(previousTimer);
+        }
+        $input.data('lookupTimer', window.setTimeout(function () {
+            searchProducts($input, false);
+        }, 250));
+    });
+
+    $tbody.on('focus', '.product-search', function () {
+        var $input = $(this);
+        var $row = $input.closest('.item-row');
+        if (!$row.data('productLookupLoaded') && !String($input.val() || '').trim()) {
+            searchProducts($input, false);
+        }
     });
 
     $tbody.on('keydown', '.product-search', function (event) {
@@ -310,13 +448,41 @@ $(function () {
             return;
         }
         event.preventDefault();
-        var $row = $(this).closest('.item-row');
-        var $matches = $row.find('.product-select option').filter(function () { return this.value && !this.hidden; });
-        if ($matches.length === 1) {
-            $row.find('.product-select').val($matches.first().val()).trigger('change');
+        var $input = $(this);
+        var timer = $input.data('lookupTimer');
+        if (timer) {
+            window.clearTimeout(timer);
+        }
+        searchProducts($input, true).then(function (items) {
+            if (!items.length && String($input.val() || '').trim()) {
+                $input.closest('.item-row').find('.quick-product-create').trigger('click');
+            }
+        });
+    });
+
+    $('#BusinessPartnerSearch').on('input', function () {
+        var $input = $(this);
+        var previousTimer = $input.data('lookupTimer');
+        if (previousTimer) {
+            window.clearTimeout(previousTimer);
+        }
+        $input.data('lookupTimer', window.setTimeout(function () {
+            searchBusinessPartners(false);
+        }, 250));
+    }).on('focus', function () {
+        if (!$(this).data('lookupLoaded') && !String($(this).val() || '').trim()) {
+            searchBusinessPartners(false);
+        }
+    }).on('keydown', function (event) {
+        if (event.key !== 'Enter') {
             return;
         }
-        $row.find('.quick-product-create').trigger('click');
+        event.preventDefault();
+        var timer = $(this).data('lookupTimer');
+        if (timer) {
+            window.clearTimeout(timer);
+        }
+        searchBusinessPartners(true);
     });
 
     $tbody.on('click', '.quick-product-create', function () {

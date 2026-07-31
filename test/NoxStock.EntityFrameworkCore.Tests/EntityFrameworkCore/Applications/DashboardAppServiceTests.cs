@@ -69,12 +69,17 @@ public class DashboardAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         await CreateInvoiceAsync(partner.Id, product.Id, "DUE-SOON", today.AddDays(4), DocumentStatus.PartiallyPaid, account.Id);
         await CreateInvoiceAsync(partner.Id, product.Id, "DUE-PAID", today.AddDays(-1), DocumentStatus.Paid, account.Id);
 
+        SqlCommandCounter.Instance.Reset();
         var summary = await _dashboardAppService.GetSummaryAsync();
 
         summary.DueDocuments.Count.ShouldBe(2);
         summary.DueDocuments.Select(x => x.DocNumber).ShouldContain("DUE-OVERDUE");
         summary.DueDocuments.Select(x => x.DocNumber).ShouldContain("DUE-SOON");
         summary.DueDocuments.Select(x => x.DocNumber).ShouldNotContain("DUE-PAID");
+        // Ten dashboard data reads plus the test host's ABP permission/UOW
+        // reads. The production baseline previously executed 13 dashboard
+        // data commands before the scalar metrics were consolidated.
+        SqlCommandCounter.Instance.CommandCount.ShouldBeLessThanOrEqualTo(14);
 
         var overdueDocuments = await _documentAppService.GetListAsync(new DocumentGetListInput
         {

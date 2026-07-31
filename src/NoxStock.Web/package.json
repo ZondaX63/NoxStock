@@ -3,7 +3,12 @@
 	"name": "my-app",
 	"private": true,
 	"dependencies": {
-    "@abp/aspnetcore.mvc.ui.theme.leptonxlite": "~5.4.1"
+    "@abp/aspnetcore.mvc.ui.theme.leptonxlite": "~5.4.1",
+    "@fontsource/outfit": "5.3.0",
+    "alpinejs": "3.15.12",
+    "jsbarcode": "3.12.3",
+    "material-icons": "1.13.14",
+    "qrcodejs": "1.0.0"
 	},
 	"devDependencies": {
 		"tailwindcss": "3.4.17"

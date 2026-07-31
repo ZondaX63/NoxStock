@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using NoxStock.ExchangeRates;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Uow;
 
 namespace NoxStock.Products;
 
@@ -45,10 +47,17 @@ public sealed class ProductPriceCalculation
 public class ProductPriceCalculator : IProductPriceCalculator, ITransientDependency
 {
     private readonly IRepository<ExchangeRate, Guid> _exchangeRateRepository;
+    private readonly IUnitOfWorkManager _unitOfWorkManager;
+    private readonly Dictionary<string, ExchangeRate?> _requestRateCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private Guid? _rateCacheUnitOfWorkId;
 
-    public ProductPriceCalculator(IRepository<ExchangeRate, Guid> exchangeRateRepository)
+    public ProductPriceCalculator(
+        IRepository<ExchangeRate, Guid> exchangeRateRepository,
+        IUnitOfWorkManager unitOfWorkManager)
     {
         _exchangeRateRepository = exchangeRateRepository;
+        _unitOfWorkManager = unitOfWorkManager;
     }
 
     public async Task<ProductPriceCalculation> CalculateAsync(Product product)
@@ -56,7 +65,7 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
         var referenceCurrency = NormalizeCurrency(product.PurchaseCurrency);
         var currentReferenceRate = referenceCurrency == "TRY"
             ? null
-            : await _exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == referenceCurrency);
+            : await GetCurrentRateAsync(referenceCurrency);
         if (product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup &&
             referenceCurrency != "TRY" &&
             (currentReferenceRate is null || currentReferenceRate.Rate <= 0))
@@ -186,7 +195,7 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
             return 1m;
         }
 
-        var rate = await _exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == currency);
+        var rate = await GetCurrentRateAsync(currency);
         if (rate is null || rate.Rate <= 0)
         {
             throw new BusinessException("NoxStock:CurrentExchangeRateUnavailable")
@@ -204,7 +213,31 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
             return null;
         }
 
-        return (await _exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == currency))?.RateDate;
+        return (await GetCurrentRateAsync(currency))?.RateDate;
+    }
+
+    private async Task<ExchangeRate?> GetCurrentRateAsync(string currency)
+    {
+        var currentUnitOfWorkId = _unitOfWorkManager.Current?.Id;
+        if (!currentUnitOfWorkId.HasValue)
+        {
+            return await _exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == currency);
+        }
+
+        if (_rateCacheUnitOfWorkId != currentUnitOfWorkId)
+        {
+            _requestRateCache.Clear();
+            _rateCacheUnitOfWorkId = currentUnitOfWorkId;
+        }
+
+        if (_requestRateCache.TryGetValue(currency, out var cached))
+        {
+            return cached;
+        }
+
+        var rate = await _exchangeRateRepository.FirstOrDefaultAsync(x => x.Currency == currency);
+        _requestRateCache[currency] = rate;
+        return rate;
     }
 
     private static string NormalizeCurrency(string currency)

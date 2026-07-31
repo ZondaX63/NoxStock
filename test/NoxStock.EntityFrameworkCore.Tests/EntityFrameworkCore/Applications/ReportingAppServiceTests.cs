@@ -88,6 +88,7 @@ public class ReportingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         await _stockMovementRepository.InsertAsync(new StockMovement(
             Guid.NewGuid(), NoxStockTestConsts.TenantId, product.Id, StockMovementType.ManualOut, -1, 5, today, description: "Reporting movement"));
 
+        SqlCommandCounter.Instance.Reset();
         var report = await _reportingAppService.GetSnapshotAsync(new ReportRequestDto
         {
             DateFrom = today.AddDays(-30),
@@ -110,6 +111,42 @@ public class ReportingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         report.ProductProfitability.Single(x => x.ProductId == product.Id).GrossProfitEstimate.ShouldBe(60);
         report.StockMovements.Single(x =>
             x.ProductName == product.Name && x.Type == StockMovementType.ManualOut).Quantity.ShouldBe(-1);
+        // Twelve bounded report reads plus ABP permission/UOW infrastructure.
+        SqlCommandCounter.Instance.CommandCount.ShouldBeLessThanOrEqualTo(19);
+    }
+
+    [Fact]
+    public async Task Should_Page_Report_Details_Without_Truncating_The_Report()
+    {
+        for (var index = 0; index < 14; index++)
+        {
+            await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+            {
+                Name = $"Paged account {index:D2}",
+                Type = AccountType.Cash,
+                Currency = "TRY",
+                IsActive = true
+            });
+        }
+
+        var firstPage = await _reportingAppService.GetSnapshotAsync(new ReportRequestDto
+        {
+            PageSize = 10,
+            AccountsPage = 1
+        });
+        var secondPage = await _reportingAppService.GetSnapshotAsync(new ReportRequestDto
+        {
+            PageSize = 10,
+            AccountsPage = 2
+        });
+
+        firstPage.Accounts.Count.ShouldBe(10);
+        firstPage.AccountsPaging.HasNext.ShouldBeTrue();
+        secondPage.AccountsPaging.HasPrevious.ShouldBeTrue();
+        secondPage.Accounts.ShouldNotBeEmpty();
+        secondPage.Accounts.Select(account => account.AccountId)
+            .Intersect(firstPage.Accounts.Select(account => account.AccountId))
+            .ShouldBeEmpty();
     }
 
     private async Task CreateDocumentAsync(Guid partnerId, Guid productId, string number, DocumentType type, decimal unitPrice, DateTime dueDate)

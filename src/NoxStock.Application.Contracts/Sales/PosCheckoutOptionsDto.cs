@@ -24,6 +24,8 @@ public class PosCustomerLookupDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? TaxNumber { get; set; }
+    public string? Phone { get; set; }
     public decimal Balance { get; set; }
     public decimal CreditLimit { get; set; }
     public string Currency { get; set; } = "TRY";

@@ -10,6 +10,12 @@ public class ReportRequestDto
 {
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
+    public int PageSize { get; set; } = 25;
+    public int AccountsPage { get; set; } = 1;
+    public int BusinessPartnersPage { get; set; } = 1;
+    public int ProductProfitabilityPage { get; set; } = 1;
+    public int StocksPage { get; set; } = 1;
+    public int StockMovementsPage { get; set; } = 1;
 }
 
 public class ReportSnapshotDto
@@ -24,6 +30,19 @@ public class ReportSnapshotDto
     public List<VatReportItemDto> VatRates { get; set; } = new();
     public List<AgingReportItemDto> Aging { get; set; } = new();
     public List<ProductProfitabilityReportItemDto> ProductProfitability { get; set; } = new();
+    public ReportPageInfoDto AccountsPaging { get; set; } = new();
+    public ReportPageInfoDto BusinessPartnersPaging { get; set; } = new();
+    public ReportPageInfoDto ProductProfitabilityPaging { get; set; } = new();
+    public ReportPageInfoDto StocksPaging { get; set; } = new();
+    public ReportPageInfoDto StockMovementsPaging { get; set; } = new();
+}
+
+public class ReportPageInfoDto
+{
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 25;
+    public bool HasPrevious => PageNumber > 1;
+    public bool HasNext { get; set; }
 }
 
 public class ReportSummaryDto

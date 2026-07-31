@@ -12,6 +12,7 @@ using NoxStock.Settings;
 using NoxStock.StockMovements;
 using NoxStock.MultiTenancy;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Settings;
@@ -69,21 +70,36 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             NoxStock.Licensing.LicenseFeatureNames.Pos);
         var query = await _productRepository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
+        var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 50);
+        List<Product> products;
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var normalizedFilter = filter.ToLower();
             var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
-            query = query.Where(x =>
+            var exactProducts = await AsyncExecuter.ToListAsync(query
+                .Where(x =>
+                    x.Sku == filter ||
+                    x.Barcode == filter ||
+                    (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode == normalizedOemFilter)))
+                .OrderBy(x => x.Name)
+                .Take(maxResultCount));
+
+            products = exactProducts.Count > 0
+                ? exactProducts
+                : await AsyncExecuter.ToListAsync(query.Where(x =>
                 x.Name.ToLower().Contains(normalizedFilter) ||
                 x.Sku.ToLower().Contains(normalizedFilter) ||
-                (!string.IsNullOrEmpty(x.Barcode) && x.Barcode.Contains(normalizedFilter)) ||
-                (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode.Contains(normalizedOemFilter))));
+                (!string.IsNullOrEmpty(x.Barcode) && x.Barcode.Contains(filter)) ||
+                (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode.Contains(normalizedOemFilter))))
+                .OrderBy(x => x.Name)
+                .Take(maxResultCount));
         }
-
-        var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 50);
-        var products = await AsyncExecuter.ToListAsync(query
-            .OrderBy(x => x.Name)
-            .Take(maxResultCount));
+        else
+        {
+            products = await AsyncExecuter.ToListAsync(query
+                .OrderBy(x => x.Name)
+                .Take(maxResultCount));
+        }
 
         var productIds = products.Select(product => product.Id).ToList();
         var oemCodeQuery = await _productOemCodeRepository.GetQueryableAsync();
@@ -91,13 +107,22 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 .Where(code => productIds.Contains(code.ProductId))))
             .GroupBy(code => code.ProductId)
             .ToDictionary(group => group.Key, group => string.Join(", ", group.Select(code => code.OemCode)));
+        var costHistoryIds = products
+            .Where(product => product.LastPurchaseCostHistoryId.HasValue)
+            .Select(product => product.LastPurchaseCostHistoryId!.Value)
+            .Distinct()
+            .ToList();
+        var costHistoriesById = costHistoryIds.Count == 0
+            ? new Dictionary<Guid, ProductCostHistory>()
+            : (await _costHistoryRepository.GetListAsync(history => costHistoryIds.Contains(history.Id)))
+                .ToDictionary(history => history.Id);
 
         var result = new List<PosProductLookupDto>();
         foreach (var product in products)
         {
             var calculation = await _priceCalculator.CalculateAsync(product);
             var costHistory = product.LastPurchaseCostHistoryId.HasValue
-                ? await _costHistoryRepository.FindAsync(product.LastPurchaseCostHistoryId.Value)
+                ? costHistoriesById.GetValueOrDefault(product.LastPurchaseCostHistoryId.Value)
                 : null;
             result.Add(new PosProductLookupDto
             {
@@ -152,7 +177,6 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         await _licenseAccessChecker.EnsureFeatureAsync(
             NoxStock.Licensing.LicenseFeatureNames.Pos);
         var accounts = await _accountRepository.GetQueryableAsync();
-        var businessPartners = await _businessPartnerRepository.GetQueryableAsync();
 
         return new PosCheckoutOptionsDto
         {
@@ -167,20 +191,50 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                     Currency = x.Currency,
                     Type = x.Type
                 })),
-            Customers = await AsyncExecuter.ToListAsync(businessPartners
-                .Where(x => x.Type == BusinessPartnerType.Customer || x.Type == BusinessPartnerType.Both)
-                .OrderBy(x => x.Name)
-                .Select(x => new PosCustomerLookupDto
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Balance = x.Balance,
-                    CreditLimit = x.CreditLimit,
-                    Currency = x.Currency
-                })),
             DefaultCashAccountId = ParseGuid(await _settingProvider.GetOrNullAsync(NoxStockSettings.DefaultCashAccountId)),
             DefaultBankAccountId = ParseGuid(await _settingProvider.GetOrNullAsync(NoxStockSettings.DefaultBankAccountId))
         };
+    }
+
+    public async Task<PagedResultDto<PosCustomerLookupDto>> GetCustomersAsync(PosCustomerLookupInputDto input)
+    {
+        CurrentTenant.RequireTenantId();
+        await _licenseAccessChecker.EnsureFeatureAsync(
+            NoxStock.Licensing.LicenseFeatureNames.Pos);
+
+        var query = await _businessPartnerRepository.GetQueryableAsync();
+        var filter = input.Filter?.Trim();
+        var normalizedFilter = filter?.ToLowerInvariant();
+        query = query.Where(partner =>
+            (partner.Type == BusinessPartnerType.Customer || partner.Type == BusinessPartnerType.Both) &&
+            partner.Currency == "TRY");
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            query = query.Where(partner =>
+                partner.Name.ToLower().Contains(normalizedFilter!) ||
+                (partner.TaxNumber != null && partner.TaxNumber.ToLower().Contains(normalizedFilter!)) ||
+                (partner.Phone != null && partner.Phone.Contains(filter!)));
+        }
+
+        var totalCount = await AsyncExecuter.CountAsync(query);
+        var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 30);
+        var skipCount = Math.Max(input.SkipCount, 0);
+        var customers = await AsyncExecuter.ToListAsync(query
+            .OrderBy(partner => partner.Name)
+            .Skip(skipCount)
+            .Take(maxResultCount)
+            .Select(partner => new PosCustomerLookupDto
+            {
+                Id = partner.Id,
+                Name = partner.Name,
+                TaxNumber = partner.TaxNumber,
+                Phone = partner.Phone,
+                Balance = partner.Balance,
+                CreditLimit = partner.CreditLimit,
+                Currency = partner.Currency
+            }));
+
+        return new PagedResultDto<PosCustomerLookupDto>(totalCount, customers);
     }
 
     [Authorize(NoxStockPermissions.Sales.Create)]

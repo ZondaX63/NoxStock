@@ -43,6 +43,7 @@ public class DashboardAppService : ApplicationService, IDashboardAppService
         var monthStart = new DateTime(today.Year, today.Month, 1);
         var trendStart = monthStart.AddMonths(-5);
         var nextMonthStart = monthStart.AddMonths(1);
+        var tomorrow = today.AddDays(1);
         var dueSoonDate = today.AddDays(7);
 
         var accounts = await _accountRepository.GetQueryableAsync();
@@ -58,34 +59,48 @@ public class DashboardAppService : ApplicationService, IDashboardAppService
              x.Status == DocumentStatus.Paid ||
              x.Status == DocumentStatus.Completed));
 
-        var todaySales = await AsyncExecuter.SumAsync(saleInvoices
-            .Where(x => x.Date.Date == today)
-            .Select(x => x.GrandTotal));
-
-        var monthlyRevenue = await AsyncExecuter.SumAsync(saleInvoices
-            .Where(x => x.Date >= monthStart)
-            .Select(x => x.GrandTotal));
+        var documentMetrics = await AsyncExecuter.FirstOrDefaultAsync(documents
+            .GroupBy(_ => 1)
+            .Select(group => new DashboardDocumentMetrics
+            {
+                TodaySales = group
+                    .Where(x =>
+                        (x.Type == DocumentType.SaleInvoice || x.Type == DocumentType.PosSale) &&
+                        (x.Status == DocumentStatus.Approved ||
+                         x.Status == DocumentStatus.PartiallyPaid ||
+                         x.Status == DocumentStatus.Paid ||
+                         x.Status == DocumentStatus.Completed) &&
+                        x.Date >= today && x.Date < tomorrow)
+                    .Sum(x => x.GrandTotal),
+                MonthlyRevenue = group
+                    .Where(x =>
+                        (x.Type == DocumentType.SaleInvoice || x.Type == DocumentType.PosSale) &&
+                        (x.Status == DocumentStatus.Approved ||
+                         x.Status == DocumentStatus.PartiallyPaid ||
+                         x.Status == DocumentStatus.Paid ||
+                         x.Status == DocumentStatus.Completed) &&
+                        x.Date >= monthStart && x.Date < nextMonthStart)
+                    .Sum(x => x.GrandTotal),
+                PendingInvoiceCount = group.Count(x =>
+                    (x.Type == DocumentType.SaleInvoice || x.Type == DocumentType.PurchaseInvoice) &&
+                    (x.Status == DocumentStatus.Draft ||
+                     x.Status == DocumentStatus.Sent ||
+                     x.Status == DocumentStatus.Approved))
+            })) ?? new DashboardDocumentMetrics();
 
         var totalAccountBalance = await AsyncExecuter.SumAsync(accounts.Select(x => x.Balance));
-        var customerReceivables = await AsyncExecuter.SumAsync(businessPartners
-            .Where(x => x.Balance > 0)
-            .Select(x => x.Balance));
-        var supplierPayables = await AsyncExecuter.SumAsync(businessPartners
-            .Where(x => x.Balance < 0)
-            .Select(x => -x.Balance));
+        var partnerMetrics = await AsyncExecuter.FirstOrDefaultAsync(businessPartners
+            .GroupBy(_ => 1)
+            .Select(group => new DashboardPartnerMetrics
+            {
+                CustomerReceivables = group.Where(x => x.Balance > 0).Sum(x => x.Balance),
+                SupplierPayables = group.Where(x => x.Balance < 0).Sum(x => -x.Balance),
+                ActiveCustomerCount = group.Count(x =>
+                    x.Type == BusinessPartnerType.Customer || x.Type == BusinessPartnerType.Both)
+            })) ?? new DashboardPartnerMetrics();
 
         var criticalStockCount = await AsyncExecuter.CountAsync(products
             .Where(x => x.TrackStock && x.Quantity <= x.CriticalStockLevel));
-
-        var pendingInvoiceCount = await AsyncExecuter.CountAsync(documents
-            .Where(x =>
-                (x.Type == DocumentType.SaleInvoice || x.Type == DocumentType.PurchaseInvoice) &&
-                (x.Status == DocumentStatus.Draft ||
-                 x.Status == DocumentStatus.Sent ||
-                 x.Status == DocumentStatus.Approved)));
-
-        var activeCustomerCount = await AsyncExecuter.CountAsync(businessPartners
-            .Where(x => x.Type == BusinessPartnerType.Customer || x.Type == BusinessPartnerType.Both));
 
         var recentDocumentsQuery =
             from document in documents
@@ -174,20 +189,34 @@ public class DashboardAppService : ApplicationService, IDashboardAppService
 
         return new DashboardSummaryDto
         {
-            TodaySales = todaySales,
-            MonthlyRevenue = monthlyRevenue,
+            TodaySales = documentMetrics.TodaySales,
+            MonthlyRevenue = documentMetrics.MonthlyRevenue,
             TotalAccountBalance = totalAccountBalance,
-            CustomerReceivables = customerReceivables,
-            SupplierPayables = supplierPayables,
-            NetPosition = totalAccountBalance + customerReceivables - supplierPayables,
+            CustomerReceivables = partnerMetrics.CustomerReceivables,
+            SupplierPayables = partnerMetrics.SupplierPayables,
+            NetPosition = totalAccountBalance + partnerMetrics.CustomerReceivables - partnerMetrics.SupplierPayables,
             CriticalStockCount = criticalStockCount,
-            PendingInvoiceCount = pendingInvoiceCount,
-            ActiveCustomerCount = activeCustomerCount,
+            PendingInvoiceCount = documentMetrics.PendingInvoiceCount,
+            ActiveCustomerCount = partnerMetrics.ActiveCustomerCount,
             RecentDocuments = await AsyncExecuter.ToListAsync(recentDocumentsQuery.Take(5)),
             CriticalStocks = await AsyncExecuter.ToListAsync(criticalStocksQuery.Take(5)),
             SalesTrend = salesTrend,
             TopProducts = await AsyncExecuter.ToListAsync(topProductsQuery.Take(5)),
             DueDocuments = await AsyncExecuter.ToListAsync(dueDocumentsQuery.Take(5))
         };
+    }
+
+    private sealed class DashboardDocumentMetrics
+    {
+        public decimal TodaySales { get; set; }
+        public decimal MonthlyRevenue { get; set; }
+        public int PendingInvoiceCount { get; set; }
+    }
+
+    private sealed class DashboardPartnerMetrics
+    {
+        public decimal CustomerReceivables { get; set; }
+        public decimal SupplierPayables { get; set; }
+        public int ActiveCustomerCount { get; set; }
     }
 }

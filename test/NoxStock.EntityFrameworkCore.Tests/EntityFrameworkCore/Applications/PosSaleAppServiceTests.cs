@@ -138,6 +138,43 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     }
 
     [Fact]
+    public async Task Should_Search_Try_Pos_Customers_Without_Bootstrapping_All_Partners()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var customer = await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
+        {
+            Name = "POS lookup customer " + suffix,
+            TaxNumber = "VKN-" + suffix,
+            Type = BusinessPartnerType.Customer,
+            Currency = "TRY",
+            Balance = 125m
+        });
+        await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
+        {
+            Name = "POS lookup supplier " + suffix,
+            Type = BusinessPartnerType.Supplier,
+            Currency = "TRY"
+        });
+        await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
+        {
+            Name = "POS lookup forex customer " + suffix,
+            Type = BusinessPartnerType.Customer,
+            Currency = "USD"
+        });
+
+        var result = await _posSaleAppService.GetCustomersAsync(new PosCustomerLookupInputDto
+        {
+            Filter = suffix,
+            MaxResultCount = 20
+        });
+
+        result.Items.Count.ShouldBe(1);
+        result.Items.Single().Id.ShouldBe(customer.Id);
+        result.Items.Single().TaxNumber.ShouldBe("VKN-" + suffix);
+        result.Items.Single().Balance.ShouldBe(125m);
+    }
+
+    [Fact]
     public async Task Should_Find_All_Brand_Alternatives_By_Shared_Oem_Code()
     {
         const string oemCode = "34116775277";
@@ -155,6 +192,59 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         posResults.Select(product => product.Id).ShouldContain(fourU.Id);
         posResults.Select(product => product.Id).ShouldContain(bmwGroup.Id);
         posResults.Single(product => product.Id == delphi.Id).OemCodes.ShouldBe(oemCode);
+    }
+
+    [Fact]
+    public async Task Should_Prioritize_Exact_Pos_Barcode_Over_Substring_Matches()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var barcode = "8699" + suffix;
+        var exactProduct = await CreateProductAsync("POS-EXACT-" + suffix, barcode, 5, 100);
+        await CreateProductAsync("POS-DISTRACTOR-" + barcode, "7788" + suffix, 5, 100);
+
+        var results = await _posSaleAppService.GetProductsAsync(new PosProductLookupInputDto
+        {
+            Filter = barcode,
+            MaxResultCount = 20
+        });
+
+        results.Count.ShouldBe(1);
+        results.Single().Id.ShouldBe(exactProduct.Id);
+    }
+
+    [Fact]
+    public async Task Should_Return_A_Bounded_Currency_Matched_Account_Lookup()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        for (var index = 0; index < 35; index++)
+        {
+            await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+            {
+                Name = $"Lookup {suffix} {index:00}",
+                Type = AccountType.Cash,
+                Currency = "TRY",
+                IsActive = true
+            });
+        }
+
+        await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+        {
+            Name = "Lookup " + suffix + " USD",
+            Type = AccountType.Bank,
+            Currency = "USD",
+            IsActive = true
+        });
+
+        var result = await _accountAppService.GetLookupListAsync(new AccountLookupInput
+        {
+            Filter = suffix,
+            Currency = "TRY",
+            MaxResultCount = 20
+        });
+
+        result.TotalCount.ShouldBe(35);
+        result.Items.Count.ShouldBe(20);
+        result.Items.ShouldAllBe(account => account.Currency == "TRY");
     }
 
     [Fact]

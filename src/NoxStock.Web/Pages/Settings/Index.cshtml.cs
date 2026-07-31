@@ -4,8 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using NoxStock.Accounts;
+using NoxStock.Licensing;
 using NoxStock.Settings;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.MultiTenancy;
 
 namespace NoxStock.Web.Pages.Settings;
 
@@ -16,22 +18,30 @@ public class IndexModel : NoxStockPageModel
 
     public List<SelectListItem> CashAccounts { get; private set; } = new();
     public List<SelectListItem> BankAccounts { get; private set; } = new();
+    public TenantLicenseAccessDto? License { get; private set; }
 
     private readonly ICompanySettingsAppService _companySettingsAppService;
     private readonly IAccountAppService _accountAppService;
+    private readonly ITenantLicenseAccessChecker _licenseAccessChecker;
+    private readonly ICurrentTenant _currentTenant;
 
     public IndexModel(
         ICompanySettingsAppService companySettingsAppService,
-        IAccountAppService accountAppService)
+        IAccountAppService accountAppService,
+        ITenantLicenseAccessChecker licenseAccessChecker,
+        ICurrentTenant currentTenant)
     {
         _companySettingsAppService = companySettingsAppService;
         _accountAppService = accountAppService;
+        _licenseAccessChecker = licenseAccessChecker;
+        _currentTenant = currentTenant;
     }
 
     public async Task OnGetAsync()
     {
         Settings = await _companySettingsAppService.GetAsync();
         await LoadAccountsAsync();
+        await LoadLicenseAsync();
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -39,6 +49,7 @@ public class IndexModel : NoxStockPageModel
         if (!ModelState.IsValid)
         {
             await LoadAccountsAsync();
+            await LoadLicenseAsync();
             return Page();
         }
 
@@ -66,5 +77,12 @@ public class IndexModel : NoxStockPageModel
             .Select(x => new SelectListItem($"{x.Name} ({x.Currency})", x.Id.ToString()))
             .ToList();
         BankAccounts.Insert(0, new SelectListItem("Seçilmedi", string.Empty));
+    }
+
+    private async Task LoadLicenseAsync()
+    {
+        License = _currentTenant.Id.HasValue
+            ? await _licenseAccessChecker.GetCurrentAsync()
+            : null;
     }
 }

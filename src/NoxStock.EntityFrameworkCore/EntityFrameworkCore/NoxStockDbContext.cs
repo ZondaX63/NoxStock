@@ -157,6 +157,9 @@ public class NoxStockDbContext :
             b.Property(x => x.CriticalStockLevel).HasColumnType("decimal(15,4)");
             b.Property(x => x.PurchaseCurrency).IsRequired().HasMaxLength(3).HasDefaultValue("TRY");
 
+            b.HasIndex(x => new { x.TenantId, x.Sku });
+            b.HasIndex(x => new { x.TenantId, x.Barcode });
+
             b.HasOne<Brand>().WithMany().HasForeignKey(x => x.BrandId).IsRequired(false);
             b.HasOne<Category>().WithMany().HasForeignKey(x => x.CategoryId).IsRequired(false);
         });
