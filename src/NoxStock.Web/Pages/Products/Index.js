@@ -79,11 +79,6 @@ $(function () {
         refreshCreateDialogHero($(this).closest('.product-create-dialog-form'));
     });
 
-    $(document).on('click', '.product-create-dialog-form [data-apply-recommended-price]', function (event) {
-        event.preventDefault();
-        applyRecommendedDialogPrice($(this).closest('.product-create-dialog-form'));
-    });
-
     $(document).on('click', '.product-create-dialog-form [data-quick-lookup-create]', function (event) {
         event.preventDefault();
         var $button = $(this);
@@ -189,47 +184,6 @@ $(function () {
         }
     }
 
-    function getDialogNetCostTry($form) {
-        var purchaseCurrency = $form.find('#Product_PurchaseCurrency').val() || 'TRY';
-        var purchaseList = Math.max(0, Number($form.find('#Product_PurchaseListPrice').val()) || 0);
-        var netPurchase = chainDiscount($form, purchaseList, 'PurchaseDiscount');
-        var approvedTryCost = Number($form.attr('data-approved-try-cost')) || 0;
-        if (approvedTryCost > 0) {
-            return approvedTryCost;
-        }
-
-        var purchaseRate = Number($form.find('[data-purchase-rate]').val());
-        if (purchaseCurrency === 'TRY') {
-            purchaseRate = 1;
-        }
-        return purchaseRate > 0 ? netPurchase * purchaseRate : null;
-    }
-
-    function applyRecommendedDialogPrice($form) {
-        if (!$form || !$form.length || String($form.find('#Product_PricingMode').val() || '0') === '1') {
-            return;
-        }
-
-        var netCostTry = getDialogNetCostTry($form);
-        var $salePrice = $form.find('#Product_SalePrice');
-        var $markup = $form.find('#Product_ProfitMarkupPercent');
-        if (netCostTry == null || netCostTry <= 0) {
-            $form.find('[data-sale-price-hint]').text('Öneri için önce liste alış fiyatı ve kur bilgisini girin.');
-            refreshCreateDialogHero($form);
-            return;
-        }
-
-        var markupRaw = $markup.val();
-        var markup = Number(markupRaw);
-        if (markupRaw == null || String(markupRaw).trim() === '' || !Number.isFinite(markup) || markup < 0) {
-            markup = 30;
-        }
-        $form.data('pricingSource', 'markup');
-        $salePrice.val((netCostTry * (1 + markup / 100)).toFixed(4));
-        $salePrice.trigger('input');
-        refreshCreateDialogHero($form);
-    }
-
     function syncDialogPricingMode($form) {
         var dynamic = String($form.find('#Product_PricingMode').val() || '0') === '1';
         var $salePrice = $form.find('#Product_SalePrice');
@@ -319,10 +273,10 @@ $(function () {
         $form.find('[data-dialog-value="final"]').text(text(finalPrice));
         $form.find('[data-dialog-value="profit"]').text(salePriceMissing ? '—' : (profit == null ? 'Hesaplanamadı' : formatMoney(profit, 'TRY')));
         $form.find('[data-dialog-value="margin"]').text(salePriceMissing
-            ? 'Satış fiyatı giriniz · Önerilen fiyatı kullanın'
+            ? 'Satış fiyatı giriniz'
             : (margin == null ? 'Brüt kâr marjı hesaplanamadı' : 'Brüt kâr marjı: %' + formatDecimal(margin, 2)));
         $form.find('[data-dialog-value="realized-markup"]').text(salePriceMissing
-            ? 'Önerilen fiyatı kullanın'
+            ? 'Satış fiyatı giriniz'
             : (realizedMarkup == null ? 'Gerçekleşen markup hesaplanamadı' : 'Gerçekleşen markup: %' + formatDecimal(realizedMarkup, 2)));
         $form.find('[data-dialog-value="meta"]').text(
             !hasDisplayedRate
@@ -339,9 +293,36 @@ $(function () {
     function refreshDialogHeroAfterOpen(selector) {
         [80, 260, 600].forEach(function (delay) {
             window.setTimeout(function () {
-                $(selector).each(function () { refreshCreateDialogHero($(this)); });
+                $(selector).each(function () {
+                    var $form = $(this);
+                    normalizeProductDecimalDisplay($form);
+                    refreshCreateDialogHero($form);
+                });
             }, delay);
         });
+    }
+
+    // Database precision is deliberately higher than the precision a user
+    // should have to read.  Keep the numeric value intact, but avoid opening a
+    // card with distracting placeholders such as 0.0000 or 30.000000.
+    function normalizeProductDecimalDisplay($form) {
+        if (!$form || !$form.length || $form.data('product-decimals-normalized')) return;
+
+        $form.find('input[type="number"]').each(function () {
+            var raw = String(this.value || '').trim();
+            if (!raw) return;
+
+            var value = Number(raw);
+            if (!Number.isFinite(value)) return;
+
+            var display = value.toFixed(6)
+                .replace(/(\.\d*?[1-9])0+$/, '$1')
+                .replace(/\.0+$/, '')
+                .replace(/\.$/, '');
+            this.value = display === '-0' ? '0' : display;
+        });
+
+        $form.data('product-decimals-normalized', true);
     }
 
     function escapeHtml(value) {
@@ -608,6 +589,7 @@ $(function () {
         if (!$form.length || $form.data('noxstock-create-ready')) return;
         $form.data('noxstock-create-ready', true);
         $form.find('[data-dialog-tab]').first().attr('aria-selected', 'true');
+        normalizeProductDecimalDisplay($form);
         $form.on('keydown', function (event) {
             if (event.key === 'Escape') { event.preventDefault(); $modal.modal('hide'); }
             else if (event.key === 'Enter' && !event.isComposing && !$(event.target).is('textarea, button, select')) {
@@ -908,21 +890,27 @@ $(function () {
         reloadProducts();
     }
 
+    var productColumnWidths = [76, 240, 112, 160, 168, 150, 168, 145, 150, 190, 132, 138, 148, 138, 168, 130];
+
     function columnWidthKey(columnIndex) {
-        return 'productColumnWidth' + columnIndex;
+        // V2 deliberately ignores the former unrestricted 72px preferences.
+        // Those values made detailed column titles overlap each other.
+        return 'productCatalogColumnWidthV2-' + columnIndex;
     }
 
-    function clampColumnWidth(width) {
-        return Math.max(72, Math.min(420, Math.round(width)));
+    function clampColumnWidth(columnIndex, width) {
+        var minimum = productColumnWidths[columnIndex] || 120;
+        return Math.max(minimum, Math.min(420, Math.round(width)));
     }
 
     function applyColumnWidth(columnIndex, width, persist) {
         if (!dataTable) {
             return;
         }
-        width = clampColumnWidth(width);
+        width = clampColumnWidth(columnIndex, width);
         $('#ProductsTable_wrapper th[data-column-index="' + columnIndex + '"]').css({ width: width + 'px', minWidth: width + 'px' });
         dataTable.column(columnIndex).nodes().to$().css({ width: width + 'px', minWidth: width + 'px' });
+        $(dataTable.column(columnIndex).header()).css({ width: width + 'px', minWidth: width + 'px' });
         if (persist) {
             localStorage.setItem(columnWidthKey(columnIndex), String(width));
         }
@@ -932,16 +920,28 @@ $(function () {
         var $headers = $('#ProductsTable_wrapper .dataTables_scrollHead th');
         $headers.each(function () {
             var $header = $(this);
-            var columnIndex = this.cellIndex;
+            var headerTitle = $header.clone().children().remove().end().text().trim();
+            var columnIndex = -1;
+            for (var index = 0; index < dataTable.columns().count(); index++) {
+                var configuredTitle = $(dataTable.column(index).header()).clone().children().remove().end().text().trim();
+                if (configuredTitle === headerTitle) {
+                    columnIndex = index;
+                    break;
+                }
+            }
+            if (columnIndex < 0) {
+                return;
+            }
             $header.attr('data-column-index', columnIndex);
             if (!$header.children('.product-column-resize-handle').length) {
                 $header.append('<span class="product-column-resize-handle" title="Kolon genişliğini ayarla" aria-hidden="true"></span>');
             }
 
             var savedWidth = Number(localStorage.getItem(columnWidthKey(columnIndex)) || 0);
-            if (savedWidth > 0) {
-                applyColumnWidth(columnIndex, savedWidth, false);
-            }
+            applyColumnWidth(
+                columnIndex,
+                savedWidth > 0 ? savedWidth : productColumnWidths[columnIndex],
+                false);
         });
     }
 
@@ -950,6 +950,7 @@ $(function () {
         paging: true,
         order: [[1, 'asc']],
         searching: false,
+        autoWidth: false,
         scrollX: true,
         drawCallback: function () {
             updateSummary();
@@ -1146,6 +1147,7 @@ $(function () {
         });
         for (var columnIndex = 0; columnIndex < dataTable.columns().count(); columnIndex++) {
             localStorage.removeItem(columnWidthKey(columnIndex));
+            localStorage.removeItem('productColumnWidth' + columnIndex);
             $('#ProductsTable_wrapper th[data-column-index="' + columnIndex + '"]').css({ width: '', minWidth: '' });
             dataTable.column(columnIndex).nodes().to$().css({ width: '', minWidth: '' });
         }

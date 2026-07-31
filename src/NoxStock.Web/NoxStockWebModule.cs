@@ -213,6 +213,7 @@ public class NoxStockWebModule : AbpModule
         Configure<RazorPagesOptions>(options =>
         {
             options.Conventions.AddPageRoute("/LicenseManagement/Index", "/host/licenses");
+            options.Conventions.AuthorizePage("/License/Unavailable");
             options.Conventions.AuthorizePage("/Dashboard/Index");
             options.Conventions.AuthorizeFolder("/Products", NoxStockPermissions.Products.Default);
             options.Conventions.AuthorizeFolder("/Brands", NoxStockPermissions.Brands.Default);

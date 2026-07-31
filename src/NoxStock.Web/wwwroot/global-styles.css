@@ -1189,7 +1189,7 @@ textarea::placeholder {
 .products-table-wrap .dataTables_scrollHeadInner,
 .products-table-wrap .dataTables_scrollFootInner { max-width: none; }
 .product-data-table { min-width: 1120px; table-layout: fixed; }
-.product-data-table th { position: relative; padding: .68rem .5rem; white-space: nowrap; letter-spacing: .04em; font-size: .6rem; }
+.product-data-table th { position: relative; padding: .68rem .5rem; white-space: normal; overflow-wrap: anywhere; line-height: 1.35; letter-spacing: .04em; font-size: .6rem; }
 .product-data-table td { min-height: 4.35rem; padding: .62rem .5rem; vertical-align: middle; overflow: hidden; }
 .product-column-resize-handle { position: absolute; top: 0; right: -3px; bottom: 0; z-index: 2; width: 7px; cursor: col-resize; }
 .product-column-resize-handle:hover,
@@ -1266,6 +1266,55 @@ textarea::placeholder {
 .products-column-menu-grid input { accent-color: #4f46e5; }
 .products-column-menu-reset { display: inline-flex; align-items: center; gap: .25rem; padding: .35rem 0 0; border: 0; border-top: 1px solid var(--nx-border); background: transparent; color: #4f46e5; font-size: .66rem; }
 .products-column-menu-reset .material-icons-round { font-size: .82rem; }
+
+/* License management: keep the row action area compact and predictable. */
+.license-assignment-card { overflow: hidden; border: 1px solid #c7d2fe; border-radius: .75rem; background: var(--nx-surface); box-shadow: 0 .15rem .5rem rgb(15 23 42 / 6%); }
+.license-assignment-card-header { display: flex; align-items: flex-start; gap: .75rem; padding: 1rem 1.25rem; border-bottom: 1px solid #e0e7ff; background: rgb(238 242 255 / 70%); }
+.license-assignment-card-header > .material-icons-round { margin-top: .1rem; color: #4f46e5; }
+.license-assignment-card-header h2 { margin: 0; color: var(--nx-text); font-size: .95rem; font-weight: 700; }
+.license-assignment-card-header p { margin: .2rem 0 0; color: var(--nx-text-muted); font-size: .75rem; }
+.license-assignment-card-body { padding: 1.25rem; }
+.license-no-unlicensed-state { display: flex; align-items: center; gap: .75rem; padding: .9rem 1.1rem; border: 1px solid var(--nx-border); border-radius: .65rem; background: var(--nx-surface); color: var(--nx-text-muted); }
+.license-no-unlicensed-state > .material-icons-round { color: #059669; font-size: 1.3rem; }
+.license-no-unlicensed-state strong { display: block; color: var(--nx-text); font-size: .78rem; }
+.license-no-unlicensed-state p { margin: .15rem 0 0; font-size: .7rem; }
+.license-management-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: .45rem; min-width: 9.5rem; }
+.license-history-action,
+.license-actions-menu > summary { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; min-height: 2.2rem; padding: .45rem .7rem; border: 1px solid var(--nx-border); border-radius: .55rem; background: var(--nx-surface); color: var(--nx-text); cursor: pointer; font-size: .7rem; font-weight: 700; list-style: none; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.license-history-action:hover,
+.license-actions-menu > summary:hover { border-color: #a5b4fc; background: #eef2ff; color: #4338ca; }
+.license-delete-direct { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; min-height: 2.2rem; padding: .45rem .65rem; border: 1px solid #fecdd3; border-radius: .55rem; background: #fff1f2; color: #be123c; cursor: pointer; font-size: .7rem; font-weight: 700; transition: background .15s ease, border-color .15s ease; }
+.license-delete-direct:hover { border-color: #fda4af; background: #ffe4e6; }
+.license-delete-direct .material-icons-round { font-size: .95rem; }
+.license-history-action .material-icons-round,
+.license-actions-menu .material-icons-round { font-size: .95rem; }
+.license-actions-menu { position: relative; }
+.license-actions-menu > summary::-webkit-details-marker { display: none; }
+.license-actions-chevron { transition: transform .15s ease; }
+.license-actions-menu[open] .license-actions-chevron { transform: rotate(180deg); }
+.license-actions-popover { position: absolute; bottom: calc(100% + .4rem); right: 0; z-index: 30; display: grid; min-width: 13.5rem; gap: .35rem; padding: .55rem; border: 1px solid var(--nx-border); border-radius: .65rem; background: var(--nx-surface); box-shadow: 0 .75rem 2rem rgb(15 23 42 / 18%); }
+.license-action-row { display: flex; width: 100%; }
+.license-action-button { display: inline-flex; width: 100%; align-items: center; justify-content: flex-start; gap: .45rem; min-height: 2.1rem; padding: .45rem .6rem; border: 1px solid transparent; border-radius: .45rem; cursor: pointer; font-size: .7rem; font-weight: 700; transition: background .15s ease, border-color .15s ease; }
+.license-action-button .material-icons-round { font-size: .95rem; }
+.license-action-neutral { border-color: var(--nx-border); background: var(--nx-surface); color: var(--nx-text); }
+.license-action-neutral:hover { background: var(--nx-surface-hover); }
+.license-action-primary { background: #eef2ff; color: #4338ca; }
+.license-action-primary:hover { background: #e0e7ff; }
+.license-action-success { background: #ecfdf5; color: #047857; }
+.license-action-success:hover { background: #d1fae5; }
+.license-action-warning { background: #fffbeb; color: #b45309; }
+.license-action-warning:hover { background: #fef3c7; }
+.license-action-danger-outline { border-color: #fecdd3; background: #fff1f2; color: #be123c; }
+.license-action-danger-outline:hover { background: #ffe4e6; }
+.license-action-danger { background: #e11d48; color: #fff; }
+.license-action-danger:hover { background: #be123c; }
+.license-action-delete-row { margin-top: .2rem; padding-top: .45rem; border-top: 1px solid var(--nx-border); }
+.license-plan-select { min-width: 0; flex: 1; border: 1px solid var(--nx-border); border-radius: .45rem; background: var(--nx-surface); color: var(--nx-text); padding: .4rem .5rem; font-size: .7rem; }
+
+@media (max-width: 900px) {
+    .license-management-actions { min-width: 0; }
+    .license-actions-popover { position: fixed; bottom: 1rem; right: 1rem; }
+}
 
 .product-edit-shell .form-label { color: var(--nx-text); font-size: .72rem; font-weight: 700; }
 .product-edit-shell .form-control,

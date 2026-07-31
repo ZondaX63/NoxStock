@@ -320,6 +320,34 @@ public class HostLicenseAppService : NoxStockAppService, IHostLicenseAppService
         return await GetAsync(id);
     }
 
+    [Authorize(NoxStockPermissions.Licenses.Manage)]
+    [UnitOfWork(isTransactional: true)]
+    public async Task DeleteAsync(Guid id)
+    {
+        EnsureHost();
+        var license = await _licenseRepository.GetAsync(id);
+        var tenantId = license.TenantId;
+        var features = await _featureRepository.GetListAsync(
+            item => item.TenantLicenseId == id);
+        var limits = await _limitRepository.GetListAsync(
+            item => item.TenantLicenseId == id);
+
+        // These are soft deletes. Audit records deliberately remain immutable so
+        // the removal is still traceable in the database audit trail.
+        await AddAuditAsync(
+            license,
+            LicenseAuditActionNames.Deleted,
+            license.Status,
+            null,
+            "Host yönetim ekranından soft-delete ile kaldırıldı.");
+        await _featureRepository.DeleteManyAsync(features);
+        await _limitRepository.DeleteManyAsync(limits);
+        await _licenseRepository.DeleteAsync(license, autoSave: true);
+        await _accessChecker.InvalidateAsync(tenantId);
+        _unitOfWorkManager.Current?.OnCompleted(
+            () => _accessChecker.InvalidateAsync(tenantId));
+    }
+
     private async Task RefreshAccessAsync(
         Guid tenantId,
         LicenseStatus? restrictiveStatus = null)

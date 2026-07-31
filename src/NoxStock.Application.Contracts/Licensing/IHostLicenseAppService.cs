@@ -18,4 +18,5 @@ public interface IHostLicenseAppService : IApplicationService
     Task<TenantLicenseDto> SuspendAsync(Guid id, SuspendTenantLicenseDto input);
     Task<TenantLicenseDto> ReactivateAsync(Guid id);
     Task<TenantLicenseDto> ChangeStatusAsync(Guid id, ChangeTenantLicenseStatusDto input);
+    Task DeleteAsync(Guid id);
 }

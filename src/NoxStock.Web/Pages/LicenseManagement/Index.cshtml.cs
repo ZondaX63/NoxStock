@@ -37,18 +37,33 @@ public class IndexModel : PageModel
         await LoadAsync(licenseId);
     }
 
-    public async Task<IActionResult> OnPostAssignAsync(Guid tenantId, Guid planId)
+    public async Task<IActionResult> OnPostAssignAsync(
+        Guid tenantId,
+        Guid planId,
+        LicenseStatus status = LicenseStatus.Trial,
+        int durationDays = 30,
+        int graceDays = 7,
+        string? licenseReference = null,
+        bool isAutoRenew = false)
     {
+        var validDurationDays = Math.Clamp(durationDays, 1, 3650);
+        var validGraceDays = Math.Clamp(graceDays, 0, 365);
         var now = DateTime.UtcNow;
+        var expiresAtUtc = now.AddDays(validDurationDays);
         await _licenseAppService.AssignAsync(new AssignTenantLicenseDto
         {
             TenantId = tenantId,
             LicensePlanId = planId,
-            Status = LicenseStatus.Trial,
+            Status = status is LicenseStatus.Active ? LicenseStatus.Active : LicenseStatus.Trial,
             StartsAtUtc = now,
-            ExpiresAtUtc = now.AddDays(30),
-            GracePeriodEndsAtUtc = now.AddDays(37),
-            LicenseReference = $"LIC-{tenantId:N}-{Guid.NewGuid():N}",
+            ExpiresAtUtc = expiresAtUtc,
+            GracePeriodEndsAtUtc = validGraceDays > 0
+                ? expiresAtUtc.AddDays(validGraceDays)
+                : null,
+            LicenseReference = string.IsNullOrWhiteSpace(licenseReference)
+                ? $"LIC-{tenantId:N}-{Guid.NewGuid():N}"
+                : licenseReference.Trim(),
+            IsAutoRenew = isAutoRenew,
             InternalNote = "Host yönetim ekranından oluşturuldu."
         });
         TempData["LicenseMessage"] = _localizer["License:Message:Assigned"].Value;
@@ -158,6 +173,13 @@ public class IndexModel : PageModel
             });
         TempData["LicenseMessage"] = _localizer["License:Message:EntitlementsUpdated"].Value;
         return RedirectToPage(new { licenseId });
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync(Guid licenseId)
+    {
+        await _licenseAppService.DeleteAsync(licenseId);
+        TempData["LicenseMessage"] = _localizer["License:Message:Deleted"].Value;
+        return RedirectToPage();
     }
 
     private async Task LoadAsync(Guid? licenseId)

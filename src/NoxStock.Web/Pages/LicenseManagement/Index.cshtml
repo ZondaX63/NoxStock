@@ -25,6 +25,8 @@
         LicenseStatus.GracePeriod or LicenseStatus.PastDue => "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
         _ => "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
     };
+
+    var unlicensedCompanies = Model.Rows.Where(row => row.License is null).ToList();
 }
 
 <div class="space-y-6">
@@ -38,6 +40,80 @@
         <h1 class="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">@L["License:Title"]</h1>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">@L["License:Description"]</p>
     </div>
+
+    @if (unlicensedCompanies.Count > 0)
+    {
+        <section id="new-license" class="license-assignment-card" aria-labelledby="new-license-heading">
+            <div class="license-assignment-card-header">
+                <span class="material-icons-round" aria-hidden="true">add_business</span>
+                <div>
+                    <h2 id="new-license-heading">@L["License:NewAssignmentTitle"]</h2>
+                    <p>@L["License:NewAssignmentDescription"]</p>
+                </div>
+            </div>
+            <div class="license-assignment-card-body">
+                <form method="post" asp-page-handler="Assign" class="grid gap-4 lg:grid-cols-12 lg:items-end">
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 lg:col-span-3">
+                        @L["License:Company"]
+                        <select name="tenantId" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900">
+                            @foreach (var company in unlicensedCompanies)
+                            {
+                                <option value="@company.TenantId">@company.TenantName</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 lg:col-span-2">
+                        @L["License:PlanAndStatus"]
+                        <select name="planId" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900">
+                            @foreach (var plan in Model.Plans)
+                            {
+                                <option value="@plan.Id">@plan.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 lg:col-span-2">
+                        @L["License:Status"]
+                        <select name="status" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900">
+                            <option value="@LicenseStatus.Trial">@L["License:Status:Trial"]</option>
+                            <option value="@LicenseStatus.Active">@L["License:Status:Active"]</option>
+                        </select>
+                    </label>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 lg:col-span-1">
+                        @L["License:DurationDays"]
+                        <input type="number" name="durationDays" min="1" max="3650" value="30" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900" />
+                    </label>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 lg:col-span-1">
+                        @L["License:GraceDays"]
+                        <input type="number" name="graceDays" min="0" max="365" value="7" required class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900" />
+                    </label>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 lg:col-span-2">
+                        @L["License:Reference"]
+                        <input type="text" name="licenseReference" maxlength="100" placeholder="@L["License:ReferenceHint"]" class="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900" />
+                    </label>
+                    <div class="flex gap-3 lg:col-span-1">
+                        <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                            <span class="material-icons-round text-base" aria-hidden="true">add</span>
+                            @L["License:Assign"]
+                        </button>
+                    </div>
+                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-slate-300 lg:col-span-12">
+                        <input type="checkbox" name="isAutoRenew" value="true" class="h-4 w-4 rounded border-slate-300 text-indigo-600" />
+                        @L["License:AutoRenew"]
+                    </label>
+                </form>
+            </div>
+        </section>
+    }
+    else
+    {
+        <div class="license-no-unlicensed-state">
+            <span class="material-icons-round" aria-hidden="true">verified</span>
+            <div>
+                <strong>@L["License:NewAssignmentTitle"]</strong>
+                <p>@L["License:NoUnlicensedCompany"]</p>
+            </div>
+        </div>
+    }
 
     <div class="grid gap-4 md:grid-cols-3">
         <div class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
@@ -79,17 +155,11 @@
                                 <td class="px-5 py-4 text-amber-700">@L["License:Missing"]</td>
                                 <td class="px-5 py-4 text-slate-500">-</td>
                                 <td class="px-5 py-4 text-slate-500">-</td>
-                                <td class="px-5 py-4">
-                                    <form method="post" asp-page-handler="Assign" class="flex items-center justify-end gap-2">
-                                        <input type="hidden" name="tenantId" value="@row.TenantId" />
-                                        <select name="planId" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900">
-                                            @foreach (var plan in Model.Plans)
-                                            {
-                                                <option value="@plan.Id">@plan.Name</option>
-                                            }
-                                        </select>
-                                        <button class="rounded-md bg-indigo-600 px-3 py-2 font-semibold text-white hover:bg-indigo-700" type="submit">@L["License:StartPilot"]</button>
-                                    </form>
+                                <td class="px-5 py-4 text-right">
+                                    <a href="#new-license" class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-300">
+                                        <span class="material-icons-round text-base" aria-hidden="true">add</span>
+                                        @L["License:QuickAssign"]
+                                    </a>
                                 </td>
                             }
                             else
@@ -114,46 +184,57 @@
                                     }
                                 </td>
                                 <td class="px-5 py-4">
-                                    <div class="flex flex-wrap items-center justify-end gap-2">
-                                        <a asp-page="/LicenseManagement/Index" asp-route-licenseId="@license.Id" data-license-action="details" class="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">@L["License:History"]</a>
-                                        <form method="post" asp-page-handler="ChangePlan" class="flex items-center gap-1" aria-label="@L["License:ChangePlan"]">
+                                    <div class="license-management-actions">
+                                        <a asp-page="/LicenseManagement/Index" asp-route-licenseId="@license.Id" data-license-action="details" class="license-history-action">
+                                            <span class="material-icons-round" aria-hidden="true">history</span>
+                                            @L["License:History"]
+                                        </a>
+                                        <form method="post" asp-page-handler="Delete" data-license-delete data-confirm-message="@L["License:DeleteConfirm"]">
                                             <input type="hidden" name="licenseId" value="@license.Id" />
-                                            <select name="planId" class="rounded-md border border-slate-300 bg-white px-2 py-2 text-xs dark:border-slate-600 dark:bg-slate-900">
-                                                @foreach (var plan in Model.Plans)
+                                            <button data-license-action="delete" type="submit" class="license-delete-direct" title="@L["License:Delete"]">
+                                                <span class="material-icons-round" aria-hidden="true">delete</span>
+                                                <span>@L["License:Delete"]</span>
+                                            </button>
+                                        </form>
+                                        <details class="license-actions-menu">
+                                            <summary><span class="material-icons-round" aria-hidden="true">tune</span>@L["License:ManageActions"]<span class="material-icons-round license-actions-chevron" aria-hidden="true">expand_more</span></summary>
+                                            <div class="license-actions-popover">
+                                                <form method="post" asp-page-handler="ChangePlan" class="license-action-row" aria-label="@L["License:ChangePlan"]">
+                                                    <input type="hidden" name="licenseId" value="@license.Id" />
+                                                    <select name="planId" class="license-plan-select">
+                                                        @foreach (var plan in Model.Plans)
+                                                        {
+                                                            <option value="@plan.Id" selected="@(plan.Id == license.LicensePlanId)">@plan.Name</option>
+                                                        }
+                                                    </select>
+                                                    <button data-license-action="change-plan" type="submit" class="license-action-button license-action-neutral"><span class="material-icons-round" aria-hidden="true">sync</span>@L["License:Apply"]</button>
+                                                </form>
+                                                <form method="post" asp-page-handler="Extend" class="license-action-row">
+                                                    <input type="hidden" name="licenseId" value="@license.Id" />
+                                                    <input type="hidden" name="days" value="30" />
+                                                    <button data-license-action="extend" type="submit" class="license-action-button license-action-primary"><span class="material-icons-round" aria-hidden="true">event</span>@L["License:Extend30Days"]</button>
+                                                </form>
+                                                @if (license.EffectiveStatus == LicenseStatus.Suspended)
                                                 {
-                                                    <option value="@plan.Id" selected="@(plan.Id == license.LicensePlanId)">@plan.Name</option>
+                                                    <form method="post" asp-page-handler="Reactivate" class="license-action-row">
+                                                        <input type="hidden" name="licenseId" value="@license.Id" />
+                                                        <button data-license-action="reactivate" type="submit" class="license-action-button license-action-success"><span class="material-icons-round" aria-hidden="true">play_arrow</span>@L["License:Reactivate"]</button>
+                                                    </form>
                                                 }
-                                            </select>
-                                            <button data-license-action="change-plan" class="rounded-md border border-slate-300 px-2 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200" type="submit" title="@L["License:Apply"]">@L["License:Apply"]</button>
-                                        </form>
-                                        <form method="post" asp-page-handler="Extend">
-                                            <input type="hidden" name="licenseId" value="@license.Id" />
-                                            <input type="hidden" name="days" value="30" />
-                                            <button data-license-action="extend" class="rounded-md border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 dark:text-indigo-300" type="submit">@L["License:Extend30Days"]</button>
-                                        </form>
-                                        @if (license.EffectiveStatus == LicenseStatus.Suspended)
-                                        {
-                                            <form method="post" asp-page-handler="Reactivate">
-                                                <input type="hidden" name="licenseId" value="@license.Id" />
-                                                <button data-license-action="reactivate" class="rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700" type="submit">@L["License:Reactivate"]</button>
-                                            </form>
-                                        }
-                                        else
-                                        {
-                                            <form method="post" asp-page-handler="SetPastDue">
-                                                <input type="hidden" name="licenseId" value="@license.Id" />
-                                                <button class="rounded-md border border-amber-300 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50" type="submit">@L["License:ReadOnly"]</button>
-                                            </form>
-                                            <form method="post" asp-page-handler="Expire">
-                                                <input type="hidden" name="licenseId" value="@license.Id" />
-                                                <button data-license-action="expire" class="rounded-md border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50" type="submit">@L["License:ExpireNow"]</button>
-                                            </form>
-                                            <form method="post" asp-page-handler="Suspend" class="flex">
-                                                <input type="hidden" name="licenseId" value="@license.Id" />
-                                                <input type="hidden" name="reason" value="Platform yöneticisi tarafından askıya alındı." />
-                                                <button data-license-action="suspend" class="rounded-md border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50" type="submit">@L["License:Suspend"]</button>
-                                            </form>
-                                        }
+                                                else
+                                                {
+                                                    <form method="post" asp-page-handler="SetPastDue" class="license-action-row">
+                                                        <input type="hidden" name="licenseId" value="@license.Id" />
+                                                        <button type="submit" class="license-action-button license-action-warning"><span class="material-icons-round" aria-hidden="true">visibility</span>@L["License:ReadOnly"]</button>
+                                                    </form>
+                                                    <form method="post" asp-page-handler="Suspend" class="license-action-row">
+                                                        <input type="hidden" name="licenseId" value="@license.Id" />
+                                                        <input type="hidden" name="reason" value="Platform yöneticisi tarafından askıya alındı." />
+                                                        <button data-license-action="suspend" type="submit" class="license-action-button license-action-danger-outline"><span class="material-icons-round" aria-hidden="true">pause</span>@L["License:Suspend"]</button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </details>
                                     </div>
                                 </td>
                             }
@@ -251,3 +332,18 @@
         </div>
     }
 </div>
+
+@section scripts {
+    <script>
+        document.querySelectorAll('[data-license-delete]').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                abp.message.confirm(form.dataset.confirmMessage).then(function (confirmed) {
+                    if (confirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+    </script>
+}

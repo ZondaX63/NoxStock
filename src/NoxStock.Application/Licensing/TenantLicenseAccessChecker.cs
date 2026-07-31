@@ -136,7 +136,7 @@ public class TenantLicenseAccessChecker : ITenantLicenseAccessChecker, ITransien
             {
                 TenantId = tenantId,
                 Status = status,
-                CanRead = true,
+                CanRead = status is LicenseStatus.PastDue,
                 CanWrite = false
             },
             new DistributedCacheEntryOptions
@@ -176,7 +176,13 @@ public class TenantLicenseAccessChecker : ITenantLicenseAccessChecker, ITransien
                 Status = effectiveStatus,
                 ExpiresAtUtc = license.ExpiresAtUtc,
                 GracePeriodEndsAtUtc = license.GracePeriodEndsAtUtc,
-                CanRead = true,
+                // A past-due subscription deliberately remains read-only so the
+                // tenant can retrieve its records. A missing, expired, cancelled
+                // or suspended license must not expose the workspace at all.
+                CanRead = effectiveStatus is LicenseStatus.Trial
+                    or LicenseStatus.Active
+                    or LicenseStatus.GracePeriod
+                    or LicenseStatus.PastDue,
                 CanWrite = effectiveStatus is LicenseStatus.Trial
                     or LicenseStatus.Active
                     or LicenseStatus.GracePeriod,
@@ -200,7 +206,7 @@ public class TenantLicenseAccessChecker : ITenantLicenseAccessChecker, ITransien
         return new TenantLicenseAccessCacheItem
         {
             TenantId = tenantId,
-            CanRead = true,
+            CanRead = false,
             CanWrite = false
         };
     }

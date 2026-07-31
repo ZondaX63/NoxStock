@@ -10,6 +10,7 @@ public static class LicenseAuditActionNames
     public const string Reactivated = "Reactivated";
     public const string StatusChanged = "StatusChanged";
     public const string Cancelled = "Cancelled";
+    public const string Deleted = "Deleted";
     public const string ExpiryNotice14Days = "ExpiryNotice14Days";
     public const string ExpiryNotice7Days = "ExpiryNotice7Days";
     public const string ExpiryNotice1Day = "ExpiryNotice1Day";

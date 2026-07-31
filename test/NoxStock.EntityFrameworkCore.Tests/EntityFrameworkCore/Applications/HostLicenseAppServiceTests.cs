@@ -139,6 +139,50 @@ public class HostLicenseAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     }
 
     [Fact]
+    public async Task Should_Soft_Delete_License_And_Allow_A_Replacement_Assignment()
+    {
+        using (_currentTenant.Change(null))
+        {
+            var tenant = await CreateTenantAsync();
+            var plan = (await _licenseAppService.GetPlansAsync())
+                .Single(item => item.Code == "PILOT");
+            var now = DateTime.UtcNow;
+            var license = await _licenseAppService.AssignAsync(new AssignTenantLicenseDto
+            {
+                TenantId = tenant.Id,
+                LicensePlanId = plan.Id,
+                Status = LicenseStatus.Active,
+                StartsAtUtc = now,
+                ExpiresAtUtc = now.AddDays(30),
+                LicenseReference = $"REMOVE-{tenant.Id:N}"
+            });
+
+            await _licenseAppService.DeleteAsync(license.Id);
+
+            (await _licenseAppService.GetOverviewAsync())
+                .Single(row => row.TenantId == tenant.Id)
+                .License.ShouldBeNull();
+            (await ServiceProvider.GetRequiredService<IRepository<TenantLicenseFeature, Guid>>()
+                .GetListAsync(item => item.TenantLicenseId == license.Id))
+                .ShouldBeEmpty();
+            (await ServiceProvider.GetRequiredService<IRepository<TenantLicenseLimit, Guid>>()
+                .GetListAsync(item => item.TenantLicenseId == license.Id))
+                .ShouldBeEmpty();
+
+            var replacement = await _licenseAppService.AssignAsync(new AssignTenantLicenseDto
+            {
+                TenantId = tenant.Id,
+                LicensePlanId = plan.Id,
+                Status = LicenseStatus.Active,
+                StartsAtUtc = now,
+                ExpiresAtUtc = now.AddDays(60),
+                LicenseReference = $"REPLACEMENT-{tenant.Id:N}"
+            });
+            replacement.TenantId.ShouldBe(tenant.Id);
+        }
+    }
+
+    [Fact]
     public async Task Pilot_User_Limit_Should_Block_The_Sixth_User()
     {
         Tenant tenant;
@@ -243,6 +287,7 @@ public class HostLicenseAppServiceTests : NoxStockEntityFrameworkCoreTestBase
 
         using (_currentTenant.Change(tenant.Id, tenant.Name))
         {
+            (await checker.GetCurrentAsync()).CanRead.ShouldBeFalse();
             var exception = await Should.ThrowAsync<BusinessException>(
                 () => checker.EnsureCanWriteAsync());
             exception.Code.ShouldBe(LicenseErrorCodes.Suspended);

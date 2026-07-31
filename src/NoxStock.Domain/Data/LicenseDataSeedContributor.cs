@@ -1,12 +1,11 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using NoxStock.Licensing;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Guids;
 using Volo.Abp.TenantManagement;
-using Volo.Abp.Timing;
 
 namespace NoxStock.Data;
 
@@ -16,31 +15,22 @@ public class LicenseDataSeedContributor : IDataSeedContributor, ITransientDepend
     private readonly IRepository<TenantLicense, Guid> _licenseRepository;
     private readonly IRepository<TenantLicenseFeature, Guid> _featureRepository;
     private readonly IRepository<TenantLicenseLimit, Guid> _limitRepository;
-    private readonly IRepository<TenantLicenseAuditLog, Guid> _auditRepository;
     private readonly ITenantRepository _tenantRepository;
-    private readonly IConfiguration _configuration;
-    private readonly IClock _clock;
-    private readonly Volo.Abp.Guids.IGuidGenerator _guidGenerator;
+    private readonly IGuidGenerator _guidGenerator;
 
     public LicenseDataSeedContributor(
         IRepository<LicensePlan, Guid> planRepository,
         IRepository<TenantLicense, Guid> licenseRepository,
         IRepository<TenantLicenseFeature, Guid> featureRepository,
         IRepository<TenantLicenseLimit, Guid> limitRepository,
-        IRepository<TenantLicenseAuditLog, Guid> auditRepository,
         ITenantRepository tenantRepository,
-        IConfiguration configuration,
-        IClock clock,
-        Volo.Abp.Guids.IGuidGenerator guidGenerator)
+        IGuidGenerator guidGenerator)
     {
         _planRepository = planRepository;
         _licenseRepository = licenseRepository;
         _featureRepository = featureRepository;
         _limitRepository = limitRepository;
-        _auditRepository = auditRepository;
         _tenantRepository = tenantRepository;
-        _configuration = configuration;
-        _clock = clock;
         _guidGenerator = guidGenerator;
     }
 
@@ -63,8 +53,6 @@ public class LicenseDataSeedContributor : IDataSeedContributor, ITransientDepend
             "Müşteriye özel özellik ve limitlerin tanımlandığı plan.",
             isCustom: true);
 
-        var trialDays = Math.Max(1, _configuration.GetValue("Licensing:DefaultTrialDays", 30));
-        var graceDays = Math.Max(0, _configuration.GetValue("Licensing:DefaultGracePeriodDays", 7));
         var tenants = await _tenantRepository.GetListAsync();
 
         foreach (var tenant in tenants)
@@ -81,35 +69,9 @@ public class LicenseDataSeedContributor : IDataSeedContributor, ITransientDepend
                 continue;
             }
 
-            var startsAtUtc = _clock.Now.ToUniversalTime();
-            var expiresAtUtc = startsAtUtc.AddDays(trialDays);
-            DateTime? graceEndsAtUtc = graceDays > 0
-                ? expiresAtUtc.AddDays(graceDays)
-                : null;
-            var license = new TenantLicense(
-                _guidGenerator.Create(),
-                tenant.Id,
-                pilot.Id,
-                LicenseStatus.Trial,
-                startsAtUtc,
-                expiresAtUtc,
-                graceEndsAtUtc,
-                $"PILOT-{tenant.Id:N}",
-                isAutoRenew: false,
-                "Private beta başlangıç lisansı.");
-
-            await _licenseRepository.InsertAsync(license, autoSave: true);
-            await SeedPilotEntitlementsAsync(license.Id);
-            await _auditRepository.InsertAsync(
-                new TenantLicenseAuditLog(
-                    _guidGenerator.Create(),
-                    license.Id,
-                    tenant.Id,
-                    LicenseAuditActionNames.Created,
-                    null,
-                    LicenseStatus.Trial,
-                    "Private beta başlangıç lisansı otomatik oluşturuldu."),
-                autoSave: true);
+            // New tenants are assigned their initial Pilot license explicitly by
+            // the tenant-creation workflow. Do not recreate a license removed by
+            // a host administrator during a later seed or migration execution.
         }
     }
 
@@ -128,38 +90,6 @@ public class LicenseDataSeedContributor : IDataSeedContributor, ITransientDepend
         return await _planRepository.InsertAsync(
             new LicensePlan(_guidGenerator.Create(), code, name, description, isCustom),
             autoSave: true);
-    }
-
-    private async Task SeedPilotEntitlementsAsync(Guid tenantLicenseId)
-    {
-        foreach (var featureName in LicenseFeatureNames.All)
-        {
-            await _featureRepository.InsertAsync(
-                new TenantLicenseFeature(
-                    _guidGenerator.Create(),
-                    tenantLicenseId,
-                    featureName,
-                    isEnabled: true));
-        }
-
-        await _limitRepository.InsertAsync(
-            new TenantLicenseLimit(
-                _guidGenerator.Create(),
-                tenantLicenseId,
-                LicenseLimitNames.MaxUsers,
-                LicensePlanDefaults.PilotMaxUsers));
-        await _limitRepository.InsertAsync(
-            new TenantLicenseLimit(
-                _guidGenerator.Create(),
-                tenantLicenseId,
-                LicenseLimitNames.MaxProducts,
-                LicensePlanDefaults.PilotMaxProducts));
-        await _limitRepository.InsertAsync(
-            new TenantLicenseLimit(
-                _guidGenerator.Create(),
-                tenantLicenseId,
-                LicenseLimitNames.MaxBranches,
-                LicensePlanDefaults.PilotMaxBranches));
     }
 
     private async Task EnsurePilotLimitsAsync(Guid tenantLicenseId)
