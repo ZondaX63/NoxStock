@@ -10,22 +10,21 @@ public class CreateUpdateProductDto
     
     [Required]
     [StringLength(150)]
-    public string Name { get; set; }
-    
-    [Required]
-    [StringLength(100)]
-    public string Sku { get; set; }
+    public string Name { get; set; } = string.Empty;
     
     [StringLength(100)]
-    public string Barcode { get; set; }
+    public string Sku { get; set; } = string.Empty;
     
-    public string Description { get; set; }
+    [StringLength(100)]
+    public string Barcode { get; set; } = string.Empty;
+    
+    public string Description { get; set; } = string.Empty;
     
     [StringLength(50)]
     public string Unit { get; set; } = "Adet";
     
     [StringLength(100)]
-    public string ShelfLocation { get; set; }
+    public string ShelfLocation { get; set; } = string.Empty;
     
     public decimal PurchasePrice { get; set; }
     public decimal PurchaseListPrice { get; set; }

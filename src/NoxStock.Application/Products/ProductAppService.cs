@@ -1,7 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using MiniExcelLibs;
+using MiniExcelLibs.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -68,6 +73,7 @@ public class ProductAppService :
     public override async Task<ProductDto> CreateAsync(CreateUpdateProductDto input)
     {
         CurrentTenant.RequireTenantId();
+        NormalizeBasicConfiguration(input);
         NormalizePricingConfiguration(input);
         ValidateFinancialConfiguration(input);
         await EnsurePricingEntitlementsAsync(input);
@@ -85,6 +91,7 @@ public class ProductAppService :
     public override async Task<ProductDto> UpdateAsync(Guid id, CreateUpdateProductDto input)
     {
         CurrentTenant.RequireTenantId();
+        NormalizeBasicConfiguration(input);
         NormalizePricingConfiguration(input);
         ValidateFinancialConfiguration(input);
         await EnsurePricingEntitlementsAsync(input);
@@ -306,6 +313,190 @@ public class ProductAppService :
         return new PagedResultDto<ProductDto>(totalCount, productDtos);
     }
 
+    [Authorize(NoxStockPermissions.Products.Create)]
+    [Authorize(NoxStockPermissions.Products.Edit)]
+    [NoxStock.Licensing.TenantLicenseWrite]
+    public async Task<ProductImportResultDto> ImportAsync(ProductImportInputDto input)
+    {
+        var tenantId = CurrentTenant.RequireTenantId();
+        ValidateImportFile(input);
+
+        List<ProductImportSpreadsheetRow> spreadsheetRows;
+        try
+        {
+            using var stream = new MemoryStream(input.Content, writable: false);
+            spreadsheetRows = (await MiniExcel.QueryAsync<ProductImportSpreadsheetRow>(
+                    stream))
+                .ToList();
+        }
+        catch (Exception exception) when (exception is not BusinessException)
+        {
+            throw new BusinessException(
+                    "NoxStock:ProductImportInvalidWorkbook",
+                    "Excel dosyası okunamadı. Dosyanın .xlsx biçiminde ve ilk satırının kolon başlıkları olduğundan emin olun.")
+                .WithData("FileName", input.FileName);
+        }
+
+        var result = new ProductImportResultDto();
+        var uniqueRows = new Dictionary<string, NormalizedImportRow>(StringComparer.OrdinalIgnoreCase);
+
+        for (var index = 0; index < spreadsheetRows.Count; index++)
+        {
+            var source = spreadsheetRows[index];
+            var rowNumber = index + 2;
+            if (source.IsEmpty())
+            {
+                continue;
+            }
+
+            result.SourceRowCount++;
+            var row = NormalizeImportRow(source, rowNumber, result);
+            if (row is null)
+            {
+                result.SkippedRowCount++;
+                continue;
+            }
+
+            if (!uniqueRows.TryAdd(row.Sku, row))
+            {
+                result.DuplicateRowCount++;
+            }
+        }
+
+        result.UniqueProductCount = uniqueRows.Count;
+        if (uniqueRows.Count == 0)
+        {
+            return result;
+        }
+
+        var normalizedSkus = uniqueRows.Keys.Select(value => value.ToLowerInvariant()).ToList();
+        var productQuery = await Repository.GetQueryableAsync();
+        var existingProducts = await AsyncExecuter.ToListAsync(productQuery
+            .Where(product => normalizedSkus.Contains(product.Sku.ToLower())));
+        var existingBySku = existingProducts
+            .GroupBy(product => product.Sku, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        var newProductCount = uniqueRows.Keys.Count(sku => !existingBySku.ContainsKey(sku));
+
+        if (newProductCount > 0)
+        {
+            var currentCount = await Repository.GetCountAsync();
+            await _licenseAccessChecker.EnsureLimitAsync(
+                NoxStock.Licensing.LicenseLimitNames.MaxProducts,
+                currentCount + newProductCount - 1);
+        }
+
+        var brands = await _brandRepository.GetListAsync();
+        var brandByName = brands
+            .GroupBy(brand => brand.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        var categories = await _categoryRepository.GetListAsync();
+        var categoryByName = categories
+            .GroupBy(category => category.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var name in uniqueRows.Values
+                     .Select(row => row.BrandName)
+                     .Where(name => !string.IsNullOrWhiteSpace(name))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (brandByName.ContainsKey(name!))
+            {
+                continue;
+            }
+
+            var brand = new Brand(GuidGenerator.Create(), tenantId, name!);
+            await _brandRepository.InsertAsync(brand, autoSave: false);
+            brandByName.Add(name!, brand);
+            result.CreatedBrandCount++;
+        }
+
+        foreach (var name in uniqueRows.Values
+                     .Select(row => row.CategoryName)
+                     .Where(name => !string.IsNullOrWhiteSpace(name))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (categoryByName.ContainsKey(name!))
+            {
+                continue;
+            }
+
+            var category = new Category(GuidGenerator.Create(), tenantId, name!);
+            await _categoryRepository.InsertAsync(category, autoSave: false);
+            categoryByName.Add(name!, category);
+            result.CreatedCategoryCount++;
+        }
+
+        var importedProducts = new List<(Product Product, NormalizedImportRow Row)>();
+        foreach (var row in uniqueRows.Values)
+        {
+            var isNew = !existingBySku.TryGetValue(row.Sku, out var product);
+            if (isNew)
+            {
+                product = new Product(GuidGenerator.Create(), tenantId, row.Name, row.Sku)
+                {
+                    Unit = "Adet",
+                    Barcode = string.Empty,
+                    Description = string.Empty,
+                    ShelfLocation = string.Empty,
+                    PurchaseCurrency = "TRY",
+                    ExchangeRateAtPurchase = 1m,
+                    VatRate = 20,
+                    ProfitMarkupPercent = 30m,
+                    PricingMode = ProductPricingMode.Manual,
+                    TrackStock = true
+                };
+            }
+
+            ApplyImportedFields(
+                product!,
+                row,
+                FindId(brandByName, row.BrandName),
+                FindId(categoryByName, row.CategoryName),
+                isNew);
+
+            if (isNew)
+            {
+                await Repository.InsertAsync(product!, autoSave: false);
+                existingBySku.Add(row.Sku, product!);
+                result.CreatedCount++;
+            }
+            else
+            {
+                await Repository.UpdateAsync(product!, autoSave: false);
+                result.UpdatedCount++;
+            }
+
+            importedProducts.Add((product!, row));
+        }
+
+        var replaceOemProductIds = importedProducts
+            .Where(item => !string.IsNullOrWhiteSpace(item.Row.OemCodes))
+            .Select(item => item.Product.Id)
+            .ToList();
+        if (replaceOemProductIds.Count > 0)
+        {
+            var existingOemCodes = await _productOemCodeRepository.GetListAsync(
+                code => replaceOemProductIds.Contains(code.ProductId));
+            if (existingOemCodes.Count > 0)
+            {
+                await _productOemCodeRepository.DeleteManyAsync(existingOemCodes, autoSave: false);
+            }
+
+            foreach (var item in importedProducts.Where(item => !string.IsNullOrWhiteSpace(item.Row.OemCodes)))
+            {
+                foreach (var oemCode in SplitOemCodes(item.Row.OemCodes))
+                {
+                    await _productOemCodeRepository.InsertAsync(
+                        new ProductOEMCode(GuidGenerator.Create(), tenantId, item.Product.Id, oemCode),
+                        autoSave: false);
+                }
+            }
+        }
+
+        return result;
+    }
+
     [NoxStock.Licensing.TenantLicenseWrite]
     public override Task DeleteAsync(Guid id)
     {
@@ -340,6 +531,250 @@ public class ProductAppService :
         if (input.CategoryId.HasValue && await _categoryRepository.FindAsync(input.CategoryId.Value) is null)
         {
             throw new BusinessException("NoxStock:InvalidCategoryReference");
+        }
+    }
+
+    private static void NormalizeBasicConfiguration(CreateUpdateProductDto input)
+    {
+        input.Name = input.Name?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(input.Name))
+        {
+            throw new BusinessException("NoxStock:ProductNameRequired", "Ürün adı zorunludur.");
+        }
+
+        input.Sku = input.Sku?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(input.Sku))
+        {
+            input.Sku = GenerateSku();
+        }
+
+        input.Barcode = input.Barcode?.Trim() ?? string.Empty;
+        input.Description = input.Description?.Trim() ?? string.Empty;
+        input.Unit = string.IsNullOrWhiteSpace(input.Unit) ? "Adet" : input.Unit.Trim();
+        input.ShelfLocation = input.ShelfLocation?.Trim() ?? string.Empty;
+    }
+
+    private static string GenerateSku()
+    {
+        return $"STK-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString("N")[..6].ToUpperInvariant()}";
+    }
+
+    private static void ValidateImportFile(ProductImportInputDto input)
+    {
+        if (input.Content.Length == 0 || input.Content.Length > ProductImportInputDto.MaximumFileSize)
+        {
+            throw new BusinessException(
+                "NoxStock:ProductImportInvalidFileSize",
+                "Excel dosyası boş olamaz ve 10 MB sınırını aşamaz.");
+        }
+
+        if (!string.Equals(Path.GetExtension(input.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase) ||
+            input.Content.Length < 4 || input.Content[0] != (byte)'P' || input.Content[1] != (byte)'K')
+        {
+            throw new BusinessException(
+                "NoxStock:ProductImportInvalidFileType",
+                "Yalnızca geçerli .xlsx dosyaları içe aktarılabilir.");
+        }
+    }
+
+    private static NormalizedImportRow? NormalizeImportRow(
+        ProductImportSpreadsheetRow source,
+        int rowNumber,
+        ProductImportResultDto result)
+    {
+        var name = Limit(CellText(source.Name), 150);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            AddImportIssue(result, rowNumber, "Ürün adı boş olduğu için satır atlandı.");
+            return null;
+        }
+
+        var sku = Limit(CellText(source.Sku), 100);
+        if (string.IsNullOrWhiteSpace(sku))
+        {
+            sku = GenerateSku();
+        }
+
+        var rawBarcode = CellText(source.Barcode);
+        var barcode = Limit(rawBarcode, 100);
+        if (LooksLikeScientificNotation(rawBarcode))
+        {
+            barcode = string.Empty;
+            result.IgnoredScientificBarcodeCount++;
+        }
+
+        return new NormalizedImportRow
+        {
+            RowNumber = rowNumber,
+            Name = name,
+            Sku = sku,
+            Barcode = barcode,
+            BrandName = Limit(CellText(source.Brand), 150),
+            CategoryName = Limit(CellText(source.Category), 150),
+            ShelfLocation = Limit(CellText(source.ShelfLocation), 100),
+            Unit = Limit(CellText(source.Unit), 50),
+            Description = CellText(source.Description),
+            OemCodes = Limit(CellText(source.Tags), 1000),
+            Quantity = ParseDecimal(source.Quantity),
+            CriticalStockLevel = ParseDecimal(source.CriticalStockLevel)
+        };
+    }
+
+    private static void ApplyImportedFields(
+        Product product,
+        NormalizedImportRow row,
+        Guid? brandId,
+        Guid? categoryId,
+        bool isNew)
+    {
+        product.Name = row.Name;
+        product.Sku = row.Sku;
+        if (!string.IsNullOrWhiteSpace(row.Barcode)) product.Barcode = row.Barcode;
+        if (!string.IsNullOrWhiteSpace(row.Description)) product.Description = row.Description;
+        if (!string.IsNullOrWhiteSpace(row.Unit)) product.Unit = row.Unit;
+        if (!string.IsNullOrWhiteSpace(row.ShelfLocation)) product.ShelfLocation = row.ShelfLocation;
+        if (brandId.HasValue) product.BrandId = brandId;
+        if (categoryId.HasValue) product.CategoryId = categoryId;
+        if (row.Quantity.HasValue) product.Quantity = row.Quantity.Value;
+        if (row.CriticalStockLevel.HasValue) product.CriticalStockLevel = row.CriticalStockLevel.Value;
+        if (isNew)
+        {
+            product.TrackStock = true;
+        }
+    }
+
+    private static Guid? FindId<T>(Dictionary<string, T> values, string? name)
+        where T : Volo.Abp.Domain.Entities.IEntity<Guid>
+    {
+        return !string.IsNullOrWhiteSpace(name) && values.TryGetValue(name, out var value)
+            ? value.Id
+            : null;
+    }
+
+    private static string CellText(object? value)
+    {
+        return value switch
+        {
+            null => string.Empty,
+            string text => text.Trim(),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture)?.Trim() ?? string.Empty,
+            _ => value.ToString()?.Trim() ?? string.Empty
+        };
+    }
+
+    private static decimal? ParseDecimal(object? value)
+    {
+        if (value is null) return null;
+        if (value is decimal decimalValue) return decimalValue;
+        if (value is IConvertible convertible && value is not string)
+        {
+            try
+            {
+                return Convert.ToDecimal(convertible, CultureInfo.InvariantCulture);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        var text = CellText(value)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace("\u00A0", string.Empty, StringComparison.Ordinal);
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        var commaIndex = text.LastIndexOf(',');
+        var dotIndex = text.LastIndexOf('.');
+        if (commaIndex >= 0 && dotIndex >= 0)
+        {
+            // When both separators exist, the last one is the decimal mark.
+            // This accepts both 1.234,50 and 1,234.50 without relying on server culture.
+            var decimalSeparator = commaIndex > dotIndex ? ',' : '.';
+            var groupSeparator = decimalSeparator == ',' ? "." : ",";
+            var normalized = text.Replace(groupSeparator, string.Empty, StringComparison.Ordinal)
+                .Replace(decimalSeparator, '.');
+            return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var formattedValue)
+                ? formattedValue
+                : null;
+        }
+
+        if (dotIndex >= 0)
+        {
+            // Spreadsheet exports commonly write quantities as strings such as "1.0".
+            // Parsing this under tr-TR would turn it into ten because '.' is a group separator.
+            return decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var dotDecimalValue)
+                ? dotDecimalValue
+                : null;
+        }
+
+        if (commaIndex >= 0)
+        {
+            return decimal.TryParse(text, NumberStyles.Number, CultureInfo.GetCultureInfo("tr-TR"), out var commaDecimalValue)
+                ? commaDecimalValue
+                : null;
+        }
+
+        return decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var integerValue)
+            ? integerValue
+            : null;
+    }
+
+    private static bool LooksLikeScientificNotation(string value)
+    {
+        return Regex.IsMatch(value, @"^[+-]?\d+(?:[\.,]\d+)?[eE][+-]?\d+$", RegexOptions.CultureInvariant);
+    }
+
+    private static string Limit(string value, int maximumLength)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length <= maximumLength ? trimmed : trimmed[..maximumLength];
+    }
+
+    private static void AddImportIssue(ProductImportResultDto result, int rowNumber, string message)
+    {
+        if (result.Issues.Count >= 50) return;
+        result.Issues.Add(new ProductImportIssueDto { RowNumber = rowNumber, Message = message });
+    }
+
+    private sealed class NormalizedImportRow
+    {
+        public int RowNumber { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string Sku { get; init; } = string.Empty;
+        public string Barcode { get; init; } = string.Empty;
+        public string BrandName { get; init; } = string.Empty;
+        public string CategoryName { get; init; } = string.Empty;
+        public string ShelfLocation { get; init; } = string.Empty;
+        public string Unit { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+        public string OemCodes { get; init; } = string.Empty;
+        public decimal? Quantity { get; init; }
+        public decimal? CriticalStockLevel { get; init; }
+    }
+
+    private sealed class ProductImportSpreadsheetRow
+    {
+        [ExcelColumnName("Ürün Adı")] public object? Name { get; set; }
+        [ExcelColumnName("SKU")] public object? Sku { get; set; }
+        [ExcelColumnName("Barkod")] public object? Barcode { get; set; }
+        [ExcelColumnName("Marka")] public object? Brand { get; set; }
+        [ExcelColumnName("Kategori")] public object? Category { get; set; }
+        [ExcelColumnName("Raf")] public object? ShelfLocation { get; set; }
+        [ExcelColumnName("Miktar")] public object? Quantity { get; set; }
+        [ExcelColumnName("Birim")] public object? Unit { get; set; }
+        [ExcelColumnName("Açıklama")] public object? Description { get; set; }
+        [ExcelColumnName("Etiketler")] public object? Tags { get; set; }
+        [ExcelColumnName("Kritik Stok Miktarı")] public object? CriticalStockLevel { get; set; }
+
+        public bool IsEmpty()
+        {
+            return string.IsNullOrWhiteSpace(CellText(Name)) &&
+                   string.IsNullOrWhiteSpace(CellText(Sku)) &&
+                   string.IsNullOrWhiteSpace(CellText(Barcode)) &&
+                   string.IsNullOrWhiteSpace(CellText(Brand)) &&
+                   string.IsNullOrWhiteSpace(CellText(Category)) &&
+                   string.IsNullOrWhiteSpace(CellText(ShelfLocation)) &&
+                   string.IsNullOrWhiteSpace(CellText(Quantity));
         }
     }
 

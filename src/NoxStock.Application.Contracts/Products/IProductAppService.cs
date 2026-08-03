@@ -13,4 +13,5 @@ public interface IProductAppService :
         CreateUpdateProductDto>
 {
     Task<PagedResultDto<ProductLookupDto>> GetLookupListAsync(ProductLookupInput input);
+    Task<ProductImportResultDto> ImportAsync(ProductImportInputDto input);
 }

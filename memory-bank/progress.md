@@ -333,6 +333,12 @@ Last updated: 2026-07-16
 
 ## Decision History
 
+- 2026-08-03: Added a tenant-scoped operational data reset from Settings. It clears commercial records (products, lookups, documents, stock/account history, partners and accounts) while retaining tenant identity, users, license, company profile and global exchange rates. Reset requires settings-edit authority plus typed `SIFIRLA` confirmation and acknowledgement.
+- 2026-08-03: Product creation was reduced to a single required business field (`Name`); blank SKU values are generated server-side and all optional text fields receive safe defaults.
+- 2026-08-03: Added tenant- and license-aware `.xlsx` stock-count import to the Products page. Import upserts by SKU, uses the first duplicate row, creates missing brand/category lookups, maps tags to OEM references, and ignores spreadsheet-corrupted scientific-notation barcodes.
+- 2026-08-03: `SON STOK SAYIM.xlsx` was verified against a temporary integration database: 806 source rows resolve to 470 unique products and 336 duplicate rows, without touching production data.
+- 2026-08-03: Corrected the stock-import decimal parser for exported values such as `1.0`; those values are now interpreted as one unit rather than ten under the Turkish server culture. The correction also supports Turkish comma decimals and both common grouped-number formats, and was verified against `SON STOK SAYIMI TÜMÜ.xlsx` in an isolated integration test.
+
 - 2026-07-10: ASP.NET Core + Razor Pages + ABP confirmed as final product direction.
 - 2026-07-10: Legacy React/Node implementation confirmed as reference only.
 - 2026-07-10: BookStore tutorial source artifacts removed.

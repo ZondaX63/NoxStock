@@ -1189,5 +1189,17 @@ $(function () {
         });
     });
 
+    $('#ImportFile').on('change', function () {
+        var file = this.files && this.files.length ? this.files[0] : null;
+        $('#ProductImportFileName').text(file ? file.name : 'En fazla 10 MB');
+    });
+
+    $('#ProductImportForm').on('submit', function () {
+        var $button = $('#SubmitProductImport');
+        $button.prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>Aktarılıyor…'
+        );
+    });
+
     fetchRates();
 });

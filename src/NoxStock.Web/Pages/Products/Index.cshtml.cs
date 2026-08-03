@@ -1,21 +1,28 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using NoxStock.Brands;
 using NoxStock.Categories;
 using NoxStock.Products;
 using NoxStock.Settings;
+using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 
 namespace NoxStock.Web.Pages.Products;
 
+[RequestSizeLimit(ProductImportInputDto.MaximumFileSize + 64 * 1024)]
 public class IndexModel : NoxStockPageModel
 {
     [BindProperty]
     public CreateUpdateProductDto Product { get; set; } = new();
+
+    [BindProperty]
+    public IFormFile? ImportFile { get; set; }
 
     public List<SelectListItem> Brands { get; private set; } = new();
     public List<SelectListItem> Categories { get; private set; } = new();
@@ -54,6 +61,49 @@ public class IndexModel : NoxStockPageModel
 
         await _productAppService.CreateAsync(Product);
         TempData["ProductCreated"] = $"{Product.Name} ürünü eklendi.";
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostImportAsync()
+    {
+        if (ImportFile is null || ImportFile.Length == 0)
+        {
+            TempData["ProductImportError"] = "İçe aktarılacak Excel dosyasını seçin.";
+            return RedirectToPage();
+        }
+
+        if (ImportFile.Length > ProductImportInputDto.MaximumFileSize)
+        {
+            TempData["ProductImportError"] = "Excel dosyası en fazla 10 MB olabilir.";
+            return RedirectToPage();
+        }
+
+        try
+        {
+            await using var stream = new MemoryStream((int)ImportFile.Length);
+            await ImportFile.CopyToAsync(stream);
+            var result = await _productAppService.ImportAsync(new ProductImportInputDto
+            {
+                FileName = Path.GetFileName(ImportFile.FileName),
+                Content = stream.ToArray()
+            });
+
+            TempData["ProductImportSummary"] =
+                $"{result.CreatedCount} yeni ürün eklendi, {result.UpdatedCount} ürün güncellendi.";
+
+            var details = new List<string>();
+            if (result.DuplicateRowCount > 0) details.Add($"{result.DuplicateRowCount} yinelenen satır atlandı");
+            if (result.CreatedBrandCount > 0) details.Add($"{result.CreatedBrandCount} marka oluşturuldu");
+            if (result.CreatedCategoryCount > 0) details.Add($"{result.CreatedCategoryCount} kategori oluşturuldu");
+            if (result.IgnoredScientificBarcodeCount > 0) details.Add($"{result.IgnoredScientificBarcodeCount} bozulmuş barkod yok sayıldı");
+            if (result.SkippedRowCount > 0) details.Add($"{result.SkippedRowCount} geçersiz satır atlandı");
+            TempData["ProductImportDetails"] = string.Join(" · ", details);
+        }
+        catch (BusinessException exception)
+        {
+            TempData["ProductImportError"] = $"Excel dosyası aktarılamadı: {exception.Message}";
+        }
+
         return RedirectToPage();
     }
 

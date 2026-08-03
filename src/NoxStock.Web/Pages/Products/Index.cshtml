@@ -19,6 +19,10 @@
                 <label class="pricing-override-toggle"><input id="ShowReferenceCurrency" type="checkbox" /><span>Referans dövizi göster</span></label>
                 <small>Satışlar her zaman TL; bu seçenek yalnızca kaynak döviz bilgisini gösterir.</small>
             </div>
+            <button id="ImportProductsButton" type="button" class="products-secondary-action" data-bs-toggle="modal" data-bs-target="#ProductImportModal">
+                <span class="material-icons-round" aria-hidden="true">upload_file</span>
+                Excel'den aktar
+            </button>
             <button id="NewProductButton" type="button" class="products-primary-action">
                 <span class="material-icons-round" aria-hidden="true">add</span>
                 Yeni ürün
@@ -30,6 +34,27 @@
     {
         <div class="products-feedback products-feedback-success" role="status">
             <span class="material-icons-round" aria-hidden="true">check_circle</span>@productCreated
+        </div>
+    }
+
+    @if (TempData["ProductImportSummary"] is string importSummary)
+    {
+        <div class="products-feedback products-feedback-success" role="status">
+            <span class="material-icons-round" aria-hidden="true">task_alt</span>
+            <div>
+                <strong>@importSummary</strong>
+                @if (TempData["ProductImportDetails"] is string importDetails && !string.IsNullOrWhiteSpace(importDetails))
+                {
+                    <small>@importDetails</small>
+                }
+            </div>
+        </div>
+    }
+
+    @if (TempData["ProductImportError"] is string importError)
+    {
+        <div class="products-feedback products-feedback-error" role="alert">
+            <span class="material-icons-round" aria-hidden="true">error</span>@importError
         </div>
     }
 
@@ -77,7 +102,7 @@
                     <div class="product-editor-section-heading"><span class="material-icons-round" aria-hidden="true">badge</span><div><h4>Kart bilgileri</h4><p>Arama ve ürünün farklı marka alternatifleri için temel kayıt.</p></div></div>
                     <div class="product-form-grid product-form-grid-2">
                         <div class="product-field product-field-wide"><label asp-for="Product.Name">Ürün adı</label><input asp-for="Product.Name" class="input-field" autocomplete="off" /><span asp-validation-for="Product.Name"></span></div>
-                        <div class="product-field"><label asp-for="Product.Sku">Stok kodu</label><div class="product-code-input"><input asp-for="Product.Sku" class="input-field" autocomplete="off" /><button id="GenerateProductSku" type="button" title="Yeni stok kodu üret" aria-label="Otomatik stok kodu üret"><span class="material-icons-round" aria-hidden="true">auto_awesome</span></button></div></div>
+                        <div class="product-field"><label asp-for="Product.Sku">Stok kodu <small>(boşsa otomatik)</small></label><div class="product-code-input"><input asp-for="Product.Sku" class="input-field" autocomplete="off" /><button id="GenerateProductSku" type="button" title="Yeni stok kodu üret" aria-label="Otomatik stok kodu üret"><span class="material-icons-round" aria-hidden="true">auto_awesome</span></button></div></div>
                         <div class="product-field"><label asp-for="Product.Barcode">Barkod</label><input asp-for="Product.Barcode" class="input-field" inputmode="numeric" autocomplete="off" /></div>
                         <div class="product-field"><label asp-for="Product.CategoryId">Kategori</label><select asp-for="Product.CategoryId" asp-items="Model.Categories" class="input-field"></select></div>
                         <div class="product-field"><label asp-for="Product.BrandId">Marka</label><select asp-for="Product.BrandId" asp-items="Model.Brands" class="input-field"></select></div>
@@ -234,6 +259,40 @@
             </table>
         </div>
     </section>
+</div>
+
+<div class="modal fade product-import-modal" id="ProductImportModal" tabindex="-1" aria-labelledby="ProductImportModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="ProductImportForm" method="post" asp-page-handler="Import" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <div><span class="products-eyebrow">TOPLU ÜRÜN AKTARIMI</span><h5 class="modal-title" id="ProductImportModalTitle">Excel stok sayımını içe aktar</h5></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="product-import-dropzone" for="ImportFile">
+                        <span class="material-icons-round" aria-hidden="true">table_view</span>
+                        <strong>.xlsx dosyasını seçin</strong>
+                        <small id="ProductImportFileName">En fazla 10 MB</small>
+                        <input asp-for="ImportFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+                    </label>
+                    <div class="product-import-rules">
+                        <strong>Aktarım kuralları</strong>
+                        <ul>
+                            <li>Yalnızca <b>Ürün Adı</b> zorunludur; boş stok kodu otomatik üretilir.</li>
+                            <li>Aynı stok kodunun ilk satırı alınır; stok miktarı iki kez eklenmez.</li>
+                            <li>Mevcut stok kodunda miktar ve dolu operasyon bilgileri güncellenir.</li>
+                            <li>Boş marka, kategori, barkod, raf ve açıklama aktarımı engellemez.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="products-secondary-action" data-bs-dismiss="modal">Vazgeç</button>
+                    <button id="SubmitProductImport" type="submit" class="products-primary-action"><span class="material-icons-round" aria-hidden="true">upload</span>Aktarımı başlat</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @section Scripts { <abp-script src="/Pages/Products/Index.js" /> }
