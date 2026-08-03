@@ -337,6 +337,35 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         sale.GrandTotal.ShouldBe(118.8m);
     }
 
+    [Fact]
+    public async Task Should_Use_The_Vat_Rate_Selected_On_The_Pos_Line()
+    {
+        var product = await CreateProductAsync("POS-VAT-001", "869000000299", 3, 100);
+        var cashAccount = await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+        {
+            Name = "VAT POS Cash",
+            Type = AccountType.Cash,
+            IsActive = true
+        });
+
+        var sale = await _posSaleAppService.CreateAsync(new CreatePosSaleDto
+        {
+            PaymentMethod = PosPaymentMethod.Cash,
+            AccountId = cashAccount.Id,
+            Items =
+            {
+                new CreatePosSaleItemDto
+                {
+                    ProductId = product.Id,
+                    Quantity = 1,
+                    VatRate = 10m
+                }
+            }
+        });
+
+        sale.GrandTotal.ShouldBe(110m);
+    }
+
     private async Task<ProductDto> CreateProductAsync(string sku, string barcode, decimal quantity, decimal salePrice, string? oemCodes = null)
     {
         return await _productAppService.CreateAsync(new CreateUpdateProductDto

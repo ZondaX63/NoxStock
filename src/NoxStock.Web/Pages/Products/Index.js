@@ -9,8 +9,10 @@ $(function () {
     });
     var dataTable;
     var searchTimer;
+    var referenceCurrencyColumns = [11, 12, 14];
+    var defaultVisibleColumns = [2, 3, 5, 6, 15];
 
-    $('#ShowReferenceCurrency').prop('checked', showReferenceCurrency);
+    syncCurrencyViewControl();
 
     // The creation modal is loaded dynamically by ABP. Delegate these actions
     // from the static page root so they work even if a modal lifecycle hook is
@@ -143,6 +145,32 @@ $(function () {
             minimumFractionDigits: digits,
             maximumFractionDigits: digits
         }).format(Number(value || 0));
+    }
+
+    function syncCurrencyViewControl() {
+        $('[data-currency-view]').each(function () {
+            var active = ($(this).data('currency-view') === 'reference') === showReferenceCurrency;
+            $(this).toggleClass('is-active', active).attr('aria-pressed', active ? 'true' : 'false');
+        });
+        $('#ProductCurrencyViewHint').text(showReferenceCurrency
+            ? 'TL tutarlarının yanında kaynak döviz, fatura kuru ve referans satış gösteriliyor.'
+            : 'Satış ve maliyetler yalnızca TL gösteriliyor.');
+    }
+
+    function applyCurrencyView(showReference, persist) {
+        showReferenceCurrency = Boolean(showReference);
+        if (persist) {
+            localStorage.setItem('productShowReferenceCurrency', String(showReferenceCurrency));
+        }
+        syncCurrencyViewControl();
+        if (!dataTable) {
+            return;
+        }
+        referenceCurrencyColumns.forEach(function (columnIndex) {
+            dataTable.column(columnIndex).visible(showReferenceCurrency, false);
+        });
+        dataTable.rows().invalidate();
+        dataTable.columns.adjust().draw(false);
     }
 
     function currentRate(currency) {
@@ -339,7 +367,8 @@ $(function () {
     }
 
     function hasLastPurchaseCost(row) {
-        return Number(row.lastPurchaseCostCurrencyAmount || 0) > 0;
+        return Number(row.lastPurchaseCostCurrencyAmount || 0) > 0 ||
+            Number(row.lastPurchaseCostTryAmount || 0) > 0;
     }
 
     function renderProductIdentity(row) {
@@ -355,11 +384,13 @@ $(function () {
 
     function renderStock(row) {
         var quantity = Number(row.quantity || 0);
-        var isZero = quantity <= 0;
-        var isCritical = !isZero && row.trackStock && quantity <= Number(row.criticalStockLevel || 0);
-        var statusClass = isZero ? 'is-zero' : (isCritical ? 'is-critical' : 'is-normal');
-        var statusText = isZero ? 'Sıfır stok' : (isCritical ? 'Kritik stok' : (row.trackStock ? 'Normal stok' : 'Takip dışı'));
-        return '<div class="product-stock-value ' + statusClass + '">' + quantity.toFixed(2) + ' ' + escapeHtml(row.unit || '') + '</div>' +
+        var tracksStock = row.trackStock !== false;
+        var isZero = tracksStock && quantity <= 0;
+        var isCritical = tracksStock && !isZero && quantity <= Number(row.criticalStockLevel || 0);
+        var statusClass = !tracksStock ? 'is-untracked' : (isZero ? 'is-zero' : (isCritical ? 'is-critical' : 'is-normal'));
+        var statusText = !tracksStock ? 'Stok takibi kapalı' : (isZero ? 'Sıfır stok' : (isCritical ? 'Kritik stok' : 'Normal stok'));
+        var stockValue = tracksStock ? quantity.toFixed(2) + ' ' + escapeHtml(row.unit || '') : 'Takip edilmiyor';
+        return '<div class="product-stock-value ' + statusClass + '">' + stockValue + '</div>' +
             '<div class="product-stock-status ' + statusClass + '">' + statusText + '</div>';
     }
 
@@ -396,12 +427,12 @@ $(function () {
 
     function renderReferenceCost(row) {
         if (!hasLastPurchaseCost(row)) {
-            return '<div class="product-cost-empty"><span class="material-icons-round" aria-hidden="true">lock_clock</span><div><strong>Kilitli maliyet yok</strong><span>Alış onayında otomatik oluşur.</span></div></div>';
+            return '<div class="product-table-empty"><strong>—</strong><span>Onaylı maliyet oluşmadı</span></div>';
         }
 
         var currency = row.purchaseCurrency || row.lastPurchaseCostCurrencyCode || 'TRY';
         var currentTryCost = row.currentNetCostInTry != null ? row.currentNetCostInTry : row.lastPurchaseCostTryAmount;
-        var referenceDetail = showReferenceCurrency
+        var referenceDetail = showReferenceCurrency && Number(row.lastPurchaseCostCurrencyAmount || 0) > 0
             ? '<div class="product-table-subtitle">' + escapeHtml(formatMoney(row.lastPurchaseCostCurrencyAmount, currency)) + ' referans maliyet</div>'
             : '';
         return '<div class="product-cost-value">' + escapeHtml(formatMoney(currentTryCost, 'TRY')) + '</div>' +
@@ -426,9 +457,10 @@ $(function () {
     }
 
     function renderOptionalReferenceSale(row) {
-        return row.suggestedSaleUnitPrice != null
-            ? '<div class="product-cost-value">' + escapeHtml(formatMoney(row.suggestedSaleUnitPrice, 'TRY')) + '</div>' +
-                '<div class="product-table-subtitle">Güncel TL satış fiyatı</div>'
+        var currency = row.purchaseCurrency || row.lastPurchaseCostCurrencyCode || 'TRY';
+        return row.referenceSaleUnitPrice != null && Number(row.referenceSaleUnitPrice) > 0
+            ? '<div class="product-cost-value">' + escapeHtml(formatMoney(row.referenceSaleUnitPrice, currency)) + '</div>' +
+                '<div class="product-table-subtitle">KDV hariç referans liste fiyatı</div>'
             : '<span class="product-table-muted">-</span>';
     }
 
@@ -440,6 +472,10 @@ $(function () {
 
         if (!row.isSuggestedSaleAvailable) {
             return '<div class="product-sale-unavailable"><span class="material-icons-round" aria-hidden="true">cloud_off</span><div><strong>Kur bekleniyor</strong><span>Fiyat satışta backend tarafından hesaplanır.</span></div></div>';
+        }
+
+        if (!dynamic && Number(row.suggestedSaleUnitPrice || 0) <= 0) {
+            return '<div class="product-sale-unavailable is-action-needed"><span class="material-icons-round" aria-hidden="true">sell</span><div><strong>Satış fiyatı girilmedi</strong><span>Ürün kartından manuel TL fiyatı belirleyin.</span></div></div>';
         }
 
         var suggested = formatMoney(row.suggestedSaleUnitPrice, 'TRY');
@@ -465,7 +501,7 @@ $(function () {
         var missingCost = rows.filter(function (row) { return !hasLastPurchaseCost(row); }).length;
         var stockAttention = rows.filter(function (row) {
             var quantity = Number(row.quantity || 0);
-            return quantity <= 0 || (row.trackStock && quantity <= Number(row.criticalStockLevel || 0));
+            return row.trackStock !== false && quantity <= Number(row.criticalStockLevel || 0);
         }).length;
 
         $('#ProductVisibleCount').text(rows.length);
@@ -986,18 +1022,18 @@ $(function () {
             { title: 'Ürün ve kodlar', data: 'name', render: function (data, type, row) { return renderProductIdentity(row); } },
             { title: 'Stok', data: 'quantity', render: function (data, type, row) { return renderStock(row); } },
             { title: 'Fiyat politikası', orderable: false, render: function (data, type, row) { return renderPricingBehavior(row); } },
-            { title: 'Maliyet kaynağı', data: 'lastPurchaseDocumentNumber', orderable: false, render: function (data, type, row) { return renderCostSource(row); } },
+            { title: 'Maliyet kaynağı / fatura', data: 'lastPurchaseDocumentNumber', visible: false, orderable: false, render: function (data, type, row) { return renderCostSource(row); } },
             { title: 'Güncel net TL maliyet', data: 'currentNetCostInTry', render: function (data, type, row) { return renderReferenceCost(row); } },
             { title: 'Güncel TL satış fiyatı', data: 'suggestedSaleUnitPrice', orderable: false, render: function (data, type, row) { return renderSalePreview(row); } },
             { title: 'Marka / kategori', data: 'brandName', visible: false, orderable: false, render: function (data, type, row) { return renderBrandCategory(row); } },
             { title: 'Barkod', data: 'barcode', visible: false, render: function (data, type, row) { return escapeHtml(row.barcode || '-'); } },
             { title: 'OEM kodları', data: 'oemCodes', visible: false, orderable: false, render: function (data, type, row) { return escapeHtml(row.oemCodes || '-'); } },
             { title: 'Son alış tarihi', data: 'lastPurchaseDate', visible: false, render: function (data, type, row) { return renderOptionalDate(row); } },
-            { title: 'Alış tutarı', data: 'lastPurchaseSourceNetUnitCost', visible: false, render: function (data, type, row) { return renderOptionalMoney(row.lastPurchaseSourceNetUnitCost, row.lastPurchaseSourceCurrencyCode); } },
-            { title: 'Fatura kuru', data: 'lastPurchaseExchangeRate', visible: false, render: function (data, type, row) { return Number(data || 0) > 0 ? '1 ' + escapeHtml(row.purchaseCurrency || 'TRY') + ' = ' + Number(data).toFixed(4) + ' TRY' : '<span class="product-table-muted">-</span>'; } },
-            { title: 'TRY maliyeti', data: 'lastPurchaseCostTryAmount', visible: false, render: function (data, type, row) { return renderOptionalMoney(data, 'TRY'); } },
-            { title: 'Referans satış (seçili)', data: 'suggestedSaleUnitPrice', visible: false, render: function (data, type, row) { return renderOptionalReferenceSale(row); } },
-            { title: 'Raf / konum', data: 'shelfLocation', visible: false, orderable: false, render: function (data, type, row) { return escapeHtml(row.shelfLocation || '-'); } }
+            { title: 'Net alış (kaynak döviz)', data: 'lastPurchaseSourceNetUnitCost', visible: false, render: function (data, type, row) { return renderOptionalMoney(row.lastPurchaseSourceNetUnitCost, row.lastPurchaseSourceCurrencyCode); } },
+            { title: 'Alış fatura kuru', data: 'lastPurchaseExchangeRate', visible: false, render: function (data, type, row) { return Number(data || 0) > 0 ? '1 ' + escapeHtml(row.purchaseCurrency || 'TRY') + ' = ' + Number(data).toFixed(4) + ' TRY' : '<span class="product-table-muted">-</span>'; } },
+            { title: 'Alış günü TL maliyeti', data: 'lastPurchaseCostTryAmount', visible: false, render: function (data, type, row) { return renderOptionalMoney(data, 'TRY'); } },
+            { title: 'Referans satış fiyatı', data: 'referenceSaleUnitPrice', visible: false, render: function (data, type, row) { return renderOptionalReferenceSale(row); } },
+            { title: 'Raf / konum', data: 'shelfLocation', visible: true, orderable: false, render: function (data, type, row) { return escapeHtml(row.shelfLocation || '-'); } }
         ]
     }));
 
@@ -1088,12 +1124,8 @@ $(function () {
     $('#ResetProductFilters').on('click', resetFilters);
     $('.products-quick-filter').on('click', function () { applyQuickFilter($(this).data('quick-filter')); });
 
-    $('#ShowReferenceCurrency').on('change', function () {
-        showReferenceCurrency = this.checked;
-        localStorage.setItem('productShowReferenceCurrency', String(showReferenceCurrency));
-        if (dataTable) {
-            dataTable.rows().invalidate().draw(false);
-        }
+    $('[data-currency-view]').on('click', function () {
+        applyCurrencyView($(this).data('currency-view') === 'reference', true);
     });
 
     editModal.onResult(function () { dataTable.ajax.reload(null, false); });
@@ -1120,27 +1152,39 @@ $(function () {
         });
     });
 
-    // Kolon gizleme dropdown ve toggle yönetimi
+    // Kolon görünümü: ilk iki kimlik kolonu sabittir; diğerleri kullanıcı tercihidir.
+    dataTable.column(0).visible(true, false);
+    dataTable.column(1).visible(true, false);
     $('.col-toggle').each(function () {
         var columnIdx = Number($(this).data('column'));
         var stored = localStorage.getItem('productVisibleColumn' + columnIdx);
-        if (stored !== null) {
-            var visible = stored === '1';
-            $(this).prop('checked', visible);
-            dataTable.column(columnIdx).visible(visible, false);
-        }
+        var visible = stored !== null ? stored === '1' : $(this).prop('checked');
+        $(this).prop('checked', visible);
+        dataTable.column(columnIdx).visible(visible, false);
     });
+    applyCurrencyView(showReferenceCurrency, false);
     dataTable.columns.adjust().draw(false);
 
     $('#ToggleColumnsBtn').on('click', function (e) {
         e.stopPropagation();
         $('#ColumnToggleMenu').toggleClass('hidden');
+        $(this).attr('aria-expanded', $('#ColumnToggleMenu').hasClass('hidden') ? 'false' : 'true');
     });
 
     $(document).on('click', function (e) {
         if (!$(e.target).closest('#ColumnToggleWrapper').length) {
             $('#ColumnToggleMenu').addClass('hidden');
+            $('#ToggleColumnsBtn').attr('aria-expanded', 'false');
         }
+    });
+
+    $(document).on('keydown.productsColumns', function (e) {
+        if (e.key !== 'Escape' || $('#ColumnToggleMenu').hasClass('hidden')) {
+            return;
+        }
+
+        $('#ColumnToggleMenu').addClass('hidden');
+        $('#ToggleColumnsBtn').attr('aria-expanded', 'false').trigger('focus');
     });
 
     $('.col-toggle').on('change', function () {
@@ -1155,7 +1199,7 @@ $(function () {
     $('#ResetProductColumns').on('click', function () {
         $('.col-toggle').each(function () {
             var columnIdx = Number($(this).data('column'));
-            var defaultVisible = columnIdx >= 2 && columnIdx <= 6;
+            var defaultVisible = defaultVisibleColumns.indexOf(columnIdx) >= 0;
             $(this).prop('checked', defaultVisible);
             localStorage.removeItem('productVisibleColumn' + columnIdx);
             dataTable.column(columnIdx).visible(defaultVisible, false);
@@ -1166,6 +1210,7 @@ $(function () {
             $('#ProductsTable_wrapper th[data-column-index="' + columnIndex + '"]').css({ width: '', minWidth: '' });
             dataTable.column(columnIndex).nodes().to$().css({ width: '', minWidth: '' });
         }
+        applyCurrencyView(false, true);
         dataTable.columns.adjust().draw(false);
     });
 

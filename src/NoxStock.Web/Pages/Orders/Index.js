@@ -25,6 +25,12 @@ $(function () {
                 title: 'İşlemler',
                 rowAction: { items: [
                     {
+                        text: 'Yazdır',
+                        action: function (data) {
+                            window.open(abp.appPath + 'Invoices/Print?id=' + encodeURIComponent(recordOf(data).id), '_blank', 'noopener');
+                        }
+                    },
+                    {
                         text: 'Gönder',
                         visible: function (data) { var record = recordOf(data); return record && record.status === 1; },
                         action: function (data) { workflowService.sendOrder(data.record.id).then(function () { abp.notify.success('Sipariş gönderildi.'); table.ajax.reload(); }); }

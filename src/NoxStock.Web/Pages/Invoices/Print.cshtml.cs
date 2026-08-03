@@ -30,7 +30,8 @@ public class PrintModel : NoxStockPageModel
         }
 
         Document = await _documentAppService.GetAsync(id);
-        if (Document.Type is not (DocumentType.SaleInvoice or DocumentType.PurchaseInvoice))
+        if (Document.Type is not (DocumentType.SaleInvoice or DocumentType.PurchaseInvoice or
+            DocumentType.SaleOrder or DocumentType.PurchaseOrder or DocumentType.Offer))
         {
             return NotFound();
         }
@@ -39,7 +40,20 @@ public class PrintModel : NoxStockPageModel
         return Page();
     }
 
-    public string GetDocumentTitle() => Document.Type == DocumentType.SaleInvoice ? "SATIŞ FATURASI" : "ALIŞ FATURASI";
+    public string GetDocumentTitle() => Document.Type switch
+    {
+        DocumentType.SaleInvoice => "SATIŞ FATURASI",
+        DocumentType.PurchaseInvoice => "ALIŞ FATURASI",
+        DocumentType.SaleOrder => "SATIŞ SİPARİŞİ",
+        DocumentType.PurchaseOrder => "ALIŞ SİPARİŞİ",
+        DocumentType.Offer => "TEKLİF",
+        _ => "TİCARİ BELGE"
+    };
+
+    public string GetPartnerLabel() => Document.Type == DocumentType.PurchaseInvoice ||
+        Document.Type == DocumentType.PurchaseOrder
+            ? "Tedarikçi"
+            : "Müşteri";
 
     public string GetStatus() => Document.Status switch
     {
@@ -49,6 +63,7 @@ public class PrintModel : NoxStockPageModel
         DocumentStatus.PartiallyPaid => "Kısmi ödendi",
         DocumentStatus.Paid => "Ödendi",
         DocumentStatus.Cancelled => "İptal",
+        DocumentStatus.Completed => "Tamamlandı / dönüştürüldü",
         _ => Document.Status.ToString()
     };
 }

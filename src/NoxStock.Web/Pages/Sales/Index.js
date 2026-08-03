@@ -81,9 +81,36 @@ $(function () {
         return netSaleUnitPrice(item) * (1 + (Number(item.vatRate) || 0) / 100);
     }
 
+    function updateCartTotals() {
+        var count = cart.reduce(function (total, item) { return total + item.quantity; }, 0);
+        $('#PosCartCount').text(count + ' ürün');
+        $('#PosSubtotal, #PosTotal').text(formatMoney(cartTotal(), cartCurrency()));
+    }
+
+    function updateCartLineSummary(item) {
+        var $row = $('#PosCartItems .pos-cart-item[data-product-id="' + item.id + '"]');
+        if (!$row.length) {
+            updateCartTotals();
+            return;
+        }
+
+        $row.find('.pos-cart-final-price').text('Müşteri bitiş: ' + formatMoney(customerFinalUnitPrice(item), item.currency));
+        $row.find('.pos-manual-price-status')
+            .text(item.isUnitPriceOverridden ? 'Manuel fiyat uygulandı' : 'Önerilen fiyat kullanılıyor')
+            .toggleClass('text-amber-600', item.isUnitPriceOverridden)
+            .toggleClass('text-slate-500', !item.isUnitPriceOverridden);
+        $row.find('.pos-vat-status')
+            .text(item.isVatRateOverridden ? 'Satır KDV oranı değiştirildi' : '')
+            .toggleClass('hidden', !item.isVatRateOverridden);
+        $row.find('.pos-price-detail-list').text('Liste fiyatı (KDV hariç): ' + formatMoney(item.salePrice, item.currency));
+        $row.find('.pos-price-detail-discount').text('Satış iskontosu: %' + (effectiveSalesDiscountRate(item) * 100).toFixed(2) + ' · KDV: %' + Number(item.vatRate || 0).toFixed(2));
+        $row.find('.pos-price-detail-final').text('Müşteri bitiş fiyatı: ' + formatMoney(customerFinalUnitPrice(item), item.currency));
+        updateCartTotals();
+    }
+
     function renderProducts() {
         var $grid = $('#PosProductGrid');
-        $grid.attr('aria-busy', 'false').empty();
+        $grid.attr('aria-busy', 'false').scrollTop(0).empty();
         if (!products.length) {
             $grid.append('<div class="col-span-full flex min-h-72 flex-col items-center justify-center text-slate-400"><span class="material-icons-round text-5xl opacity-40">inventory_2</span><p class="mt-3 font-medium">Ürün bulunamadı.</p><p class="mt-1 text-sm">Barkod, ürün adı, stok kodu veya OEM ile arayın.</p></div>');
             return;
@@ -132,17 +159,16 @@ $(function () {
                     '<p class="mt-1">' + costText + '</p>' +
                     (item.usesCurrentExchangeRate ? '<p>Güncel ' + escapeHtml(item.referenceCurrencyCode || sourceCurrency) + '/TRY kuru: ' + Number(item.referenceCurrencyExchangeRate || 1).toFixed(4) + '</p><p>Maliyet üzeri kâr: %' + Number(item.profitMarkupPercent || 0).toFixed(2) + '</p>' : '') +
                     (item.referenceSaleUnitPrice ? '<p>Referans satış: ' + formatMoney(item.referenceSaleUnitPrice, item.referenceCurrencyCode || sourceCurrency) + '</p>' : '') +
-                    '<p class="mt-1">Liste fiyatı (KDV hariç): ' + formatMoney(item.salePrice, item.currency) + '</p>' +
-                    '<p>Satış iskontosu: %' + (effectiveSalesDiscountRate(item) * 100).toFixed(2) + ' · KDV: %' + Number(item.vatRate || 0).toFixed(2) + '</p>' +
-                    '<p class="mt-1 font-semibold">Müşteri bitiş fiyatı: ' + formatMoney(customerFinalUnitPrice(item), item.currency) + '</p>' +
+                    '<p class="mt-1 pos-price-detail-list">Liste fiyatı (KDV hariç): ' + formatMoney(item.salePrice, item.currency) + '</p>' +
+                    '<p class="pos-price-detail-discount">Satış iskontosu: %' + (effectiveSalesDiscountRate(item) * 100).toFixed(2) + ' · KDV: %' + Number(item.vatRate || 0).toFixed(2) + '</p>' +
+                    '<p class="mt-1 font-semibold pos-price-detail-final">Müşteri bitiş fiyatı: ' + formatMoney(customerFinalUnitPrice(item), item.currency) + '</p>' +
                     '<p class="mt-1 text-slate-500">Sepete eklenirken kilitlendi. Güncelleme yalnızca yukarıdaki aksiyonla yapılır.</p></div>';
                 var manualStatus = item.isUnitPriceOverridden ? '<p class="pos-manual-price-status mt-1 text-xs font-semibold text-amber-600">Manuel fiyat uygulandı</p>' : '<p class="pos-manual-price-status mt-1 text-xs text-slate-500">Önerilen fiyat kullanılıyor</p>';
-                $items.append('<div class="pos-cart-item p-4 flex items-start gap-3"><div class="min-w-0 flex-1"><p class="truncate font-semibold text-sm text-slate-800 dark:text-white">' + escapeHtml(item.name) + '</p><p class="text-xs text-slate-500 mt-1">' + dynamicLabel + ' · ' + costText + '</p><button type="button" class="pos-price-detail-toggle mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-300" data-product-id="' + item.id + '">Fiyat hesabını göster</button><label class="mt-2 block text-xs text-slate-500">Liste satış fiyatı (KDV hariç)<input type="number" min="0" step="0.0001" class="pos-cart-price mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-product-id="' + item.id + '" value="' + Number(item.salePrice).toFixed(4) + '"></label><p class="mt-1 text-sm font-bold text-indigo-600 dark:text-indigo-300">Müşteri bitiş: ' + formatMoney(customerFinalUnitPrice(item), item.currency) + '</p>' + manualStatus + detail + '</div><div class="flex shrink-0 items-center border border-slate-200 dark:border-slate-700 rounded-lg"><button type="button" class="pos-cart-decrease w-8 h-8 flex items-center justify-center text-slate-600 dark:text-slate-300" data-product-id="' + item.id + '" title="Azalt"><span class="material-icons-round text-base">remove</span></button><span class="w-8 text-center text-sm font-bold text-slate-800 dark:text-white">' + item.quantity + '</span><button type="button" class="pos-cart-increase w-8 h-8 flex items-center justify-center text-slate-600 dark:text-slate-300" data-product-id="' + item.id + '" title="Artır"><span class="material-icons-round text-base">add</span></button></div></div>');
+                var vatStatus = '<p class="pos-vat-status mt-1 text-xs font-semibold text-amber-600' + (item.isVatRateOverridden ? '' : ' hidden') + '">' + (item.isVatRateOverridden ? 'Satır KDV oranı değiştirildi' : '') + '</p>';
+                $items.append('<div class="pos-cart-item p-4 flex items-start gap-3" data-product-id="' + item.id + '"><div class="min-w-0 flex-1"><p class="truncate font-semibold text-sm text-slate-800 dark:text-white">' + escapeHtml(item.name) + '</p><p class="text-xs text-slate-500 mt-1">' + dynamicLabel + ' · ' + costText + '</p><button type="button" class="pos-price-detail-toggle mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-300" data-product-id="' + item.id + '">Fiyat hesabını göster</button><div class="pos-cart-price-fields mt-2"><label>Satış fiyatı (KDV hariç)<input type="number" min="0" step="1" inputmode="decimal" class="pos-cart-price mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-product-id="' + item.id + '" value="' + Number(item.salePrice || 0).toFixed(2) + '"></label><label>KDV (%)<select class="pos-cart-vat mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white" data-product-id="' + item.id + '"><option value="0"' + (Number(item.vatRate) === 0 ? ' selected' : '') + '>%0</option><option value="1"' + (Number(item.vatRate) === 1 ? ' selected' : '') + '>%1</option><option value="10"' + (Number(item.vatRate) === 10 ? ' selected' : '') + '>%10</option><option value="20"' + (Number(item.vatRate) === 20 ? ' selected' : '') + '>%20</option></select></label></div><p class="pos-cart-final-price mt-1 text-sm font-bold text-indigo-600 dark:text-indigo-300">Müşteri bitiş: ' + formatMoney(customerFinalUnitPrice(item), item.currency) + '</p>' + manualStatus + vatStatus + detail + '</div><div class="flex shrink-0 items-center border border-slate-200 dark:border-slate-700 rounded-lg"><button type="button" class="pos-cart-decrease w-8 h-8 flex items-center justify-center text-slate-600 dark:text-slate-300" data-product-id="' + item.id + '" title="Azalt"><span class="material-icons-round text-base">remove</span></button><span class="w-8 text-center text-sm font-bold text-slate-800 dark:text-white">' + item.quantity + '</span><button type="button" class="pos-cart-increase w-8 h-8 flex items-center justify-center text-slate-600 dark:text-slate-300" data-product-id="' + item.id + '" title="Artır"><span class="material-icons-round text-base">add</span></button></div></div>');
             });
         }
-        var count = cart.reduce(function (total, item) { return total + item.quantity; }, 0);
-        $('#PosCartCount').text(count + ' ürün');
-        $('#PosSubtotal, #PosTotal').text(formatMoney(cartTotal(), cartCurrency()));
+        updateCartTotals();
     }
 
     function renderCheckoutOptions() {
@@ -248,7 +274,7 @@ $(function () {
             }
             item.quantity += posQuantityStep;
         } else {
-            cart.push($.extend({}, product, { quantity: 1, isUnitPriceOverridden: false }));
+            cart.push($.extend({}, product, { quantity: 1, isUnitPriceOverridden: false, isVatRateOverridden: false }));
         }
         renderCart();
         renderCheckoutOptions();
@@ -308,7 +334,9 @@ $(function () {
                 item.listSalePrice = latest.listSalePrice;
                 item.netSalePrice = latest.netSalePrice;
                 item.customerFinalUnitPrice = latest.customerFinalUnitPrice;
-                item.vatRate = latest.vatRate;
+                if (!item.isVatRateOverridden) {
+                    item.vatRate = latest.vatRate;
+                }
                 item.salesDiscount1 = latest.salesDiscount1;
                 item.salesDiscount2 = latest.salesDiscount2;
                 item.salesDiscount3 = latest.salesDiscount3;
@@ -416,9 +444,16 @@ $(function () {
         if (item && price >= 0) {
             item.salePrice = price;
             item.isUnitPriceOverridden = true;
-            // Re-render so the VAT/discount-inclusive customer price and all totals
-            // always reflect the manually entered list price immediately.
-            renderCart();
+            updateCartLineSummary(item);
+        }
+    });
+    $('#PosCartItems').on('change', '.pos-cart-vat', function () {
+        var item = cart.find(function (cartItem) { return cartItem.id === $(this).data('product-id'); }.bind(this));
+        var vatRate = Number($(this).val());
+        if (item && vatRate >= 0 && vatRate <= 100) {
+            item.vatRate = vatRate;
+            item.isVatRateOverridden = true;
+            updateCartLineSummary(item);
         }
     });
     $('#ClearPosCartButton').click(function () { cart = []; renderCart(); });
@@ -462,6 +497,7 @@ $(function () {
                     productId: item.id,
                     quantity: item.quantity,
                     unitPrice: item.salePrice,
+                    vatRate: item.vatRate,
                     isUnitPriceOverridden: item.isUnitPriceOverridden === true
                 };
             })

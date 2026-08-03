@@ -275,6 +275,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 ProductId = group.Key,
                 Quantity = group.Sum(x => x.Quantity),
                 UnitPrice = group.Last().UnitPrice,
+                VatRate = group.Last().VatRate,
                 IsUnitPriceOverridden = group.Any(x => x.IsUnitPriceOverridden)
             })
             .ToList();
@@ -282,6 +283,11 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         if (cartItems.Any(x => x.Quantity <= 0))
         {
             throw new BusinessException("NoxStock:PosSaleQuantityMustBePositive");
+        }
+
+        if (cartItems.Any(x => x.VatRate is < 0m or > 100m))
+        {
+            throw new BusinessException("NoxStock:InvalidPosVatRate");
         }
 
         var saleDate = Clock.Now;
@@ -308,11 +314,12 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             }
             var usesManualPrice = cartItem.IsUnitPriceOverridden && cartItem.UnitPrice is > 0;
             var unitPrice = usesManualPrice ? cartItem.UnitPrice!.Value : calculation.ListSalePriceInTry;
+            var vatRate = cartItem.VatRate ?? product.VatRate;
             var effectiveDiscountRate = GetEffectiveSalesDiscountRate(product);
             var lineNet = unitPrice * cartItem.Quantity;
             var discount = lineNet * effectiveDiscountRate / 100m;
             var taxable = lineNet - discount;
-            var vat = taxable * product.VatRate / 100m;
+            var vat = taxable * vatRate / 100m;
             if (product.TrackStock && product.Quantity < cartItem.Quantity)
             {
                 throw new BusinessException("NoxStock:InsufficientStock")
@@ -325,7 +332,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 ProductId = product.Id,
                 Quantity = cartItem.Quantity,
                 UnitPrice = unitPrice,
-                VatRate = product.VatRate,
+                VatRate = vatRate,
                 DiscountRate = effectiveDiscountRate,
                 SalesDiscount1 = product.SalesDiscount1,
                 SalesDiscount2 = product.SalesDiscount2,

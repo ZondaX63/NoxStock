@@ -319,6 +319,52 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     }
 
     [Fact]
+    public async Task Should_Keep_Untracked_Products_Out_Of_Stock_Attention_Filters()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var tracked = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Tracked zero stock " + suffix,
+            Sku = "TRACKED-ZERO-" + suffix,
+            Unit = "Adet",
+            PurchaseCurrency = "TRY",
+            SalePrice = 100m,
+            PricingMode = ProductPricingMode.Manual,
+            Quantity = 0m,
+            CriticalStockLevel = 1m,
+            TrackStock = true
+        });
+        var untracked = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Untracked service " + suffix,
+            Sku = "UNTRACKED-" + suffix,
+            Unit = "Adet",
+            PurchaseCurrency = "TRY",
+            SalePrice = 100m,
+            PricingMode = ProductPricingMode.Manual,
+            Quantity = 0m,
+            CriticalStockLevel = 1m,
+            TrackStock = false
+        });
+
+        var attention = await _productAppService.GetListAsync(new ProductGetListInput
+        {
+            Filter = suffix,
+            StockStatus = "attention",
+            MaxResultCount = 10
+        });
+        var untrackedOnly = await _productAppService.GetListAsync(new ProductGetListInput
+        {
+            Filter = suffix,
+            StockStatus = "untracked",
+            MaxResultCount = 10
+        });
+
+        attention.Items.Select(item => item.Id).ShouldBe(new[] { tracked.Id });
+        untrackedOnly.Items.Select(item => item.Id).ShouldBe(new[] { untracked.Id });
+    }
+
+    [Fact]
     public async Task Should_Keep_Product_List_Query_Count_Bounded_As_Page_Size_Grows()
     {
         await WithUnitOfWorkAsync(async () =>

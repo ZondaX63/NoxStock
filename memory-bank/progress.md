@@ -333,6 +333,13 @@ Last updated: 2026-07-16
 
 ## Decision History
 
+- 2026-08-03: POS kartları ürün sayısı arttığında kaydırma alanının önceki konumunda kalmayacak şekilde sıfırlanıyor; sepet içindeki fiyat/KDV kontrolleri dar panelde dengeli oranlarla hizalanıyor.
+- 2026-08-03: POS ürün kataloğu, ürün sayısı arttığında sayfa yüksekliğini büyütmemesi için sınırlı yükseklikli iç kaydırma alanına alındı; geniş ekranlarda dört kolonlu yoğun görünüm kullanılıyor.
+- 2026-08-03: POS sepetinde KDV oranı satır bazında görünür ve düzenlenebilir hale getirildi; fiyat input'u artık her tuşta DOM'dan yeniden oluşturulmadığı için odak korunuyor ve fiyat oklarının adımı 1 olarak sabitlendi.
+- 2026-08-03: Product catalogue now defaults to a compact daily-work column set and separates TRY-only from TRY-plus-reference-currency presentation. Reference amount, invoice rate and reference sale columns move together; user column widths/visibility persist, and non-stock-tracked items no longer appear as zero/critical stock.
+- 2026-08-03: POS cart lines now allow an explicit legal KDV selection; the selected rate is recalculated live, validated server-side, and stored on the commercial document item snapshot.
+- 2026-08-03: The invoice A4 print view was generalized for offers, sales orders and purchase orders, and print actions were added to both commercial lists.
+- 2026-08-03: Sidebar navigation groups were changed from collapsible menus to permanently visible static groups so page destinations no longer move or disappear.
 - 2026-08-03: Added a tenant-scoped operational data reset from Settings. It clears commercial records (products, lookups, documents, stock/account history, partners and accounts) while retaining tenant identity, users, license, company profile and global exchange rates. Reset requires settings-edit authority plus typed `SIFIRLA` confirmation and acknowledgement.
 - 2026-08-03: Product creation was reduced to a single required business field (`Name`); blank SKU values are generated server-side and all optional text fields receive safe defaults.
 - 2026-08-03: Added tenant- and license-aware `.xlsx` stock-count import to the Products page. Import upserts by SKU, uses the first duplicate row, creates missing brand/category lookups, maps tags to OEM references, and ignores spreadsheet-corrupted scientific-notation barcodes.

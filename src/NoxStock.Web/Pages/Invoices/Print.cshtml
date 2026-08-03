@@ -2,7 +2,7 @@
 @model NoxStock.Web.Pages.Invoices.PrintModel
 @{
     Layout = null;
-    ViewData["Title"] = $"Fatura {Model.Document.DocNumber}";
+    ViewData["Title"] = $"{Model.GetDocumentTitle()} {Model.Document.DocNumber}";
 }
 <!DOCTYPE html>
 <html lang="tr">
@@ -50,7 +50,7 @@ Vergi Dairesi: @Model.Company.TaxOffice | Vergi No: @Model.Company.TaxNumber</di
         <hr class="rule" />
         <section class="party-grid">
             <div class="party">
-                <div class="section-label">@(Model.Document.Type == NoxStock.Documents.DocumentType.SaleInvoice ? "Müşteri" : "Tedarikçi")</div>
+                <div class="section-label">@Model.GetPartnerLabel()</div>
                 <div class="party-name">@Model.Document.BusinessPartnerName</div>
             </div>
             <div class="party">

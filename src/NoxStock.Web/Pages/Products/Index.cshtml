@@ -14,11 +14,6 @@
             <p>Envanteri, onaylı alış maliyetini ve satış fiyatı davranışını aynı çalışma alanından yönetin.</p>
         </div>
         <div class="products-header-actions">
-            <div class="products-currency-control">
-                <label for="ShowReferenceCurrency">Döviz gösterimi</label>
-                <label class="pricing-override-toggle"><input id="ShowReferenceCurrency" type="checkbox" /><span>Referans dövizi göster</span></label>
-                <small>Satışlar her zaman TL; bu seçenek yalnızca kaynak döviz bilgisini gösterir.</small>
-            </div>
             <button id="ImportProductsButton" type="button" class="products-secondary-action" data-bs-toggle="modal" data-bs-target="#ProductImportModal">
                 <span class="material-icons-round" aria-hidden="true">upload_file</span>
                 Excel'den aktar
@@ -69,7 +64,7 @@
         </div>
         <div class="products-overview-card products-overview-warning">
             <span class="material-icons-round" aria-hidden="true">receipt_long</span>
-            <div><span>Maliyet bekleyen</span><strong id="ProductMissingCostCount">-</strong></div>
+            <div><span>Maliyet bilgisi olmayan</span><strong id="ProductMissingCostCount">-</strong></div>
         </div>
         <div class="products-overview-card products-overview-danger">
             <span class="material-icons-round" aria-hidden="true">warning_amber</span>
@@ -204,49 +199,55 @@
             <button type="button" class="products-quick-filter is-active" data-quick-filter="all"><span class="material-icons-round" aria-hidden="true">apps</span>Tümü</button>
             <button type="button" class="products-quick-filter" data-quick-filter="dynamic"><span class="material-icons-round" aria-hidden="true">currency_exchange</span>Dinamik fiyatlı</button>
             <button type="button" class="products-quick-filter" data-quick-filter="manual"><span class="material-icons-round" aria-hidden="true">sell</span>Manuel fiyatlı</button>
-            <button type="button" class="products-quick-filter" data-quick-filter="missing-cost"><span class="material-icons-round" aria-hidden="true">receipt_long</span>Maliyet bekleyen</button>
+            <button type="button" class="products-quick-filter" data-quick-filter="missing-cost"><span class="material-icons-round" aria-hidden="true">receipt_long</span>Maliyeti olmayan</button>
             <button type="button" class="products-quick-filter" data-quick-filter="attention-stock"><span class="material-icons-round" aria-hidden="true">warning_amber</span>Stok uyarısı</button>
         </div>
         <div class="products-filter-panel">
             <div class="product-search-field"><span class="material-icons-round" aria-hidden="true">search</span><input id="ProductSearch" type="search" placeholder="Ürün adı, stok kodu, barkod veya OEM ara" autocomplete="off" /></div>
             <select id="ProductBrandFilter" class="input-field" aria-label="Marka filtresi"><option value="">Tüm markalar</option>@foreach (var brand in Model.Brands.Skip(1)) { <option value="@brand.Value">@brand.Text</option> }</select>
             <select id="ProductCategoryFilter" class="input-field" aria-label="Kategori filtresi"><option value="">Tüm kategoriler</option>@foreach (var category in Model.Categories.Skip(1)) { <option value="@category.Value">@category.Text</option> }</select>
-            <select id="ProductStockStatusFilter" class="input-field" aria-label="Stok durumu filtresi"><option value="">Tüm stok durumları</option><option value="attention">Kritik veya sıfır stok</option><option value="critical">Kritik stok</option><option value="zero">Sıfır stok</option><option value="normal">Normal stok</option></select>
+            <select id="ProductStockStatusFilter" class="input-field" aria-label="Stok durumu filtresi"><option value="">Tüm stok durumları</option><option value="attention">Kritik veya sıfır stok</option><option value="critical">Kritik stok</option><option value="zero">Sıfır stok</option><option value="normal">Normal stok</option><option value="untracked">Stok takibi kapalı</option></select>
             <select id="ProductPricingModeFilter" class="input-field" aria-label="Fiyatlandırma modu filtresi"><option value="">Tüm fiyatlandırmalar</option><option value="dynamic">Döviz bazlı dinamik</option><option value="manual">Manuel fiyat</option></select>
-            <select id="ProductCostStatusFilter" class="input-field" aria-label="Maliyet durumu filtresi"><option value="">Tüm maliyet durumları</option><option value="available">Onaylı maliyeti olan</option><option value="missing">Maliyet bekleyen</option><option value="under-cost">Maliyetin altında satma riski</option><option value="recent">Son 30 gün maliyet değişen</option></select>
+            <select id="ProductCostStatusFilter" class="input-field" aria-label="Maliyet durumu filtresi"><option value="">Tüm maliyet durumları</option><option value="available">Onaylı maliyeti olan</option><option value="missing">Maliyet bilgisi olmayan</option><option value="under-cost">Maliyetin altında satma riski</option><option value="recent">Son 30 gün maliyet değişen</option></select>
             <button id="ResetProductFilters" type="button" class="products-reset-action"><span class="material-icons-round" aria-hidden="true">restart_alt</span><span>Temizle</span></button>
         </div>
         <p class="products-search-help"><span class="material-icons-round" aria-hidden="true">tips_and_updates</span>OEM araması boşluk ve tireleri yok sayar; aynı referans numaralı tüm marka alternatifleri birlikte listelenir.</p>
-        <div class="flex justify-end mb-3">
+        <div class="products-table-tools">
+            <div class="products-currency-view" aria-labelledby="ProductCurrencyViewLabel">
+                <span class="material-icons-round" aria-hidden="true">currency_exchange</span>
+                <div class="products-currency-view-copy"><strong id="ProductCurrencyViewLabel">Fiyat görünümü</strong><small id="ProductCurrencyViewHint">Satış ve maliyetler yalnızca TL gösteriliyor.</small></div>
+                <div class="products-segmented-control" role="group" aria-label="Fiyat para birimi görünümü">
+                    <button type="button" data-currency-view="try" aria-pressed="true">Yalnızca TL</button>
+                    <button type="button" data-currency-view="reference" aria-pressed="false">TL + referans</button>
+                </div>
+            </div>
             <div class="relative inline-block text-left" id="ColumnToggleWrapper">
-                <button type="button" id="ToggleColumnsBtn" class="products-quick-filter flex items-center gap-1 text-xs" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--nx-border);">
+                <button type="button" id="ToggleColumnsBtn" class="products-column-trigger" aria-haspopup="true" aria-expanded="false">
                     <span class="material-icons-round text-sm">view_column</span>
-                    Kolonları Özelleştir
+                    Kolonları özelleştir
                 </button>
                 <div id="ColumnToggleMenu" class="products-column-menu hidden" role="menu" aria-label="Ürün kolonları">
-                    <div class="products-column-menu-heading"><strong>Kolon görünümü</strong><span>Kolonları açıp kapatın; tablo başlığının sağ kenarını sürükleyerek genişliği ayarlayın.</span></div>
+                    <div class="products-column-menu-heading"><strong>Kolon görünümü</strong><span>Günlük kullanım için gereken alanları seçin. Başlık kenarını sürükleyerek genişliği ayarlayabilirsiniz.</span></div>
                     <div class="products-column-menu-grid">
                         <div>
-                            <p>Temel bilgiler</p>
+                            <p>Günlük görünüm</p>
                             <label><input type="checkbox" class="col-toggle" data-column="2" checked> Stok</label>
                             <label><input type="checkbox" class="col-toggle" data-column="3" checked> Fiyat politikası</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="4" checked> Maliyet kaynağı</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="5" checked> Referans maliyet</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="6" checked> Satış önerisi</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="5" checked> Güncel net TL maliyet</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="6" checked> Güncel TL satış fiyatı</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="15" checked> Raf / konum</label>
                             <label><input type="checkbox" class="col-toggle" data-column="7"> Marka / kategori</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="8"> Barkod</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="9"> OEM kodları</label>
                         </div>
                         <div>
-                            <p>Fiyat ve stok ayrıntıları</p>
+                            <p>Belge ve kod ayrıntıları</p>
+                            <label><input type="checkbox" class="col-toggle" data-column="4"> Maliyet kaynağı / fatura</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="8"> Barkod</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="9"> OEM kodları</label>
                             <label><input type="checkbox" class="col-toggle" data-column="10"> Son alış tarihi</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="11"> Alış tutarı</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="12"> Fatura kuru</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="13"> TRY maliyeti</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="14"> Referans satış (seçili)</label>
-                            <label><input type="checkbox" class="col-toggle" data-column="15"> Raf / konum</label>
+                            <label><input type="checkbox" class="col-toggle" data-column="13"> Alış günü TL maliyeti</label>
                         </div>
                     </div>
+                    <div class="products-column-menu-note"><span class="material-icons-round" aria-hidden="true">info</span>Kaynak döviz tutarı, fatura kuru ve referans satış kolonları “TL + referans” görünümünden birlikte yönetilir.</div>
                     <button type="button" id="ResetProductColumns" class="products-column-menu-reset"><span class="material-icons-round" aria-hidden="true">restart_alt</span>Görünüm ve genişlikleri sıfırla</button>
                 </div>
             </div>
@@ -254,7 +255,7 @@
         <div class="products-table-wrap" data-products-table-shell>
             <div id="ProductsTableLoading" class="products-table-loading is-visible" role="status" aria-live="polite"><span></span><span>Ürünler yükleniyor…</span></div>
             <table id="ProductsTable" class="product-data-table w-full text-left text-sm">
-                <thead><tr><th>İşlem</th><th>Ürün ve kodlar</th><th>Stok</th><th>Fiyat politikası</th><th>Maliyet kaynağı</th><th>Kilitli referans maliyet</th><th>Güncel satış önerisi</th><th>Marka / kategori</th><th>Barkod</th><th>OEM kodları</th><th>Son alış tarihi</th><th>Alış tutarı</th><th>Fatura kuru</th><th>TRY maliyeti</th><th>Referans satış (seçili)</th><th>Raf / konum</th></tr></thead>
+                <thead><tr><th>İşlem</th><th>Ürün ve kodlar</th><th>Stok</th><th>Fiyat politikası</th><th>Maliyet kaynağı / fatura</th><th>Güncel net TL maliyet</th><th>Güncel TL satış fiyatı</th><th>Marka / kategori</th><th>Barkod</th><th>OEM kodları</th><th>Son alış tarihi</th><th>Net alış (kaynak döviz)</th><th>Alış fatura kuru</th><th>Alış günü TL maliyeti</th><th>Referans satış fiyatı</th><th>Raf / konum</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
