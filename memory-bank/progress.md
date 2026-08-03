@@ -333,6 +333,7 @@ Last updated: 2026-07-16
 
 ## Decision History
 
+- 2026-08-03: Invoice quick-product creation now uses the ABP/jQuery promise `always` lifecycle to restore the save button after either outcome; this fixes subsequent in-invoice product creation being stuck at “Kaydediliyor…”.
 - 2026-08-03: POS kartları ürün sayısı arttığında kaydırma alanının önceki konumunda kalmayacak şekilde sıfırlanıyor; sepet içindeki fiyat/KDV kontrolleri dar panelde dengeli oranlarla hizalanıyor.
 - 2026-08-03: POS ürün kataloğu, ürün sayısı arttığında sayfa yüksekliğini büyütmemesi için sınırlı yükseklikli iç kaydırma alanına alındı; geniş ekranlarda dört kolonlu yoğun görünüm kullanılıyor.
 - 2026-08-03: POS sepetinde KDV oranı satır bazında görünür ve düzenlenebilir hale getirildi; fiyat input'u artık her tuşta DOM'dan yeniden oluşturulmadığı için odak korunuyor ve fiyat oklarının adımı 1 olarak sabitlendi.

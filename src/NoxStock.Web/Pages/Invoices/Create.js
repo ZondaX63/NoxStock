@@ -517,8 +517,9 @@ $(function () {
             return;
         }
         var barcode = String($('#QuickProductBarcode').val() || '').trim();
+        var $targetRow = quickProductRow;
         $button.prop('disabled', true).text(l('Saving'));
-        noxStock.products.product.create({
+        var createRequest = noxStock.products.product.create({
             name: name,
             sku: sku,
             barcode: barcode,
@@ -529,15 +530,21 @@ $(function () {
             profitMarkupPercent: 30,
             vatRate: Number($('#InvoiceForm').data('default-vat-rate') || 20),
             trackStock: true
-        }).then(function (product) {
+        });
+
+        createRequest.then(function (product) {
             addProductOption(product);
-            quickProductRow.find('.product-search').val('');
-            quickProductRow.find('.product-select').val(product.id).trigger('change');
+            $targetRow.find('.product-search').val('');
+            $targetRow.find('.product-select').val(product.id).trigger('change');
             closeQuickProductPanel();
             abp.notify.success(l('InvoiceQuickProductCreated'));
         }).catch(function (error) {
             abp.notify.error(error && error.message ? error.message : l('InvoiceQuickProductFailed'));
-        }).finally(function () {
+        });
+
+        // ABP's generated proxy uses a jQuery promise. `always` runs for both
+        // success and failure; native Promise.finally is not available here.
+        createRequest.always(function () {
             $button.prop('disabled', false).text(l('InvoiceQuickProductSave'));
         });
     });
