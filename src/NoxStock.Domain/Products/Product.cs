@@ -49,7 +49,7 @@ public class Product : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; }
     
-    public string PurchaseCurrency { get; set; } = "TRY";
+    public string PurchaseCurrency { get; set; } = "EUR";
 
     public ICollection<ProductOEMCode> OemCodes { get; set; }
 

@@ -14,6 +14,26 @@ $(function () {
 
     syncCurrencyViewControl();
 
+    // Modal forms are loaded after this page. Use a capturing invalid handler
+    // so a required/min/max error is visible inside the product card before
+    // ABP submits its AJAX request.
+    document.addEventListener('invalid', function (event) {
+        var field = event.target;
+        if (!field || !field.matches || !field.matches('.product-create-dialog-form input, .product-create-dialog-form select, .product-create-dialog-form textarea')) {
+            return;
+        }
+        var $form = $(field).closest('.product-create-dialog-form');
+        var $summary = $form.find('.product-save-errors');
+        var fieldLabel = $form.find('label[for="' + field.id + '"]').first().text().trim() || 'Bu alan';
+        $summary.removeClass('validation-summary-valid').html('<strong>Ürün kaydedilemedi.</strong> ' + escapeHtml(fieldLabel) + ': ' + escapeHtml(field.validationMessage));
+
+        var $section = $(field).closest('[data-dialog-section]');
+        if ($section.length && $section.is('[hidden]')) {
+            var sectionName = $section.data('dialog-section');
+            $form.find('[data-dialog-tab="' + sectionName + '"]').trigger('click');
+        }
+    }, true);
+
     // The creation modal is loaded dynamically by ABP. Delegate these actions
     // from the static page root so they work even if a modal lifecycle hook is
     // skipped by a cached or already-open Bootstrap dialog.

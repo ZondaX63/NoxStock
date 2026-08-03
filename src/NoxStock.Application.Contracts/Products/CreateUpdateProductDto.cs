@@ -8,7 +8,7 @@ public class CreateUpdateProductDto
     public Guid? CategoryId { get; set; }
     public Guid? BrandId { get; set; }
     
-    [Required]
+    [Required(ErrorMessage = "Ürün adı zorunludur.")]
     [StringLength(150)]
     public string Name { get; set; } = string.Empty;
     
@@ -48,7 +48,10 @@ public class CreateUpdateProductDto
     public bool TrackStock { get; set; } = true;
     
     [StringLength(3)]
-    public string PurchaseCurrency { get; set; } = "TRY";
+    // A product's reference currency is independent from the purchase
+    // document currency. EUR is the default reference for new cards; a TRY
+    // purchase is converted with that document's EUR snapshot on approval.
+    public string PurchaseCurrency { get; set; } = "EUR";
 
     [StringLength(1000)]
     public string? OemCodes { get; set; }

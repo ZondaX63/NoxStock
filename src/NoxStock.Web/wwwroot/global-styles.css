@@ -1091,6 +1091,8 @@ textarea::placeholder {
 .product-finance-integrity strong { color: #3730a3; }
 
 .product-dialog-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .55fr); gap: .85rem; }
+.product-save-errors.validation-summary-valid { display: none; }
+.product-save-errors ul { margin: 0; padding-left: 1.1rem; }
 .product-dialog-main { min-width: 0; }
 .product-dialog-tabs { display: flex; gap: .25rem; margin-bottom: .75rem; border-bottom: 1px solid var(--nx-border); }
 .product-dialog-tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--nx-text-muted); padding: .45rem .65rem; font-size: .7rem; font-weight: 700; }

@@ -9,8 +9,12 @@ $(function () {
     var rates = {};
     var l = abp.localization.getResource('NoxStock');
     var quickProductRow = null;
+    var quickProductSku = null;
+    var productCreateModal = new abp.ModalManager({
+        viewUrl: abp.appPath + 'Products/CreateModal',
+        modalClass: 'ProductCreateModal'
+    });
     var lookupCache = new Map();
-    $('#QuickProductSave').text(l('InvoiceQuickProductSave'));
 
     function escapeHtml(value) {
         return $('<div>').text(value || '').html();
@@ -21,6 +25,143 @@ $(function () {
             style: 'currency', currency: currencyCode || 'TRY'
         }).format(Number(value || 0));
     }
+
+    document.addEventListener('invalid', function (event) {
+        var field = event.target;
+        if (!field || !field.matches || !field.matches('.product-create-dialog-form input, .product-create-dialog-form select, .product-create-dialog-form textarea')) {
+            return;
+        }
+        var $form = $(field).closest('.product-create-dialog-form');
+        var $summary = $form.find('.product-save-errors');
+        var label = $form.find('label[for="' + field.id + '"]').first().text().trim() || 'Bu alan';
+        $summary.removeClass('validation-summary-valid').html('<strong>Ürün kaydedilemedi.</strong> ' + escapeHtml(label) + ': ' + escapeHtml(field.validationMessage));
+        var $section = $(field).closest('[data-dialog-section]');
+        if ($section.length && $section.is('[hidden]')) {
+            $form.find('[data-dialog-tab="' + $section.data('dialog-section') + '"]').trigger('click');
+        }
+    }, true);
+
+    function getGeneratedSku() {
+        var now = new Date();
+        return 'STK-' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') +
+            String(now.getDate()).padStart(2, '0') + String(now.getTime()).slice(-6);
+    }
+
+    function syncInvoiceProductCardRate($form, forceRefresh) {
+        var selectedCurrency = String($form.find('#Product_PurchaseCurrency').val() || 'EUR').toUpperCase();
+        var $rate = $form.find('[data-purchase-rate]');
+        var $override = $form.find('[data-rate-override]');
+        if (selectedCurrency === 'TRY') {
+            $rate.val('1').prop('readonly', true);
+            $override.prop('checked', false).prop('disabled', true);
+            return Promise.resolve();
+        }
+
+        $override.prop('disabled', false);
+        if ($override.prop('checked')) {
+            $rate.prop('readonly', false);
+            return Promise.resolve();
+        }
+
+        $rate.prop('readonly', true);
+        if (!forceRefresh) return Promise.resolve();
+        return fetch(abp.appPath + 'api/app/exchange-rate/current', {
+            credentials: 'same-origin', headers: { Accept: 'application/json' }
+        }).then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (data) {
+                var rate = data && data[selectedCurrency.toLowerCase()] && data[selectedCurrency.toLowerCase()].rate;
+                if (Number(rate) > 0) $rate.val(Number(rate).toFixed(6));
+            })
+            .catch(function () { /* A manual rate can still be supplied. */ });
+    }
+
+    function syncInvoiceProductCardMode($form) {
+        var dynamic = String($form.find('#Product_PricingMode').val() || '0') === '1';
+        var $salePrice = $form.find('#Product_SalePrice');
+        $salePrice.prop('disabled', dynamic);
+        $form.find('[data-manual-sale-field]').toggleClass('is-automatic', dynamic);
+        $form.find('[data-sale-price-label]').text(dynamic
+            ? 'Otomatik satış fiyatı (KDV\'siz)'
+            : 'Manuel satış fiyatı (KDV\'siz, TL)');
+        $form.find('[data-sale-price-hint]').text(dynamic
+            ? 'Maliyet ve hedef kâr oranından onaylı alış maliyeti oluştuğunda hesaplanır.'
+            : 'Satışta kullanılacak sabit TL liste fiyatını girin.');
+    }
+
+    // Products/Index.js is intentionally not loaded by invoice pages. These
+    // delegated handlers make the shared full product-card modal functional
+    // here as well (tabs, SKU, currency rate and pricing mode).
+    $(document).on('click', '.product-create-dialog-form [data-dialog-tab]', function (event) {
+        event.preventDefault();
+        var $form = $(this).closest('.product-create-dialog-form');
+        var tab = String($(this).data('dialog-tab'));
+        $form.find('[data-dialog-tab]').removeClass('is-active').attr('aria-selected', 'false');
+        $(this).addClass('is-active').attr('aria-selected', 'true');
+        $form.find('[data-dialog-section]').attr('hidden', 'hidden')
+            .filter('[data-dialog-section="' + tab + '"]').removeAttr('hidden');
+        if (tab === 'pricing') syncInvoiceProductCardRate($form, true);
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-dialog-generate-sku]', function (event) {
+        event.preventDefault();
+        $(this).closest('.product-create-dialog-form').find('#Product_Sku').val(getGeneratedSku()).trigger('focus').select();
+    });
+
+    $(document).on('change', '.product-create-dialog-form #Product_PurchaseCurrency', function () {
+        syncInvoiceProductCardRate($(this).closest('.product-create-dialog-form'), true);
+    });
+
+    $(document).on('change', '.product-create-dialog-form [data-rate-override]', function () {
+        syncInvoiceProductCardRate($(this).closest('.product-create-dialog-form'), !this.checked);
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-rate-refresh]', function (event) {
+        event.preventDefault();
+        syncInvoiceProductCardRate($(this).closest('.product-create-dialog-form'), true);
+    });
+
+    $(document).on('change', '.product-create-dialog-form #Product_PricingMode', function () {
+        syncInvoiceProductCardMode($(this).closest('.product-create-dialog-form'));
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-quick-lookup-create]', function (event) {
+        event.preventDefault();
+        var $form = $(this).closest('.product-create-dialog-form');
+        var lookupType = String($(this).data('quick-lookup-create'));
+        var $panel = $form.find('[data-quick-lookup-panel="' + lookupType + '"]');
+        $form.find('[data-quick-lookup-panel]').not($panel).attr('hidden', 'hidden');
+        $panel.removeAttr('hidden').find('[data-quick-lookup-name]').val('').trigger('focus');
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-quick-lookup-cancel]', function (event) {
+        event.preventDefault();
+        $(this).closest('[data-quick-lookup-panel]').attr('hidden', 'hidden');
+    });
+
+    $(document).on('click', '.product-create-dialog-form [data-quick-lookup-save]', function (event) {
+        event.preventDefault();
+        var $button = $(this);
+        var $panel = $button.closest('[data-quick-lookup-panel]');
+        var $form = $button.closest('.product-create-dialog-form');
+        var lookupType = String($panel.data('quick-lookup-panel'));
+        var name = String($panel.find('[data-quick-lookup-name]').val() || '').trim();
+        if (!name) {
+            $panel.find('[data-quick-lookup-name]').trigger('focus');
+            return;
+        }
+        var service = lookupType === 'brand' ? noxStock.brands.brand : noxStock.categories.category;
+        $button.prop('disabled', true).text('Kaydediliyor…');
+        Promise.resolve(service.create({ name: name }))
+            .then(function (created) {
+                var selectId = lookupType === 'brand' ? '#Product_BrandId' : '#Product_CategoryId';
+                $form.find(selectId).append(new Option(created.name, created.id, true, true)).trigger('change');
+                $panel.attr('hidden', 'hidden');
+            })
+            .catch(function (error) {
+                abp.notify.error(error && error.message ? error.message : 'Yeni kayıt oluşturulamadı.');
+            })
+            .finally(function () { $button.prop('disabled', false).text('Kaydet'); });
+    });
 
     function uuidv4() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -488,64 +629,48 @@ $(function () {
     $tbody.on('click', '.quick-product-create', function () {
         quickProductRow = $(this).closest('.item-row');
         var suggestedName = quickProductRow.find('.product-search').val();
-        var now = new Date();
-        var sku = 'STK-' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(now.getTime()).slice(-6);
-        $('#QuickProductName').val(suggestedName || '').trigger('focus');
-        $('#QuickProductSku').val(sku);
-        $('#QuickProductBarcode').val('');
-        $('#QuickProductUnit').val('Adet');
-        $('#QuickProductPanel').removeAttr('hidden');
+        quickProductSku = getGeneratedSku();
+        // Use the same complete product-card modal as the Products page.  It
+        // lets the operator set reference currency, price policy, discounts,
+        // VAT, brand and category before the product is added to this line.
+        productCreateModal.open({
+            initialName: suggestedName || '',
+            initialSku: quickProductSku
+        });
+        window.setTimeout(function () {
+            var $form = $('.product-create-dialog-form').last();
+            if ($form.length) {
+                syncInvoiceProductCardMode($form);
+                syncInvoiceProductCardRate($form, true);
+            }
+        }, 180);
     });
 
-    function closeQuickProductPanel() {
-        $('#QuickProductPanel').attr('hidden', 'hidden');
+    productCreateModal.onResult(function () {
+        var $targetRow = quickProductRow;
+        var sku = quickProductSku;
         quickProductRow = null;
-    }
-
-    $(document).on('click', '.quick-product-cancel', closeQuickProductPanel);
-    $(document).on('keydown', function (event) {
-        if (event.key === 'Escape' && !$('#QuickProductPanel').is('[hidden]')) {
-            closeQuickProductPanel();
-        }
-    });
-    $('#QuickProductSave').on('click', function () {
-        var $button = $(this);
-        var name = String($('#QuickProductName').val() || '').trim();
-        var sku = String($('#QuickProductSku').val() || '').trim();
-        if (!name || !sku || !quickProductRow) {
-            abp.notify.warn(l('InvoiceQuickProductRequired'));
+        quickProductSku = null;
+        if (!$targetRow || !$targetRow.length || !sku) {
             return;
         }
-        var barcode = String($('#QuickProductBarcode').val() || '').trim();
-        var $targetRow = quickProductRow;
-        $button.prop('disabled', true).text(l('Saving'));
-        var createRequest = noxStock.products.product.create({
-            name: name,
-            sku: sku,
-            barcode: barcode,
-            unit: $('#QuickProductUnit').val() || 'Adet',
-            purchaseCurrency: 'TRY',
-            exchangeRateAtPurchase: 1,
-            pricingMode: 0,
-            profitMarkupPercent: 30,
-            vatRate: Number($('#InvoiceForm').data('default-vat-rate') || 20),
-            trackStock: true
-        });
 
-        createRequest.then(function (product) {
+        // The Razor modal returns no DTO by design. Resolve the just-created
+        // card by its generated SKU, then select it on the originating row.
+        fetchLookup(productLookupUrl, sku).then(function (result) {
+            var product = (result.items || []).find(function (item) {
+                return String(item.sku || '').toLocaleLowerCase('tr-TR') === sku.toLocaleLowerCase('tr-TR');
+            });
+            if (!product) {
+                abp.notify.warn('Ürün kaydedildi ancak fatura satırında otomatik seçilemedi. Arayarak seçebilirsiniz.');
+                return;
+            }
             addProductOption(product);
             $targetRow.find('.product-search').val('');
             $targetRow.find('.product-select').val(product.id).trigger('change');
-            closeQuickProductPanel();
-            abp.notify.success(l('InvoiceQuickProductCreated'));
-        }).catch(function (error) {
-            abp.notify.error(error && error.message ? error.message : l('InvoiceQuickProductFailed'));
-        });
-
-        // ABP's generated proxy uses a jQuery promise. `always` runs for both
-        // success and failure; native Promise.finally is not available here.
-        createRequest.always(function () {
-            $button.prop('disabled', false).text(l('InvoiceQuickProductSave'));
+            abp.notify.success('Ürün kartı oluşturuldu ve fatura satırına eklendi.');
+        }).catch(function () {
+            abp.notify.warn('Ürün kaydedildi. Fatura satırında arayarak seçebilirsiniz.');
         });
     });
 

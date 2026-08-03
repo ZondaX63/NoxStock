@@ -125,7 +125,9 @@ public class IndexModel : NoxStockPageModel
         {
             Sku = $"STK-{DateTime.UtcNow:yyyyMMddHHmmss}",
             Unit = defaultUnit,
-            PurchaseCurrency = defaultCurrency,
+            // Company accounting currency can stay TRY. Product reference
+            // pricing is EUR by default and remains separately selectable.
+            PurchaseCurrency = "EUR",
             ProfitMarkupPercent = 30m,
             TrackStock = true
         };

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -172,6 +173,15 @@ public class NoxStockWebModule : AbpModule
             context.Services.AddRazorPages()
                 .AddRazorRuntimeCompilation();
         }
+
+        // Optional DTO fields (barcode, description, shelf, quantity, etc.)
+        // must not become implicitly required just because they are declared
+        // as non-nullable CLR properties. Explicit [Required] attributes still
+        // remain enforced (for example Product.Name).
+        Configure<MvcOptions>(options =>
+        {
+            options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+        });
 
         context.Services.AddHostedService<ExchangeRateRefreshHostedService>();
         ConfigureBundles(hostingEnvironment);

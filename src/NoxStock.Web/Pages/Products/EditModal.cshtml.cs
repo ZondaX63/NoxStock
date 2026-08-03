@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using NoxStock.Brands;
 using NoxStock.Categories;
 using NoxStock.Products;
+using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 
 namespace NoxStock.Web.Pages.Products;
@@ -53,13 +54,7 @@ public class EditModalModel : NoxStockPageModel
         PricingQuote = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto { ProductId = Id });
         CostHistory = await _productPricingAppService.GetCostHistoryAsync(Id);
 
-        var brandLookup = await _brandAppService.GetListAsync(new PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
-        Brands = brandLookup.Items.Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToList();
-        Brands.Insert(0, new SelectListItem("Marka seçiniz", ""));
-
-        var categoryLookup = await _categoryAppService.GetListAsync(new PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
-        Categories = categoryLookup.Items.Select(c => new SelectListItem(c.Name, c.Id.ToString())).ToList();
-        Categories.Insert(0, new SelectListItem("Kategori seçiniz", ""));
+        await LoadLookupsAsync();
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -70,8 +65,59 @@ public class EditModalModel : NoxStockPageModel
         NormalizeDecimalProductFields();
         NormalizeIntegralProductFields();
         NormalizeTryExchangeRate();
-        await _productAppService.UpdateAsync(Id, Product);
+        if (!ModelState.IsValid)
+        {
+            return ProductSaveValidationError(GetModelStateError());
+        }
+
+        try
+        {
+            await _productAppService.UpdateAsync(Id, Product);
+        }
+        catch (BusinessException exception)
+        {
+            return ProductSaveValidationError(GetProductSaveError(exception));
+        }
+
         return NoContent();
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var request = new PagedAndSortedResultRequestDto { MaxResultCount = 1000 };
+        var brandLookup = await _brandAppService.GetListAsync(request);
+        Brands = brandLookup.Items.Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToList();
+        Brands.Insert(0, new SelectListItem("Marka seçiniz", ""));
+
+        var categoryLookup = await _categoryAppService.GetListAsync(request);
+        Categories = categoryLookup.Items.Select(c => new SelectListItem(c.Name, c.Id.ToString())).ToList();
+        Categories.Insert(0, new SelectListItem("Kategori seçiniz", ""));
+    }
+
+    private static string GetProductSaveError(BusinessException exception) => exception.Code switch
+    {
+        "NoxStock:ProductNameRequired" => "Ürün adı zorunludur.",
+        "NoxStock:InvalidProductPricingValue" => "İşlem kuru sıfırdan büyük olmalıdır; kur bilgisini yenileyin veya elle girin.",
+        "NoxStock:ProductDiscountOutOfRange" => "İskonto oranları %0 ile %100 arasında olmalıdır.",
+        "NoxStock:UnsupportedVatRate" => "Geçerli bir KDV oranı seçin.",
+        "NoxStock:UnsupportedCurrency" => "Geçerli bir referans para birimi seçin.",
+        "NoxStock:DocumentExchangeRateSnapshotUnavailable" => "Geçmiş alış belgesinde seçilen para birimi için kur snapshotı yok.",
+        _ => "Ürün kaydedilemedi. Lütfen alanları ve lisans limitlerini kontrol edin."
+    };
+
+    private IActionResult ProductSaveValidationError(string message) =>
+        BadRequest(new { error = new { message } });
+
+    private string GetModelStateError()
+    {
+        var errors = ModelState.Values
+            .SelectMany(value => value.Errors)
+            .Select(error => error.ErrorMessage)
+            .Where(message => !string.IsNullOrWhiteSpace(message))
+            .ToList();
+        return errors.Count > 0
+            ? string.Join(" ", errors)
+            : "Ürün kaydedilemedi. Zorunlu alanları kontrol edin.";
     }
 
     private void NormalizeTryExchangeRate()

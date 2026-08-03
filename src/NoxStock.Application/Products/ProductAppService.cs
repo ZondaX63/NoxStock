@@ -96,17 +96,26 @@ public class ProductAppService :
         ValidateFinancialConfiguration(input);
         await EnsurePricingEntitlementsAsync(input);
         var existingProduct = await Repository.GetAsync(id);
-        if (existingProduct.LastPurchaseCostHistoryId.HasValue &&
-            !string.Equals(existingProduct.PurchaseCurrency, input.PurchaseCurrency, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new BusinessException("NoxStock:PricingCurrencyLockedByApprovedCost")
-                .WithData("Currency", existingProduct.PurchaseCurrency);
-        }
+        var referenceCurrencyChanged = !string.Equals(
+            existingProduct.PurchaseCurrency,
+            input.PurchaseCurrency,
+            StringComparison.OrdinalIgnoreCase);
         await ValidateRelationsAsync(input);
-        var result = await base.UpdateAsync(id, input);
+        await base.UpdateAsync(id, input);
+
+        // Approved purchase records are immutable.  The product profile is a
+        // derived, current pricing view, though, so it can safely be rebased
+        // to another reference currency using the original document's locked
+        // exchange-rate snapshot.
+        if (referenceCurrencyChanged)
+        {
+            var updatedProduct = await Repository.GetAsync(id);
+            await RebaseCurrentCostProfileAsync(updatedProduct, input.PurchaseCurrency);
+            await Repository.UpdateAsync(updatedProduct, autoSave: true);
+        }
+
         await ReplaceOemCodesAsync(id, input.OemCodes);
-        result.OemCodes = NormalizeOemCodes(input.OemCodes);
-        return result;
+        return await GetAsync(id);
     }
 
     public override async Task<ProductDto> GetAsync(Guid id)
@@ -778,6 +787,46 @@ public class ProductAppService :
                    string.IsNullOrWhiteSpace(CellText(Quantity));
         }
     }
+
+    private async Task RebaseCurrentCostProfileAsync(Product product, string referenceCurrency)
+    {
+        if (!product.LastPurchaseDocumentId.HasValue ||
+            product.LastPurchaseCostTryAmount is not > 0m)
+        {
+            return;
+        }
+
+        var normalizedCurrency = NormalizeCurrency(referenceCurrency);
+        var rateToTry = 1m;
+        if (!string.Equals(normalizedCurrency, "TRY", StringComparison.OrdinalIgnoreCase))
+        {
+            var documents = await _documentRepository.WithDetailsAsync(x => x.ExchangeRateSnapshots);
+            var sourceDocument = await AsyncExecuter.FirstOrDefaultAsync(
+                documents.Where(x => x.Id == product.LastPurchaseDocumentId.Value));
+            var rateSnapshot = sourceDocument?.ExchangeRateSnapshots
+                .OrderByDescending(x => x.RateDate)
+                .FirstOrDefault(x => string.Equals(
+                    x.CurrencyCode,
+                    normalizedCurrency,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (rateSnapshot?.RateToTry is not > 0m)
+            {
+                throw new BusinessException("NoxStock:DocumentExchangeRateSnapshotUnavailable")
+                    .WithData("Currency", normalizedCurrency)
+                    .WithData("DocumentId", product.LastPurchaseDocumentId.Value);
+            }
+
+            rateToTry = rateSnapshot.RateToTry;
+        }
+
+        product.LastPurchaseCostCurrencyCode = normalizedCurrency;
+        product.LastPurchaseCostCurrencyAmount = RoundMoney(product.LastPurchaseCostTryAmount.Value / rateToTry);
+        product.LastPurchaseExchangeRate = RoundMoney(rateToTry);
+    }
+
+    private static decimal RoundMoney(decimal value) =>
+        Math.Round(value, 6, MidpointRounding.AwayFromZero);
 
     private static void NormalizePricingConfiguration(CreateUpdateProductDto input)
     {
