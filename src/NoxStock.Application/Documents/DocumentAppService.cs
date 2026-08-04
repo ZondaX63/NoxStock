@@ -11,6 +11,7 @@ using NoxStock.BusinessPartners;
 using NoxStock.ExchangeRates;
 using NoxStock.Permissions;
 using NoxStock.Products;
+using NoxStock.Common;
 using NoxStock.MultiTenancy;
 using Volo.Abp;
 
@@ -242,8 +243,8 @@ public class DocumentAppService :
 
         if (!string.IsNullOrWhiteSpace(input.Filter))
         {
-            var filter = input.Filter.ToLower();
-            query = query.Where(x => x.DocNumber.ToLower().Contains(filter));
+            var filter = SearchText.Normalize(input.Filter);
+            query = query.Where(x => x.DocNumber.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(filter));
         }
 
         if (input.DueFilter != DocumentDueFilter.All)
@@ -351,7 +352,7 @@ public class DocumentAppService :
                     unitPrice = product.SalePrice;
                 }
 
-                ApplyProductSalesDiscountDefaults(inputItem, product);
+                ApplyBusinessPartnerSalesDiscountDefaults(inputItem, businessPartner);
                 if (inputItem.VatRate == 0m && product.VatRate > 0)
                 {
                     inputItem.VatRate = product.VatRate;
@@ -601,7 +602,7 @@ public class DocumentAppService :
         return RoundMoney((1m - remainingFactor) * 100m);
     }
 
-    private static void ApplyProductSalesDiscountDefaults(CreateUpdateDocumentItemDto item, Product product)
+    private static void ApplyBusinessPartnerSalesDiscountDefaults(CreateUpdateDocumentItemDto item, BusinessPartner businessPartner)
     {
         var hasLineDiscounts = item.SalesDiscount1 != 0m || item.SalesDiscount2 != 0m ||
             item.SalesDiscount3 != 0m || item.SalesDiscount4 != 0m || item.DiscountRate != 0m;
@@ -610,10 +611,10 @@ public class DocumentAppService :
             return;
         }
 
-        item.SalesDiscount1 = product.SalesDiscount1;
-        item.SalesDiscount2 = product.SalesDiscount2;
-        item.SalesDiscount3 = product.SalesDiscount3;
-        item.SalesDiscount4 = product.SalesDiscount4;
+        item.SalesDiscount1 = businessPartner.DefaultSalesDiscount1;
+        item.SalesDiscount2 = businessPartner.DefaultSalesDiscount2;
+        item.SalesDiscount3 = businessPartner.DefaultSalesDiscount3;
+        item.SalesDiscount4 = businessPartner.DefaultSalesDiscount4;
     }
 
     private static decimal GetEffectiveSalesDiscountRate(CreateUpdateDocumentItemDto item)

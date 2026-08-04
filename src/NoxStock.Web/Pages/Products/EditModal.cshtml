@@ -42,7 +42,7 @@
                         <div class="pricing-block">
                             <div class="pricing-block-title"><b>1</b><span><strong>Alış faturası &amp; döviz</strong><small>Liste fiyatı ve işlem günündeki kur.</small></span></div>
                             <div class="row g-3">
-                                <div class="col-md-6"><label asp-for="Product.PurchaseListPrice" class="form-label">Liste alış fiyatı</label><input asp-for="Product.PurchaseListPrice" class="form-control" type="number" step="0.000001" min="0" /></div>
+                                <div class="col-md-6"><label asp-for="Product.PurchaseListPrice" class="form-label">Liste alış fiyatı</label><input asp-for="Product.PurchaseListPrice" class="form-control" type="number" step="1" min="0" /></div>
                                 <div class="col-md-6"><label asp-for="Product.PurchaseCurrency" class="form-label">Referans / alış para birimi</label><select asp-for="Product.PurchaseCurrency" class="form-select"><option>EUR</option><option>USD</option><option>TRY</option></select><small class="pricing-field-hint">Değiştirildiğinde geçmiş maliyet korunur; aktif maliyet belge günü kuru ile yeni referans para birimine çevrilir.</small></div>
                                 <div class="col-md-8"><label asp-for="Product.ExchangeRateAtPurchase" class="form-label">İşlem kuru (1 döviz = TL) <span class="text-danger" aria-hidden="true">*</span></label><div class="pricing-rate-input"><input asp-for="Product.ExchangeRateAtPurchase" class="form-control" type="number" step="0.000001" min="0.000001" data-purchase-rate readonly required aria-required="true" /><button type="button" data-rate-refresh><span class="material-icons-round">refresh</span>TCMB</button></div><span asp-validation-for="Product.ExchangeRateAtPurchase" class="text-danger small d-block mt-1"></span></div>
                                 <div class="col-md-4 d-flex align-items-end"><label class="pricing-override-toggle"><input type="checkbox" data-rate-override /><span>Kuru elle değiştir</span></label></div>
@@ -50,22 +50,18 @@
                         </div>
                         <div class="pricing-block">
                             <div class="pricing-block-title"><b>2</b><span><strong>Kademeli alış iskontoları</strong><small>Oranlar sırayla uygulanır.</small></span></div>
-                            <div class="pricing-four-grid"><label>İsk. 1 %<input asp-for="Product.PurchaseDiscount1" class="form-control" type="number" min="0" max="100" step="0.0001" /></label><label>İsk. 2 %<input asp-for="Product.PurchaseDiscount2" class="form-control" type="number" min="0" max="100" step="0.0001" /></label><label>İsk. 3 %<input asp-for="Product.PurchaseDiscount3" class="form-control" type="number" min="0" max="100" step="0.0001" /></label><label>İsk. 4 %<input asp-for="Product.PurchaseDiscount4" class="form-control" type="number" min="0" max="100" step="0.0001" /></label></div>
+                            <div class="pricing-four-grid"><label>İsk. 1 %<input asp-for="Product.PurchaseDiscount1" class="form-control" type="number" min="0" max="100" step="1" /></label><label>İsk. 2 %<input asp-for="Product.PurchaseDiscount2" class="form-control" type="number" min="0" max="100" step="1" /></label><label>İsk. 3 %<input asp-for="Product.PurchaseDiscount3" class="form-control" type="number" min="0" max="100" step="1" /></label><label>İsk. 4 %<input asp-for="Product.PurchaseDiscount4" class="form-control" type="number" min="0" max="100" step="1" /></label></div>
                             <div class="pricing-inline-result">Net alış: <strong data-dialog-value="net-purchase-currency">0,0000 TRY</strong></div>
                         </div>
                         <div class="pricing-block">
                             <div class="pricing-block-title"><b>3</b><span><strong>Satış stratejisi</strong><small>Mod seçimi hangi alanın fiyatı yönettiğini belirler.</small></span></div>
                             <div class="row g-3">
                                 <div class="col-md-6"><label asp-for="Product.PricingMode" class="form-label">Satış fiyatı modu</label><select asp-for="Product.PricingMode" class="form-select"><option value="0">Sabit fiyat</option><option value="1">Dövize çıpalı dinamik</option></select></div>
-                                <div class="col-md-6" data-manual-sale-field><label asp-for="Product.SalePrice" class="form-label" data-sale-price-label>Manuel satış fiyatı (KDV'siz, TL)</label><div class="input-group"><input asp-for="Product.SalePrice" class="form-control" type="number" step="0.0001" min="0" /><span class="input-group-text">TRY</span></div><small class="pricing-field-hint" data-sale-price-hint></small></div>
-                                <div class="col-md-6" data-markup-field><label asp-for="Product.ProfitMarkupPercent" class="form-label" data-markup-label>Hedef kâr ekleme oranı (%)</label><input asp-for="Product.ProfitMarkupPercent" class="form-control" type="number" min="0" step="0.0001" /><small class="pricing-field-hint" data-markup-hint></small></div>
+                                <div class="col-md-6" data-manual-sale-field><label asp-for="Product.SalePrice" class="form-label" data-sale-price-label>Manuel satış fiyatı (KDV'siz, TL)</label><div class="input-group"><input asp-for="Product.SalePrice" class="form-control" type="number" step="1" min="0" /><span class="input-group-text">TRY</span></div><small class="pricing-field-hint" data-sale-price-hint></small></div>
+                                <div class="col-md-6" data-markup-field><label asp-for="Product.ProfitMarkupPercent" class="form-label" data-markup-label>Hedef kâr ekleme oranı (%)</label><input asp-for="Product.ProfitMarkupPercent" class="form-control" type="number" min="0" step="1" /><small class="pricing-field-hint" data-markup-hint></small></div>
                                 <div class="col-md-6"><label asp-for="Product.VatRate" class="form-label">KDV oranı</label><select asp-for="Product.VatRate" class="form-select"><option value="0">%0</option><option value="1">%1</option><option value="10">%10</option><option value="20">%20</option></select></div>
                             </div>
                             <div class="pricing-mode-explainer" data-pricing-mode-explainer></div>
-                        </div>
-                        <div class="pricing-block">
-                            <div class="pricing-block-title"><b>4</b><span><strong>Varsayılan satış iskontoları</strong><small>Müşteri satışında sırayla uygulanır.</small></span></div>
-                            <div class="pricing-four-grid"><label>Satış İsk. 1 %<input asp-for="Product.SalesDiscount1" class="form-control" type="number" min="0" max="100" step="0.0001" /></label><label>Satış İsk. 2 %<input asp-for="Product.SalesDiscount2" class="form-control" type="number" min="0" max="100" step="0.0001" /></label><label>Satış İsk. 3 %<input asp-for="Product.SalesDiscount3" class="form-control" type="number" min="0" max="100" step="0.0001" /></label><label>Satış İsk. 4 %<input asp-for="Product.SalesDiscount4" class="form-control" type="number" min="0" max="100" step="0.0001" /></label></div>
                         </div>
                         <input asp-for="Product.PurchasePrice" type="hidden" />
                         <div class="product-dialog-note"><span class="material-icons-round">verified_user</span>Geçmiş alış maliyeti ve belge kuru değişmez; referans para birimi yalnızca aktif fiyatlama profilini yeniden ifade eder.</div>
@@ -73,9 +69,9 @@
                     <section class="product-dialog-section" data-dialog-section="stock" hidden>
                         <div class="product-dialog-section-title"><span class="material-icons-round">shelves</span><div><h4>Stok &amp; raf</h4><p>Operasyonel stok ve konum bilgisini güncelleyin.</p></div></div>
                         <div class="row g-3">
-                            <div class="col-md-4"><label asp-for="Product.Quantity" class="form-label">Stok miktarı</label><input asp-for="Product.Quantity" class="form-control" type="number" step="any" /></div>
+                            <div class="col-md-4"><label asp-for="Product.Quantity" class="form-label">Stok miktarı</label><input asp-for="Product.Quantity" class="form-control" type="number" step="1" /></div>
                             <div class="col-md-4"><label asp-for="Product.Unit" class="form-label">Birim</label><select asp-for="Product.Unit" class="form-select"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select></div>
-                            <div class="col-md-4"><label asp-for="Product.CriticalStockLevel" class="form-label">Kritik stok seviyesi</label><input asp-for="Product.CriticalStockLevel" class="form-control" type="number" step="any" min="0" /></div>
+                            <div class="col-md-4"><label asp-for="Product.CriticalStockLevel" class="form-label">Kritik stok seviyesi</label><input asp-for="Product.CriticalStockLevel" class="form-control" type="number" step="1" min="0" /></div>
                             <div class="col-md-8"><label asp-for="Product.ShelfLocation" class="form-label">Depo / raf konumu</label><input asp-for="Product.ShelfLocation" class="form-control" placeholder="A-12-3" /></div>
                             <div class="col-md-4 d-flex align-items-end"><div class="form-check mb-2"><input asp-for="Product.TrackStock" class="form-check-input" /><label asp-for="Product.TrackStock" class="form-check-label">Stok takibi aktif</label></div></div>
                         </div>
@@ -84,10 +80,10 @@
                 <aside class="product-dialog-hero product-finance-hero" aria-live="polite">
                     <div class="product-finance-hero-head"><div><span class="products-eyebrow">CANLI FİNANSAL ÖZET</span><h4>Hesaplama akışı</h4></div><span class="product-live-badge"><i></i>Canlı</span></div>
                     <div class="product-finance-main"><span>Net TL maliyet</span><strong data-dialog-value="cost">₺0,00</strong><small data-dialog-value="meta">4'lü alış iskontosu ve kur dahil</small></div>
-                    <dl class="product-finance-breakdown"><div><dt>Liste satış fiyatı (KDV'siz)</dt><dd data-dialog-value="list">₺0,00</dd></div><div><dt>Satış iskontosu</dt><dd data-dialog-value="sales-discount">-₺0,00</dd></div><div><dt>İskontolu satış</dt><dd data-dialog-value="net-sale">₺0,00</dd></div><div><dt data-dialog-value="vat-label">KDV (%20)</dt><dd data-dialog-value="vat-amount">₺0,00</dd></div></dl>
+                    <dl class="product-finance-breakdown"><div><dt>Liste satış fiyatı (KDV'siz)</dt><dd data-dialog-value="list">₺0,00</dd></div><div><dt>KDV hariç satış</dt><dd data-dialog-value="net-sale">₺0,00</dd></div><div><dt data-dialog-value="vat-label">KDV (%20)</dt><dd data-dialog-value="vat-amount">₺0,00</dd></div></dl>
                     <div class="product-final-price"><span>Müşteri bitiş fiyatı</span><strong data-dialog-value="final">₺0,00</strong><small>KDV dahil ödenecek tutar</small></div>
                     <div class="product-finance-profit"><span>Tahmini brüt kâr</span><strong data-dialog-value="profit">₺0,00</strong><small data-dialog-value="realized-markup">Gerçekleşen markup: %0,00</small><small data-dialog-value="margin">Brüt kâr marjı: %0,00</small></div>
-                    <div class="product-finance-integrity"><span class="material-icons-round">verified_user</span><p>Satış fiyatı ve kur, POS/fatura onayında belge satırına snapshot olarak kaydedilir.</p></div>
+                    <div class="product-finance-integrity"><span class="material-icons-round">verified_user</span><p>Müşteri iskontoları fatura/POS satırında uygulanır; satış fiyatı ve kur belge satırına snapshot olarak kaydedilir.</p></div>
                 </aside>
             </div>
         </abp-modal-body>

@@ -2,6 +2,7 @@
   "culture": "tr",
   "texts": {
     "AppName": "NoxStock",
+    "NoxStock:CreditLimitExceeded": "{PartnerName} için tanımlı limit aşılır. Limit: {CreditLimit}; işlem sonrası açık bakiye: {ProjectedExposure}.",
     "Auth:HostLoginEyebrow": "Platform yönetimi",
     "Auth:HostLoginTitle": "Yönetici girişi",
     "Auth:HostLoginDescription": "Şirket oluşturma ve platform yönetimi için yönetici hesabınızla giriş yapın.",

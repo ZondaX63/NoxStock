@@ -76,9 +76,7 @@
             <!-- Main Content -->
             <main class="app-main flex-1 overflow-x-hidden overflow-y-auto transition-colors duration-200 relative">
                 <div class="app-content-frame">
-                    <div class="mb-4">
-                        <abp-page-alerts />
-                    </div>
+                    <div class="app-page-alerts"><abp-page-alerts /></div>
                     <div id="AbpContentToolbar">
                         @await RenderSectionAsync("content_toolbar", required: false)
                     </div>

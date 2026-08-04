@@ -162,9 +162,15 @@ $(function () {
     function formatDecimal(value, digits) {
         var locale = document.documentElement.lang === 'en' ? 'en-US' : 'tr-TR';
         return new Intl.NumberFormat(locale, {
-            minimumFractionDigits: digits,
+            minimumFractionDigits: 0,
             maximumFractionDigits: digits
         }).format(Number(value || 0));
+    }
+
+    function compactInputNumber(value, digits) {
+        var number = Number(value || 0);
+        if (!Number.isFinite(number)) return '0';
+        return number.toFixed(digits || 6).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '').replace(/\.$/, '');
     }
 
     function syncCurrencyViewControl() {
@@ -228,7 +234,7 @@ $(function () {
         $rate.prop('readonly', true);
         var rate = currentRate(currency);
         if (forceCurrentRate && rate > 0) {
-            $rate.val(rate.toFixed(6)).trigger('input');
+            $rate.val(compactInputNumber(rate, 6)).trigger('input');
         }
     }
 
@@ -296,17 +302,17 @@ $(function () {
         var text = function (amount) { return amount == null ? 'Kur bekleniyor' : formatMoney(amount, 'TRY'); };
 
         if (dynamic && listSale != null) {
-            $form.find('#Product_SalePrice').val(listSale.toFixed(4));
+            $form.find('#Product_SalePrice').val(compactInputNumber(listSale, 6));
         }
         if (!dynamic) {
             if (pricingSource === 'markup' && listSale != null) {
-                $form.find('#Product_SalePrice').val(listSale.toFixed(4));
+                $form.find('#Product_SalePrice').val(compactInputNumber(listSale, 6));
             }
             var reverseMarkup = displayedCost != null && displayedCost > 0 && listSale != null
                 ? Math.max(0, (listSale / displayedCost - 1) * 100)
                 : 0;
             if (pricingSource !== 'markup') {
-                $form.find('#Product_ProfitMarkupPercent').val(reverseMarkup.toFixed(4));
+                $form.find('#Product_ProfitMarkupPercent').val(compactInputNumber(reverseMarkup, 6));
             }
         }
 
@@ -352,7 +358,7 @@ $(function () {
 
     // Database precision is deliberately higher than the precision a user
     // should have to read.  Keep the numeric value intact, but avoid opening a
-    // card with distracting placeholders such as 0.0000 or 30.000000.
+    // card with distracting padded decimal placeholders.
     function normalizeProductDecimalDisplay($form) {
         if (!$form || !$form.length || $form.data('product-decimals-normalized')) return;
 
@@ -363,10 +369,7 @@ $(function () {
             var value = Number(raw);
             if (!Number.isFinite(value)) return;
 
-            var display = value.toFixed(6)
-                .replace(/(\.\d*?[1-9])0+$/, '$1')
-                .replace(/\.0+$/, '')
-                .replace(/\.$/, '');
+            var display = compactInputNumber(value, 6);
             this.value = display === '-0' ? '0' : display;
         });
 
@@ -441,7 +444,7 @@ $(function () {
             : formatMoney(row.lastPurchaseCostTryAmount, 'TRY');
         var rate = Number(row.lastPurchaseExchangeRate || row.lastPurchaseSourceExchangeRate || 0);
         return '<div class="product-cost-value product-cost-source-title" title="' + escapeHtml(sourceLine) + '">' + escapeHtml(sourceLine) + '</div>' +
-            '<div class="product-cost-source">' + escapeHtml(netCost) + (rate > 0 ? ' · 1 ' + escapeHtml(row.purchaseCurrency || 'TRY') + ' = ' + rate.toFixed(4) + ' TRY' : '') + '</div>' +
+            '<div class="product-cost-source">' + escapeHtml(netCost) + (rate > 0 ? ' · 1 ' + escapeHtml(row.purchaseCurrency || 'TRY') + ' = ' + formatDecimal(rate, 4) + ' TRY' : '') + '</div>' +
             '<div class="product-table-subtitle">' + escapeHtml(date) + '</div>';
     }
 
@@ -504,7 +507,7 @@ $(function () {
             : '';
         var pricingRate = Number(row.currentReferenceCurrencyExchangeRate || 0);
         var pricingRateText = dynamic && row.purchaseCurrency !== 'TRY' && pricingRate > 0
-            ? 'Güncel kur: 1 ' + escapeHtml(row.purchaseCurrency) + ' = ' + pricingRate.toFixed(4) + ' TRY'
+            ? 'Güncel kur: 1 ' + escapeHtml(row.purchaseCurrency) + ' = ' + formatDecimal(pricingRate, 4) + ' TRY'
             : (rateDate ? 'Kur zamanı: ' + escapeHtml(rateDate) : 'TRY baz para birimi');
         return '<div class="product-sale-value">' + escapeHtml(suggested) + '</div>' +
             '<div class="product-sale-live"><span></span>' + (dynamic ? 'Güncel kurla dinamik' : 'Manuel fiyatın güncel görünümü') + '</div>' +
@@ -512,22 +515,57 @@ $(function () {
     }
 
     function updateSummary() {
-        if (!dataTable) {
+        noxStock.products.product.getInventorySummary().then(function (summary) {
+            $('#ProductVisibleCount').text(Number(summary.totalCount || 0));
+            $('#ProductDynamicCount').text(Number(summary.dynamicPricingCount || 0));
+            $('#ProductMissingCostCount').text(Number(summary.missingCostCount || 0));
+            $('#ProductAttentionStockCount').text(Number(summary.attentionStockCount || 0));
+        }).catch(function () {
+            $('#ProductVisibleCount, #ProductDynamicCount, #ProductMissingCostCount, #ProductAttentionStockCount').text('—');
+        });
+    }
+
+    var lookupManagerType = 'brand';
+
+    function lookupManagerConfig() {
+        return lookupManagerType === 'brand'
+            ? { service: noxStock.brands.brand, label: 'marka', selector: '#Product_BrandId', filterSelector: '#ProductBrandFilter' }
+            : { service: noxStock.categories.category, label: 'kategori', selector: '#Product_CategoryId', filterSelector: '#ProductCategoryFilter' };
+    }
+
+    function renderLookupManager(items) {
+        var config = lookupManagerConfig();
+        var $list = $('#ProductLookupManagerList').empty();
+        if (!items.length) {
+            $list.html('<p class="px-4 py-8 text-center text-sm text-slate-500">Henüz kayıt yok.</p>');
             return;
         }
+        items.forEach(function (item) {
+            $list.append('<div class="flex items-center justify-between gap-3 px-4 py-3">' +
+                '<span class="min-w-0 truncate text-sm font-medium text-slate-800 dark:text-slate-100">' + escapeHtml(item.name) + '</span>' +
+                '<button type="button" class="product-lookup-delete shrink-0 text-rose-600 hover:text-rose-700" data-id="' + item.id + '" aria-label="' + escapeHtml(item.name) + ' ' + config.label + 'sını sil" title="Sil"><span class="material-icons-round text-base">delete</span></button>' +
+                '</div>');
+        });
+    }
 
-        var rows = dataTable.rows({ page: 'current' }).data().toArray();
-        var dynamic = rows.filter(isDynamicPrice).length;
-        var missingCost = rows.filter(function (row) { return !hasLastPurchaseCost(row); }).length;
-        var stockAttention = rows.filter(function (row) {
-            var quantity = Number(row.quantity || 0);
-            return row.trackStock !== false && quantity <= Number(row.criticalStockLevel || 0);
-        }).length;
+    function loadLookupManager() {
+        var config = lookupManagerConfig();
+        var $list = $('#ProductLookupManagerList');
+        $list.html('<p class="px-4 py-8 text-center text-sm text-slate-500">Yükleniyor…</p>');
+        config.service.getList({ skipCount: 0, maxResultCount: 500, sorting: 'name asc' }).then(function (result) {
+            renderLookupManager(result.items || []);
+        }).catch(function () {
+            $list.html('<p class="px-4 py-8 text-center text-sm text-rose-600">Kayıtlar yüklenemedi.</p>');
+        });
+    }
 
-        $('#ProductVisibleCount').text(rows.length);
-        $('#ProductDynamicCount').text(dynamic);
-        $('#ProductMissingCostCount').text(missingCost);
-        $('#ProductAttentionStockCount').text(stockAttention);
+    function addLookupManagerOption(item) {
+        var config = lookupManagerConfig();
+        $(config.selector + ', ' + config.filterSelector).each(function () {
+            if (!$(this).find('option[value="' + item.id + '"]').length) {
+                $(this).append(new Option(item.name, item.id));
+            }
+        });
     }
 
     function updateEquivalent(priceInput, currencyInput, target) {
@@ -752,12 +790,12 @@ $(function () {
             $modal.find('#EditSourceDocument').text(dashboard.dataset.documentNumber || '-');
             $modal.find('#EditSourceSupplier').text(dashboard.dataset.supplierName || '-');
             $modal.find('#EditSourceRate').text(hasCost && purchaseReferenceRate > 0
-                ? '1 ' + referenceCurrency + ' = ' + purchaseReferenceRate.toFixed(4) + ' TRY'
+                ? '1 ' + referenceCurrency + ' = ' + formatDecimal(purchaseReferenceRate, 4) + ' TRY'
                 : '-');
             $modal.find('#EditSourceDate').text(dashboard.dataset.purchaseDate || '-');
             $modal.find('#EditReferenceCost').text(hasCost && referenceCost > 0 ? editFormatMoney(referenceCost, referenceCurrency) : 'Maliyet bilgisi yok');
             $modal.find('#EditReferenceMeta').text(hasCost
-                ? 'Referans: ' + referenceCurrency + ' · Güncel ' + referenceCurrency + '/TRY kuru: ' + (currentReferenceRate ? currentReferenceRate.toFixed(4) : 'bekleniyor')
+                ? 'Referans: ' + referenceCurrency + ' · Güncel ' + referenceCurrency + '/TRY kuru: ' + (currentReferenceRate ? formatDecimal(currentReferenceRate, 4) : 'bekleniyor')
                 : 'TL maliyet, seçili referans dövizinde saklanır.');
             $modal.find('#EditPricingModeStatus').text(mode === 1 ? 'Dinamik fiyat aktif' : 'Manuel fiyat modu');
             $modal.find('#EditPricingModeStatus').toggleClass('is-dynamic', mode === 1).toggleClass('is-manual', mode !== 1);
@@ -1024,7 +1062,6 @@ $(function () {
         scrollX: true,
         drawCallback: function () {
             setProductsTableLoading(false);
-            updateSummary();
             initColumnResizeHandles();
         },
         ajax: abp.libs.datatables.createAjax(noxStock.products.product.getList, getFilterPayload),
@@ -1050,7 +1087,7 @@ $(function () {
             { title: 'OEM kodları', data: 'oemCodes', visible: false, orderable: false, render: function (data, type, row) { return escapeHtml(row.oemCodes || '-'); } },
             { title: 'Son alış tarihi', data: 'lastPurchaseDate', visible: false, render: function (data, type, row) { return renderOptionalDate(row); } },
             { title: 'Net alış (kaynak döviz)', data: 'lastPurchaseSourceNetUnitCost', visible: false, render: function (data, type, row) { return renderOptionalMoney(row.lastPurchaseSourceNetUnitCost, row.lastPurchaseSourceCurrencyCode); } },
-            { title: 'Alış fatura kuru', data: 'lastPurchaseExchangeRate', visible: false, render: function (data, type, row) { return Number(data || 0) > 0 ? '1 ' + escapeHtml(row.purchaseCurrency || 'TRY') + ' = ' + Number(data).toFixed(4) + ' TRY' : '<span class="product-table-muted">-</span>'; } },
+            { title: 'Alış fatura kuru', data: 'lastPurchaseExchangeRate', visible: false, render: function (data, type, row) { return Number(data || 0) > 0 ? '1 ' + escapeHtml(row.purchaseCurrency || 'TRY') + ' = ' + formatDecimal(data, 4) + ' TRY' : '<span class="product-table-muted">-</span>'; } },
             { title: 'Alış günü TL maliyeti', data: 'lastPurchaseCostTryAmount', visible: false, render: function (data, type, row) { return renderOptionalMoney(data, 'TRY'); } },
             { title: 'Referans satış fiyatı', data: 'referenceSaleUnitPrice', visible: false, render: function (data, type, row) { return renderOptionalReferenceSale(row); } },
             { title: 'Raf / konum', data: 'shelfLocation', visible: true, orderable: false, render: function (data, type, row) { return escapeHtml(row.shelfLocation || '-'); } }
@@ -1062,6 +1099,58 @@ $(function () {
     $('#NewProductButton').on('click', function () {
         createModal.open();
         refreshDialogHeroAfterOpen('.product-create-dialog-form');
+    });
+    $('#ProductLookupsModal').on('shown.bs.modal', function () {
+        loadLookupManager();
+        $('#ProductLookupManagerName').trigger('focus');
+    });
+    $('[data-lookup-manager-tab]').on('click', function () {
+        lookupManagerType = String($(this).data('lookup-manager-tab'));
+        $('[data-lookup-manager-tab]').removeClass('is-active');
+        $(this).addClass('is-active');
+        $('#ProductLookupManagerName').val('').attr('placeholder', lookupManagerType === 'brand' ? 'Yeni marka adı' : 'Yeni kategori adı');
+        $('#ProductLookupManagerHint').text(lookupManagerType === 'brand'
+            ? 'Markalar ürün kartlarında seçim için kullanılır.'
+            : 'Kategoriler ürün kartlarında seçim için kullanılır.');
+        loadLookupManager();
+    });
+    $('#ProductLookupManagerAdd').on('click', function () {
+        var config = lookupManagerConfig();
+        var $name = $('#ProductLookupManagerName');
+        var name = String($name.val() || '').trim();
+        if (!name) {
+            $name.trigger('focus');
+            return;
+        }
+        var $button = $(this).prop('disabled', true);
+        config.service.create({ name: name }).then(function (created) {
+            addLookupManagerOption(created);
+            $name.val('');
+            abp.notify.success('Yeni ' + config.label + ' eklendi.');
+            loadLookupManager();
+        }, function (error) {
+            abp.notify.error(error && error.message ? error.message : 'Kayıt eklenemedi.');
+        }).then(function () { $button.prop('disabled', false); });
+    });
+    $('#ProductLookupManagerName').on('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            $('#ProductLookupManagerAdd').trigger('click');
+        }
+    });
+    $('#ProductLookupManagerList').on('click', '.product-lookup-delete', function () {
+        var config = lookupManagerConfig();
+        var id = $(this).data('id');
+        abp.message.confirm('Bu ' + config.label + ' kaydını silmek istediğinize emin misiniz?').then(function (confirmed) {
+            if (!confirmed) return;
+            config.service.delete(id).then(function () {
+                $(config.selector + ', ' + config.filterSelector).find('option[value="' + id + '"]').remove();
+                abp.notify.success(config.label + ' silindi.');
+                loadLookupManager();
+            }, function (error) {
+                abp.notify.error(error && error.message ? error.message : 'Kayıt silinemedi. Ürüne bağlı kayıtlar silinemez.');
+            });
+        });
     });
     $('#CloseProductEditor').on('click', closeEditor);
     $('#Product_PurchasePrice, #Product_SalePrice, #Product_PurchaseCurrency, #Product_ProfitMarkupPercent').on('input change', function () {
@@ -1148,8 +1237,8 @@ $(function () {
         applyCurrencyView($(this).data('currency-view') === 'reference', true);
     });
 
-    editModal.onResult(function () { dataTable.ajax.reload(null, false); });
-    createModal.onResult(function () { dataTable.ajax.reload(null, false); });
+    editModal.onResult(function () { dataTable.ajax.reload(null, false); updateSummary(); });
+    createModal.onResult(function () { dataTable.ajax.reload(null, false); updateSummary(); });
 
     $('#ProductsTable').on('click', '.product-edit-button', function () {
         closeEditor();
@@ -1168,6 +1257,7 @@ $(function () {
             noxStock.products.product.delete(productId).then(function () {
                 abp.notify.info('Ürün silindi.');
                 dataTable.ajax.reload(null, false);
+                updateSummary();
             });
         });
     });
@@ -1184,6 +1274,7 @@ $(function () {
     });
     applyCurrencyView(showReferenceCurrency, false);
     dataTable.columns.adjust().draw(false);
+    updateSummary();
 
     $('#ToggleColumnsBtn').on('click', function (e) {
         e.stopPropagation();

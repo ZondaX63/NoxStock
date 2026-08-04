@@ -8,6 +8,7 @@ using NoxStock.BusinessPartners;
 using NoxStock.Documents;
 using NoxStock.Permissions;
 using NoxStock.Products;
+using NoxStock.Common;
 using NoxStock.Settings;
 using NoxStock.StockMovements;
 using NoxStock.MultiTenancy;
@@ -74,12 +75,12 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         List<Product> products;
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            var normalizedFilter = filter.ToLower();
+            var normalizedFilter = SearchText.Normalize(filter);
             var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
             var exactProducts = await AsyncExecuter.ToListAsync(query
                 .Where(x =>
-                    x.Sku == filter ||
-                    x.Barcode == filter ||
+                    x.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c") == normalizedFilter ||
+                    (x.Barcode != null && x.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c") == normalizedFilter) ||
                     (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode == normalizedOemFilter)))
                 .OrderBy(x => x.Name)
                 .Take(maxResultCount));
@@ -87,9 +88,9 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             products = exactProducts.Count > 0
                 ? exactProducts
                 : await AsyncExecuter.ToListAsync(query.Where(x =>
-                x.Name.ToLower().Contains(normalizedFilter) ||
-                x.Sku.ToLower().Contains(normalizedFilter) ||
-                (!string.IsNullOrEmpty(x.Barcode) && x.Barcode.Contains(filter)) ||
+                x.Name.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter) ||
+                x.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter) ||
+                (!string.IsNullOrEmpty(x.Barcode) && x.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter)) ||
                 (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode.Contains(normalizedOemFilter))))
                 .OrderBy(x => x.Name)
                 .Take(maxResultCount));
@@ -139,10 +140,11 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 NetSalePrice = calculation.UnitPrice,
                 CustomerFinalUnitPrice = calculation.CustomerFinalPriceInTry,
                 VatRate = product.VatRate,
-                SalesDiscount1 = product.SalesDiscount1,
-                SalesDiscount2 = product.SalesDiscount2,
-                SalesDiscount3 = product.SalesDiscount3,
-                SalesDiscount4 = product.SalesDiscount4,
+                // Varsayılan satış iskontosu ürün değil, müşteri politikasına aittir.
+                SalesDiscount1 = 0,
+                SalesDiscount2 = 0,
+                SalesDiscount3 = 0,
+                SalesDiscount4 = 0,
                 IsPriceAvailable = calculation.IsAvailable,
                 PriceUnavailableReason = calculation.UnavailableReason,
                 Currency = calculation.Currency,
@@ -204,15 +206,15 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
         var query = await _businessPartnerRepository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
-        var normalizedFilter = filter?.ToLowerInvariant();
+        var normalizedFilter = SearchText.Normalize(filter);
         query = query.Where(partner =>
             (partner.Type == BusinessPartnerType.Customer || partner.Type == BusinessPartnerType.Both) &&
             partner.Currency == "TRY");
         if (!string.IsNullOrWhiteSpace(filter))
         {
             query = query.Where(partner =>
-                partner.Name.ToLower().Contains(normalizedFilter!) ||
-                (partner.TaxNumber != null && partner.TaxNumber.ToLower().Contains(normalizedFilter!)) ||
+                partner.Name.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter!) ||
+                (partner.TaxNumber != null && partner.TaxNumber.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter!)) ||
                 (partner.Phone != null && partner.Phone.Contains(filter!)));
         }
 
@@ -231,7 +233,11 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 Phone = partner.Phone,
                 Balance = partner.Balance,
                 CreditLimit = partner.CreditLimit,
-                Currency = partner.Currency
+                Currency = partner.Currency,
+                DefaultSalesDiscount1 = partner.DefaultSalesDiscount1,
+                DefaultSalesDiscount2 = partner.DefaultSalesDiscount2,
+                DefaultSalesDiscount3 = partner.DefaultSalesDiscount3,
+                DefaultSalesDiscount4 = partner.DefaultSalesDiscount4
             }));
 
         return new PagedResultDto<PosCustomerLookupDto>(totalCount, customers);
@@ -302,6 +308,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             Description = input.Note,
             OperationKey = operationKey
         };
+        var businessPartner = await ResolveBusinessPartnerAsync(input.BusinessPartnerId, input.PaymentMethod, document.Currency);
+        document.BusinessPartnerId = businessPartner.Id;
 
         foreach (var cartItem in cartItems)
         {
@@ -315,7 +323,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             var usesManualPrice = cartItem.IsUnitPriceOverridden && cartItem.UnitPrice is > 0;
             var unitPrice = usesManualPrice ? cartItem.UnitPrice!.Value : calculation.ListSalePriceInTry;
             var vatRate = cartItem.VatRate ?? product.VatRate;
-            var effectiveDiscountRate = GetEffectiveSalesDiscountRate(product);
+            var effectiveDiscountRate = GetEffectiveSalesDiscountRate(businessPartner);
             var lineNet = unitPrice * cartItem.Quantity;
             var discount = lineNet * effectiveDiscountRate / 100m;
             var taxable = lineNet - discount;
@@ -334,10 +342,10 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 UnitPrice = unitPrice,
                 VatRate = vatRate,
                 DiscountRate = effectiveDiscountRate,
-                SalesDiscount1 = product.SalesDiscount1,
-                SalesDiscount2 = product.SalesDiscount2,
-                SalesDiscount3 = product.SalesDiscount3,
-                SalesDiscount4 = product.SalesDiscount4,
+                SalesDiscount1 = businessPartner.DefaultSalesDiscount1,
+                SalesDiscount2 = businessPartner.DefaultSalesDiscount2,
+                SalesDiscount3 = businessPartner.DefaultSalesDiscount3,
+                SalesDiscount4 = businessPartner.DefaultSalesDiscount4,
                 Total = RoundMoney(taxable + vat),
                 IsUnitPriceOverridden = usesManualPrice,
                 PriceCurrencyCode = calculation.Currency,
@@ -369,9 +377,6 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         }));
         document.GrandTotal = RoundMoney(document.Subtotal - document.DiscountTotal + document.VatTotal);
 
-        var businessPartner = await ResolveBusinessPartnerAsync(input.BusinessPartnerId, input.PaymentMethod, document.Currency);
-        document.BusinessPartnerId = businessPartner.Id;
-
         Account? account = null;
         if (input.PaymentMethod is PosPaymentMethod.Cash or PosPaymentMethod.Bank)
         {
@@ -384,7 +389,9 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             if (businessPartner.CreditLimit > 0 && businessPartner.Balance + document.GrandTotal > businessPartner.CreditLimit)
             {
                 throw new BusinessException("NoxStock:CreditLimitExceeded")
-                    .WithData("CreditLimit", businessPartner.CreditLimit);
+                    .WithData("PartnerName", businessPartner.Name)
+                    .WithData("CreditLimit", businessPartner.CreditLimit)
+                    .WithData("ProjectedExposure", businessPartner.Balance + document.GrandTotal);
             }
 
             businessPartner.Balance += document.GrandTotal;
@@ -585,12 +592,12 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
 
     private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
 
-    private static decimal GetEffectiveSalesDiscountRate(Product product)
+    private static decimal GetEffectiveSalesDiscountRate(BusinessPartner businessPartner)
     {
-        var remainingFactor = (1m - product.SalesDiscount1 / 100m) *
-            (1m - product.SalesDiscount2 / 100m) *
-            (1m - product.SalesDiscount3 / 100m) *
-            (1m - product.SalesDiscount4 / 100m);
+        var remainingFactor = (1m - businessPartner.DefaultSalesDiscount1 / 100m) *
+            (1m - businessPartner.DefaultSalesDiscount2 / 100m) *
+            (1m - businessPartner.DefaultSalesDiscount3 / 100m) *
+            (1m - businessPartner.DefaultSalesDiscount4 / 100m);
         return RoundMoney((1m - remainingFactor) * 100m);
     }
 

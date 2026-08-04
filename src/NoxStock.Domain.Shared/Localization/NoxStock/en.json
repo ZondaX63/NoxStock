@@ -2,6 +2,7 @@
   "Culture": "en",
   "Texts": {
     "AppName": "NoxStock",
+    "NoxStock:CreditLimitExceeded": "This transaction would exceed the limit for {PartnerName}. Limit: {CreditLimit}; projected outstanding balance: {ProjectedExposure}.",
     "Auth:HostLoginEyebrow": "Platform management",
     "Auth:HostLoginTitle": "Administrator sign in",
     "Auth:HostLoginDescription": "Sign in with your administrator account to manage companies and the platform.",

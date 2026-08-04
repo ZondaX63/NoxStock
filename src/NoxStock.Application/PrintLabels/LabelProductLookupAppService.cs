@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using NoxStock.Permissions;
 using NoxStock.Products;
+using NoxStock.Common;
 using NoxStock.MultiTenancy;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -30,22 +31,22 @@ public class LabelProductLookupAppService : ApplicationService, ILabelProductLoo
         CurrentTenant.RequireTenantId();
         var query = await _productRepository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
-        var normalizedFilter = filter?.ToLowerInvariant();
+        var normalizedFilter = SearchText.Normalize(filter);
         var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var exactQuery = query.Where(product =>
-                product.Sku == filter ||
-                product.Barcode == filter ||
+                product.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c") == normalizedFilter ||
+                (product.Barcode != null && product.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c") == normalizedFilter) ||
                 (normalizedOemFilter.Length > 0 &&
                  product.OemCodes.Any(code => code.SearchCode == normalizedOemFilter)));
             query = await AsyncExecuter.AnyAsync(exactQuery)
                 ? exactQuery
                 : query.Where(product =>
-                    product.Name.ToLower().Contains(normalizedFilter!) ||
-                    product.Sku.ToLower().Contains(normalizedFilter!) ||
-                    (product.Barcode != null && product.Barcode.ToLower().Contains(normalizedFilter!)) ||
+                    product.Name.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter) ||
+                    product.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter) ||
+                    (product.Barcode != null && product.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter)) ||
                     (normalizedOemFilter.Length > 0 &&
                      product.OemCodes.Any(code => code.SearchCode.Contains(normalizedOemFilter))));
         }

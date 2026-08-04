@@ -6,6 +6,7 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using NoxStock.Permissions;
+using NoxStock.Common;
 using NoxStock.MultiTenancy;
 
 namespace NoxStock.BusinessPartners;
@@ -74,9 +75,9 @@ public class BusinessPartnerAppService :
 
         if (!string.IsNullOrWhiteSpace(input.Filter))
         {
-            var filter = input.Filter.ToLower();
-            query = query.Where(x => x.Name.ToLower().Contains(filter) || 
-                                     (x.TaxNumber != null && x.TaxNumber.Contains(filter)));
+            var filter = SearchText.Normalize(input.Filter);
+            query = query.Where(x => x.Name.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(filter) ||
+                                     (x.TaxNumber != null && x.TaxNumber.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(filter)));
         }
 
         return query;

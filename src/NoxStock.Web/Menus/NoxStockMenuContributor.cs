@@ -60,18 +60,6 @@ public class NoxStockMenuContributor : IMenuContributor
                 ).RequirePermissions(NoxStockPermissions.Products.Default)
             ).AddItem(
                 new ApplicationMenuItem(
-                    "Inventory.Categories",
-                    l["Menu:Categories"],
-                    url: "/Categories"
-                ).RequirePermissions(NoxStockPermissions.Categories.Default)
-            ).AddItem(
-                new ApplicationMenuItem(
-                    "Inventory.Brands",
-                    l["Menu:Brands"],
-                    url: "/Brands"
-                ).RequirePermissions(NoxStockPermissions.Brands.Default)
-            ).AddItem(
-                new ApplicationMenuItem(
                     "Inventory.StockMovements",
                     l["Menu:StockMovements"],
                     url: "/ProductMovements"

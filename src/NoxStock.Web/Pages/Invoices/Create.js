@@ -1,4 +1,9 @@
 $(function () {
+    function compactInputNumber(value, digits) {
+        var number = Number(value || 0);
+        if (!Number.isFinite(number)) return '0';
+        return number.toFixed(digits || 6).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '').replace(/\.$/, '');
+    }
     var $tbody = $('#ItemsTbody');
     var $template = $('#ItemRowTemplate').html();
     var currency = $('#InvoiceCurrency').val() || $('#InvoiceForm').data('currency') || 'TRY';
@@ -15,9 +20,16 @@ $(function () {
         modalClass: 'ProductCreateModal'
     });
     var lookupCache = new Map();
+    var businessPartnerLookupById = new Map();
 
     function escapeHtml(value) {
         return $('<div>').text(value || '').html();
+    }
+
+    function normalizeSearchText(value) {
+        return String(value || '').trim().toLocaleLowerCase('tr-TR')
+            .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+            .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c');
     }
 
     function formatAmount(value, currencyCode) {
@@ -70,7 +82,7 @@ $(function () {
         }).then(function (response) { return response.ok ? response.json() : null; })
             .then(function (data) {
                 var rate = data && data[selectedCurrency.toLowerCase()] && data[selectedCurrency.toLowerCase()].rate;
-                if (Number(rate) > 0) $rate.val(Number(rate).toFixed(6));
+                if (Number(rate) > 0) $rate.val(compactInputNumber(rate, 6));
             })
             .catch(function () { /* A manual rate can still be supplied. */ });
     }
@@ -174,6 +186,7 @@ $(function () {
         var id = uuidv4();
         var html = $template.replace(/\{id\}/g, id);
         $tbody.append(html);
+        applyBusinessPartnerDiscountDefaults(businessPartnerLookupById.get(String($('#InvoiceBusinessPartner').val() || '')));
         calculateTotals();
     }
 
@@ -190,7 +203,7 @@ $(function () {
 
     function fetchLookup(url, query) {
         var normalizedQuery = String(query || '').trim();
-        var cacheKey = url + '|' + normalizedQuery.toLocaleLowerCase('tr-TR');
+        var cacheKey = url + '|' + normalizeSearchText(normalizedQuery);
         if (lookupCache.has(cacheKey)) {
             return Promise.resolve(lookupCache.get(cacheKey));
         }
@@ -250,10 +263,10 @@ $(function () {
                 : 'Eşleşen ürün bulunamadı. Yeni ürün oluşturabilirsiniz.');
 
             if (selectBestMatch && items.length) {
-                var normalizedQuery = query.toLocaleLowerCase('tr-TR');
+                var normalizedQuery = normalizeSearchText(query);
                 var exactMatch = items.find(function (item) {
                     return [item.barcode, item.sku, item.name].some(function (value) {
-                        return String(value || '').trim().toLocaleLowerCase('tr-TR') === normalizedQuery;
+                        return normalizeSearchText(value) === normalizedQuery;
                     });
                 });
                 var selectedItem = exactMatch || (items.length === 1 ? items[0] : null);
@@ -287,6 +300,7 @@ $(function () {
             }
 
             var items = result.items || [];
+            items.forEach(function (item) { businessPartnerLookupById.set(String(item.id), item); });
             replaceLookupOptions($select, items, 'Seçiniz...');
             $input.data('lookupLoaded', true);
             $status.text(items.length
@@ -294,10 +308,10 @@ $(function () {
                 : 'Eşleşen cari bulunamadı.');
 
             if (selectBestMatch && items.length) {
-                var normalizedQuery = query.toLocaleLowerCase('tr-TR');
+                var normalizedQuery = normalizeSearchText(query);
                 var exactMatch = items.find(function (item) {
                     return [item.taxNumber, item.name].some(function (value) {
-                        return String(value || '').trim().toLocaleLowerCase('tr-TR') === normalizedQuery;
+                        return normalizeSearchText(value) === normalizedQuery;
                     });
                 });
                 var selectedItem = exactMatch || (items.length === 1 ? items[0] : null);
@@ -314,6 +328,26 @@ $(function () {
             }
             return [];
         });
+    }
+
+    function applyBusinessPartnerDiscountDefaults(partner) {
+        if (!useProductPricing || !partner) return;
+        var discounts = [
+            Number(partner.defaultSalesDiscount1 || 0),
+            Number(partner.defaultSalesDiscount2 || 0),
+            Number(partner.defaultSalesDiscount3 || 0),
+            Number(partner.defaultSalesDiscount4 || 0)
+        ];
+        $tbody.find('.item-row').each(function () {
+            var $row = $(this);
+            var existing = $row.find('.sales-discount-input').map(function () { return Number($(this).val()) || 0; }).get();
+            if (existing.some(function (value) { return value !== 0; }) && !$row.data('customerDiscountApplied')) return;
+            $row.find('.sales-discount-input').each(function (index) {
+                $(this).val(compactInputNumber(discounts[index], 6));
+            });
+            $row.data('customerDiscountApplied', true);
+        });
+        calculateTotals();
     }
 
     function quoteProductPrice($row) {
@@ -342,18 +376,10 @@ $(function () {
                     return;
                 }
                 if (isLatestQuote && !hasManualPrice && useProductPricing) {
-                    $row.find('.price-input').val(Number(quote.listSalePriceInTry || quote.unitPrice || 0).toFixed(4));
-                    $row.find('.vat-input').val(Number(quote.vatRate || 0).toFixed(2));
-                    [
-                        quote.salesDiscount1,
-                        quote.salesDiscount2,
-                        quote.salesDiscount3,
-                        quote.salesDiscount4
-                    ].forEach(function (value, index) {
-                        $row.find('.sales-discount-input').eq(index).val(Number(value || 0).toFixed(4));
-                    });
+                    $row.find('.price-input').val(compactInputNumber(quote.listSalePriceInTry || quote.unitPrice || 0, 6));
+                    $row.find('.vat-input').val(compactInputNumber(quote.vatRate || 0, 6));
                 } else if (isLatestQuote && !hasManualPrice) {
-                    $row.find('.price-input').val(Number(quote.purchaseListPrice || quote.purchasePrice || 0).toFixed(4));
+                    $row.find('.price-input').val(compactInputNumber(quote.purchaseListPrice || quote.purchasePrice || 0, 6));
                 }
                 if (usePurchaseCosting) {
                     [
@@ -362,7 +388,7 @@ $(function () {
                         quote.purchaseDiscount3,
                         quote.purchaseDiscount4
                     ].forEach(function (value, index) {
-                        $row.find('.purchase-discount-input').eq(index).val(Number(value || 0).toFixed(4));
+                        $row.find('.purchase-discount-input').eq(index).val(compactInputNumber(value, 6));
                     });
                 }
 
@@ -370,8 +396,8 @@ $(function () {
                 var pricingCurrency = quote.referenceCurrencyCode || quote.lastPurchaseCostCurrencyCode || quote.purchaseCurrency || 'TRY';
                 var hasLastCost = Number(quote.lastPurchaseCostCurrencyAmount || 0) > 0;
                 var sourceDetails = hasLastCost
-                    ? 'Son onaylı alış: ' + Number(quote.lastPurchaseSourceNetUnitCost || 0).toFixed(4) + ' ' + sourceCurrency +
-                        ' · fiyatlama maliyeti: ' + Number(quote.lastPurchaseCostCurrencyAmount || 0).toFixed(4) + ' ' + pricingCurrency +
+                    ? 'Son onaylı alış: ' + compactInputNumber(quote.lastPurchaseSourceNetUnitCost, 6) + ' ' + sourceCurrency +
+                        ' · fiyatlama maliyeti: ' + compactInputNumber(quote.lastPurchaseCostCurrencyAmount, 6) + ' ' + pricingCurrency +
                         (quote.lastPurchaseDocumentNumber ? ' · ' + quote.lastPurchaseDocumentNumber : '') +
                         (quote.lastPurchaseSupplierName ? ' · ' + quote.lastPurchaseSupplierName : '')
                     : 'Bu ürün için onaylı alış maliyeti yok.';
@@ -381,7 +407,7 @@ $(function () {
                     priceDetails = '<span class="invoice-price-badge invoice-price-badge-dynamic">Güncel satış fiyatı</span>' +
                         '<span class="invoice-price-detail">' + sourceDetails + '</span>' +
                         '<span class="invoice-price-detail">Referans satış: ' + formatAmount(quote.referenceSaleUnitPrice || 0, pricingCurrency) + '</span>' +
-                        '<span class="invoice-price-detail">' + pricingCurrency + '/TRY: ' + pricingRate.toFixed(4) + ' · %' + Number(quote.profitMarkupPercent || 0).toFixed(2) + ' markup</span>' +
+                        '<span class="invoice-price-detail">' + pricingCurrency + '/TRY: ' + compactInputNumber(pricingRate, 6) + ' · %' + compactInputNumber(quote.profitMarkupPercent, 6) + ' markup</span>' +
                         '<span class="invoice-price-detail">Taslakta önerilir; onayda güncel kurla yeniden hesaplanıp kilitlenir. Fiyatı değiştirirseniz manuel override korunur.</span>';
                 } else if (useProductPricing) {
                     priceDetails = '<span class="invoice-price-badge invoice-price-badge-warning">Dinamik maliyet beklemede</span>' +
@@ -450,7 +476,7 @@ $(function () {
             remainingFactor *= 1 - discount / 100;
         });
         var effectiveRate = (1 - remainingFactor) * 100;
-        $row.find('input[name$=".DiscountRate"]').val(effectiveRate.toFixed(4));
+        $row.find('input[name$=".DiscountRate"]').val(compactInputNumber(effectiveRate, 6));
         return effectiveRate;
     }
 
@@ -524,12 +550,12 @@ $(function () {
                 var rate = currency === 'TRY' ? 1 : Number(rates[currency] && rates[currency].rate || 0);
                 var $documentRate = $('#InvoiceExchangeRate');
                 if ($documentRate.length && rate > 0 && !$documentRate.data('manual-rate') && Number($documentRate.val() || 0) <= 1) {
-                    $documentRate.val(rate.toFixed(6));
+                    $documentRate.val(compactInputNumber(rate, 6));
                 }
                 $('#InvoiceRateInfo').text(useProductPricing
                     ? 'Satış belgesi TRY olarak kaydedilir; ürün referans kuru satır bazında kilitlenir.'
                     : rate > 0
-                        ? currency + '/TRY güncel kur: ' + rate.toFixed(4) + '. Onaylanan belgede kullanılan kur sabitlenir.'
+                        ? currency + '/TRY güncel kur: ' + compactInputNumber(rate, 6) + '. Onaylanan belgede kullanılan kur sabitlenir.'
                         : 'Güncel kur bulunamadı. Sunucu belge kaydında tekrar deneyecek.');
                 renderPurchaseCostImpact();
             })
@@ -626,6 +652,10 @@ $(function () {
         searchBusinessPartners(true);
     });
 
+    $('#InvoiceBusinessPartner').on('change', function () {
+        applyBusinessPartnerDiscountDefaults(businessPartnerLookupById.get(String($(this).val() || '')));
+    });
+
     $tbody.on('click', '.quick-product-create', function () {
         quickProductRow = $(this).closest('.item-row');
         var suggestedName = quickProductRow.find('.product-search').val();
@@ -640,8 +670,12 @@ $(function () {
         window.setTimeout(function () {
             var $form = $('.product-create-dialog-form').last();
             if ($form.length) {
-                syncInvoiceProductCardMode($form);
-                syncInvoiceProductCardRate($form, true);
+                if (noxStock.productCardModal) {
+                    noxStock.productCardModal.init($form);
+                } else {
+                    syncInvoiceProductCardMode($form);
+                    syncInvoiceProductCardRate($form, true);
+                }
             }
         }, 180);
     });
@@ -659,7 +693,7 @@ $(function () {
         // card by its generated SKU, then select it on the originating row.
         fetchLookup(productLookupUrl, sku).then(function (result) {
             var product = (result.items || []).find(function (item) {
-                return String(item.sku || '').toLocaleLowerCase('tr-TR') === sku.toLocaleLowerCase('tr-TR');
+                return normalizeSearchText(item.sku) === normalizeSearchText(sku);
             });
             if (!product) {
                 abp.notify.warn('Ürün kaydedildi ancak fatura satırında otomatik seçilemedi. Arayarak seçebilirsiniz.');

@@ -144,10 +144,10 @@
                                     }
                                 </select><button type="button" class="quick-product-create" title="Listede olmayan ürünü kaydet">Yeni ürün</button></div><span class="product-search-status invoice-lookup-status" aria-live="polite">Aramak için yazın veya barkod okutun.</span></div>
                             </td>
-                            <td><input type="number" name="Invoice.Items[@index].Quantity" class="calc-input quantity-input invoice-number-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0.01" step="any" required /></td>
+                            <td><input type="number" name="Invoice.Items[@index].Quantity" class="calc-input quantity-input invoice-number-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="1" step="1" required /></td>
                             <td>
                                 <input type="hidden" name="Invoice.Items[@index].IsUnitPriceOverridden" class="price-overridden-input" value="@item.IsUnitPriceOverridden.ToString().ToLowerInvariant()" />
-                                <input type="number" name="Invoice.Items[@index].UnitPrice" class="calc-input price-input invoice-price-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" step="any" required />
+                                <input type="number" name="Invoice.Items[@index].UnitPrice" class="calc-input price-input invoice-price-input w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 dark:bg-slate-800 dark:border-slate-600 dark:text-white" value="@item.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" step="1" required />
                                 <p class="price-source mt-1 text-xs text-slate-500">Bu satırın kaydedilmiş fiyatı.</p>
                             </td>
                             <td>
@@ -311,5 +311,6 @@
 </style>
 
 @section Scripts {
+    <script src="/Pages/Products/ProductCardModal.js" asp-append-version="true"></script>
     <script src="/Pages/Invoices/Create.js" asp-append-version="true"></script>
 }

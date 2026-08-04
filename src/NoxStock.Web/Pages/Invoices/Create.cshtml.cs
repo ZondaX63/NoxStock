@@ -166,6 +166,10 @@ public class CreateModel : NoxStockPageModel
                 partner.Id,
                 partner.Name,
                 partner.TaxNumber,
+                partner.DefaultSalesDiscount1,
+                partner.DefaultSalesDiscount2,
+                partner.DefaultSalesDiscount3,
+                partner.DefaultSalesDiscount4,
                 text = FormatBusinessPartnerLabel(partner)
             }),
             result.TotalCount

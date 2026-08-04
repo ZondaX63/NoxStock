@@ -10,6 +10,7 @@ using NoxStock.Documents;
 using NoxStock.MultiTenancy;
 using NoxStock.Permissions;
 using NoxStock.Products;
+using NoxStock.Common;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Entities;
@@ -174,17 +175,17 @@ public class CustomerSalesHistoryAppService : ApplicationService, ICustomerSales
 
         if (!string.IsNullOrWhiteSpace(input.ProductSearch))
         {
-            var productSearch = input.ProductSearch.Trim().ToLowerInvariant();
+            var productSearch = SearchText.Normalize(input.ProductSearch);
             query = query.Where(x =>
-                x.ProductName.ToLower().Contains(productSearch) ||
-                x.Sku.ToLower().Contains(productSearch) ||
-                (x.Barcode != null && x.Barcode.Contains(productSearch)));
+                x.ProductName.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(productSearch) ||
+                x.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(productSearch) ||
+                (x.Barcode != null && x.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(productSearch)));
         }
 
         if (!string.IsNullOrWhiteSpace(input.DocumentNumber))
         {
-            var documentNumber = input.DocumentNumber.Trim().ToLowerInvariant();
-            query = query.Where(x => x.DocumentNumber.ToLower().Contains(documentNumber));
+            var documentNumber = SearchText.Normalize(input.DocumentNumber);
+            query = query.Where(x => x.DocumentNumber.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(documentNumber));
         }
 
         if (input.BrandId.HasValue)

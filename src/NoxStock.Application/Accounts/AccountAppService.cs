@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using NoxStock.Permissions;
+using NoxStock.Common;
 using NoxStock.MultiTenancy;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -197,12 +198,12 @@ public class AccountAppService :
         CurrentTenant.RequireTenantId();
         await CheckGetListPolicyAsync();
 
-        var filter = input.Filter?.Trim().ToLowerInvariant();
+        var filter = SearchText.Normalize(input.Filter);
         var currency = input.Currency?.Trim().ToUpperInvariant();
         var query = (await Repository.GetQueryableAsync())
             .Where(account => account.IsActive)
             .WhereIf(!string.IsNullOrWhiteSpace(currency), account => account.Currency == currency)
-            .WhereIf(!string.IsNullOrWhiteSpace(filter), account => account.Name.ToLower().Contains(filter!));
+            .WhereIf(!string.IsNullOrWhiteSpace(filter), account => account.Name.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(filter));
 
         var totalCount = await AsyncExecuter.CountAsync(query);
         var maxResultCount = Math.Clamp(input.MaxResultCount, 1, 30);

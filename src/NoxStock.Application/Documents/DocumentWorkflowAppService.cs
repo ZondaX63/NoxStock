@@ -93,6 +93,8 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
             throw new BusinessException("NoxStock:PaymentExceedsDocumentTotal");
         }
 
+        await EnsureBusinessPartnerCreditLimitAsync(document, paymentAmount);
+
         if (document.Type is DocumentType.SaleInvoice or DocumentType.PurchaseInvoice)
         {
             await ApplyStockAsync(document);
@@ -267,6 +269,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
             throw new BusinessException("NoxStock:SalesDocumentsRequireTry");
         }
 
+        var businessPartner = await _businessPartnerRepository.GetAsync(document.BusinessPartnerId);
         ProductPriceCalculation? firstCalculation = null;
         foreach (var item in document.Items)
         {
@@ -286,7 +289,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
                 item.UnitPrice = calculation.ListSalePriceInTry;
             }
 
-            ApplyProductSalesDiscountDefaults(item, product);
+            ApplyBusinessPartnerSalesDiscountDefaults(item, businessPartner);
             if (item.VatRate == 0m && product.VatRate > 0)
             {
                 item.VatRate = product.VatRate;
@@ -335,7 +338,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
     private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
 
-    private static void ApplyProductSalesDiscountDefaults(DocumentItem item, Product product)
+    private static void ApplyBusinessPartnerSalesDiscountDefaults(DocumentItem item, BusinessPartner businessPartner)
     {
         var hasLineDiscounts = item.SalesDiscount1 != 0m || item.SalesDiscount2 != 0m ||
             item.SalesDiscount3 != 0m || item.SalesDiscount4 != 0m || item.DiscountRate != 0m;
@@ -344,10 +347,10 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
             return;
         }
 
-        item.SalesDiscount1 = product.SalesDiscount1;
-        item.SalesDiscount2 = product.SalesDiscount2;
-        item.SalesDiscount3 = product.SalesDiscount3;
-        item.SalesDiscount4 = product.SalesDiscount4;
+        item.SalesDiscount1 = businessPartner.DefaultSalesDiscount1;
+        item.SalesDiscount2 = businessPartner.DefaultSalesDiscount2;
+        item.SalesDiscount3 = businessPartner.DefaultSalesDiscount3;
+        item.SalesDiscount4 = businessPartner.DefaultSalesDiscount4;
     }
 
     private static decimal GetEffectiveSalesDiscountRate(DocumentItem item)
@@ -442,6 +445,41 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         }
 
         await _businessPartnerRepository.UpdateAsync(businessPartner);
+    }
+
+    private async Task EnsureBusinessPartnerCreditLimitAsync(Document document, decimal paymentAmount)
+    {
+        if (document.Type is not (DocumentType.SaleInvoice or DocumentType.PurchaseInvoice))
+        {
+            return;
+        }
+
+        var outstandingAmount = Math.Max(0m, document.GrandTotal - paymentAmount);
+        if (outstandingAmount <= 0m)
+        {
+            return;
+        }
+
+        var businessPartner = await _businessPartnerRepository.GetAsync(document.BusinessPartnerId);
+        if (businessPartner.CreditLimit <= 0m)
+        {
+            return;
+        }
+
+        // Customers carry receivables as a positive balance; supplier debt is
+        // represented as a negative balance. Both are checked against the
+        // same user-defined exposure limit before stock or money is posted.
+        var projectedExposure = document.Type == DocumentType.SaleInvoice
+            ? Math.Max(0m, businessPartner.Balance) + outstandingAmount
+            : Math.Max(0m, -businessPartner.Balance) + outstandingAmount;
+
+        if (projectedExposure > businessPartner.CreditLimit)
+        {
+            throw new BusinessException("NoxStock:CreditLimitExceeded")
+                .WithData("PartnerName", businessPartner.Name)
+                .WithData("CreditLimit", businessPartner.CreditLimit)
+                .WithData("ProjectedExposure", projectedExposure);
+        }
     }
 
     private async Task ReverseBusinessPartnerBalanceAsync(Document document)

@@ -17,6 +17,7 @@ using NoxStock.Categories;
 using NoxStock.BusinessPartners;
 using NoxStock.Documents;
 using NoxStock.MultiTenancy;
+using NoxStock.Common;
 using NoxStock.Permissions;
 using Volo.Abp;
 
@@ -154,7 +155,7 @@ public class ProductAppService :
 
         var query = await Repository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
-        var normalizedFilter = filter?.ToLowerInvariant();
+        var normalizedFilter = SearchText.Normalize(filter);
         var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
         var ids = input.Ids?.Distinct().ToList();
 
@@ -164,17 +165,17 @@ public class ProductAppService :
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var exactQuery = query.Where(product =>
-                product.Sku == filter ||
-                product.Barcode == filter ||
+                product.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c") == normalizedFilter ||
+                (product.Barcode != null && product.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c") == normalizedFilter) ||
                 (normalizedOemFilter.Length > 0 &&
                  product.OemCodes.Any(code => code.SearchCode == normalizedOemFilter)));
             exactCount = await AsyncExecuter.CountAsync(exactQuery);
             query = exactCount > 0
                 ? exactQuery
                 : query.Where(product =>
-                product.Name.ToLower().Contains(normalizedFilter!) ||
-                product.Sku.ToLower().Contains(normalizedFilter!) ||
-                (product.Barcode != null && product.Barcode.ToLower().Contains(normalizedFilter!)) ||
+                product.Name.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter) ||
+                product.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter) ||
+                (product.Barcode != null && product.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter)) ||
                 (normalizedOemFilter.Length > 0 &&
                  product.OemCodes.Any(code => code.SearchCode.Contains(normalizedOemFilter))));
         }
@@ -212,11 +213,26 @@ public class ProductAppService :
             }).ToList());
     }
 
+    public async Task<ProductInventorySummaryDto> GetInventorySummaryAsync()
+    {
+        CurrentTenant.RequireTenantId();
+        var query = await Repository.GetQueryableAsync();
+
+        return new ProductInventorySummaryDto
+        {
+            TotalCount = await AsyncExecuter.CountAsync(query),
+            DynamicPricingCount = await AsyncExecuter.CountAsync(query.Where(x => x.PricingMode == ProductPricingMode.DynamicCurrencyMarkup)),
+            MissingCostCount = await AsyncExecuter.CountAsync(query.Where(x => !x.LastPurchaseCostCurrencyAmount.HasValue || x.LastPurchaseCostCurrencyAmount <= 0)),
+            AttentionStockCount = await AsyncExecuter.CountAsync(query.Where(x => x.TrackStock && x.Quantity <= x.CriticalStockLevel))
+        };
+    }
+
     protected override async Task<IQueryable<Product>> CreateFilteredQueryAsync(ProductGetListInput input)
     {
         var queryable = await Repository.GetQueryableAsync();
         var filter = input.Filter?.Trim();
         var normalizedOemFilter = ProductOemCodeNormalizer.Normalize(filter);
+        var normalizedFilter = SearchText.Normalize(filter);
         var stockStatus = input.StockStatus?.Trim().ToLowerInvariant();
         var pricingMode = input.PricingMode?.Trim().ToLowerInvariant();
         var costStatus = input.CostStatus?.Trim().ToLowerInvariant();
@@ -240,15 +256,15 @@ public class ProductAppService :
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var exactQuery = queryable.Where(x =>
-                x.Sku == filter ||
-                x.Barcode == filter ||
+                x.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c") == normalizedFilter ||
+                (x.Barcode != null && x.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c") == normalizedFilter) ||
                 (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode == normalizedOemFilter)));
             queryable = await AsyncExecuter.CountAsync(exactQuery) > 0
                 ? exactQuery
                 : queryable.Where(x =>
-                    x.Name.Contains(filter!) ||
-                    x.Sku.Contains(filter!) ||
-                    (x.Barcode != null && x.Barcode.Contains(filter!)) ||
+                    x.Name.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter) ||
+                    x.Sku.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter) ||
+                    (x.Barcode != null && x.Barcode.ToLower().Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ş", "s").Replace("ö", "o").Replace("ç", "c").Contains(normalizedFilter)) ||
                     (normalizedOemFilter.Length > 0 && x.OemCodes.Any(o => o.SearchCode.Contains(normalizedOemFilter))));
         }
 

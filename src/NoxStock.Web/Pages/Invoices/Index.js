@@ -1,4 +1,10 @@
 $(function () {
+    function normalizeSearchText(value) {
+        return String(value || '').trim().toLocaleLowerCase('tr-TR')
+            .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+            .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c');
+    }
+
     var documentService = noxStock.documents.document;
     var documentWorkflowService = noxStock.documents.documentWorkflow;
 
@@ -37,7 +43,7 @@ $(function () {
 
                 function loadAccounts() {
                     var filter = String($search.val() || '').trim();
-                    var cacheKey = currency + '|' + filter.toLocaleLowerCase('tr-TR');
+                    var cacheKey = currency + '|' + normalizeSearchText(filter);
                     if (cache.has(cacheKey)) {
                         renderAccounts(cache.get(cacheKey));
                         $status.text(cache.get(cacheKey).length ? '' : 'Eşleşen aktif hesap bulunamadı.');

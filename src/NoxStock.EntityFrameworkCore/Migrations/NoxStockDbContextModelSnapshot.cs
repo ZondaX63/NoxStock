@@ -275,6 +275,26 @@ namespace NoxStock.Migrations
                     b.Property<decimal>("CreditLimit")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<decimal>("DefaultSalesDiscount1")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("DefaultSalesDiscount2")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("DefaultSalesDiscount3")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("DefaultSalesDiscount4")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(0m);
+
                     b.Property<string>("Currency")
                         .IsRequired()
                         .ValueGeneratedOnAdd()

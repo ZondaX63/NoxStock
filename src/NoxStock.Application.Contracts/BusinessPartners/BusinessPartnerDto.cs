@@ -15,4 +15,8 @@ public class BusinessPartnerDto : FullAuditedEntityDto<Guid>
     public decimal Balance { get; set; }
     public decimal CreditLimit { get; set; }
     public string Currency { get; set; }
+    public decimal DefaultSalesDiscount1 { get; set; }
+    public decimal DefaultSalesDiscount2 { get; set; }
+    public decimal DefaultSalesDiscount3 { get; set; }
+    public decimal DefaultSalesDiscount4 { get; set; }
 }

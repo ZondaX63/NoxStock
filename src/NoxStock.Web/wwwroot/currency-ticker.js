@@ -6,28 +6,9 @@
     var usd = document.getElementById('CurrencyTickerUsd');
     var eur = document.getElementById('CurrencyTickerEur');
     var updated = document.getElementById('CurrencyTickerUpdated');
-    var mode = document.getElementById('CurrencyTickerMode');
     var ticker = document.getElementById('CurrencyTicker');
 
     if (!ticker || !usd || !eur || !updated) return;
-
-    function applyMode(value) {
-        if (!ticker) return;
-        ticker.querySelectorAll('[data-currency-ticker-item]').forEach(function (item) {
-            item.classList.toggle('hidden', value !== 'both' && item.dataset.currencyTickerItem !== value);
-        });
-        var separator = ticker.querySelector('[data-currency-ticker-separator]');
-        if (separator) separator.classList.toggle('hidden', value !== 'both');
-    }
-
-    if (mode) {
-        mode.value = localStorage.getItem('noxstock.currencyTickerMode') || 'both';
-        applyMode(mode.value);
-        mode.addEventListener('change', function () {
-            localStorage.setItem('noxstock.currencyTickerMode', mode.value);
-            applyMode(mode.value);
-        });
-    }
 
     function format(rate) {
         return rate === undefined || rate === null ? '--' : new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(rate) + ' TL';

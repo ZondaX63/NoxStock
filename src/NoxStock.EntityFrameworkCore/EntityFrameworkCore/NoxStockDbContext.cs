@@ -204,6 +204,10 @@ public class NoxStockDbContext :
             b.Property(x => x.Balance).HasColumnType("decimal(18,4)");
             b.Property(x => x.CreditLimit).HasColumnType("decimal(18,4)");
             b.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("TRY");
+            b.Property(x => x.DefaultSalesDiscount1).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.DefaultSalesDiscount2).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.DefaultSalesDiscount3).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+            b.Property(x => x.DefaultSalesDiscount4).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
         });
 
         builder.Entity<Document>(b =>
