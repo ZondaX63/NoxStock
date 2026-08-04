@@ -1,0 +1,45 @@
+/* The stock-take screen deliberately uses text-first controls: icon fonts can
+   reflow while their glyph file is loading, which made dense count screens look unstable. */
+.inventory-count-button {
+    gap: 0;
+}
+
+.inventory-count-scanner-heading {
+    margin-bottom: 10px;
+}
+
+.inventory-count-search-wrap > input {
+    padding-left: 13px;
+}
+
+.inventory-count-summary article {
+    min-height: 82px;
+    padding: 14px 16px;
+}
+
+.inventory-count-summary article div {
+    display: grid;
+    grid-template-columns: auto auto;
+    width: 100%;
+}
+
+.inventory-count-summary strong {
+    font-size: 22px;
+}
+
+.inventory-count-empty {
+    min-height: 170px;
+}
+
+.inventory-count-remove {
+    width: auto;
+    min-width: 42px;
+    height: 31px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+.inventory-count-modal-note {
+    display: block;
+}

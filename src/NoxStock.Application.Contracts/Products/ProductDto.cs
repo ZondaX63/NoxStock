@@ -45,6 +45,7 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     public decimal Quantity { get; set; }
     public decimal CriticalStockLevel { get; set; }
     public bool TrackStock { get; set; }
+    public bool IsIncompleteProfile { get; set; }
     public string PurchaseCurrency { get; set; }
     public string? OemCodes { get; set; }
     

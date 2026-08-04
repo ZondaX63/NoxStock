@@ -9,6 +9,8 @@ public static class NoxStockDefaultUserPermissions
         "NoxStock.Categories",
         "NoxStock.Brands",
         "NoxStock.StockMovements",
+        "NoxStock.InventoryCounts",
+        "NoxStock.InventoryCounts.Create",
         "NoxStock.BusinessPartners",
         "NoxStock.Accounts",
         "NoxStock.Documents",

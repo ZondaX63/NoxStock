@@ -1,12 +1,18 @@
 # Active Context
 
-Last updated: 2026-07-31
+Last updated: 2026-08-04
 
 ## Current Work Focus
+
+The tenant-scoped **Stock Take / Inventory Audit** workflow is now implemented. It provides draft and approval states, barcode-first cumulative entry, inline quantities, quick incomplete-product creation, Excel/CSV draft import, completion confirmation, transactionally applied stock replacement, zeroing of omitted stock-tracked products, and immutable stock-movement evidence. `Product.Quantity` remains the current stock source of truth; warehouse-ledger expansion is still deferred. The next operational step is applying migration `20260804150340_Add_Inventory_Count_Workflow` through DbMigrator and performing an authenticated browser smoke with assigned `InventoryCounts.Create` / `InventoryCounts.Complete` permissions.
 
 The active target remains **Private Beta Prototype Release**. The frontend-first implementation phases are complete: shared-layout deferral/caching, local pinned assets, Product/POS/document batching, exact and bounded remote lookups, bounded alerts, cached Dashboard aggregates, database-aggregated/paged reports, stable DataTable state, reduced paint work, request/browser timing telemetry, and a repeatable cold/warm navigation script are implemented. The remaining performance release evidence is operational rather than source work: run the prepared cold/warm browser and PostgreSQL capture on the 1 OCPU / 6 GB Oracle VM and compare it with `docs/performance/frontend-budget.md`. Production image build/deployment optimization remains explicitly deferred. ABP Razor Pages, tenant/license/audit enforcement, server-authoritative financial calculations, and component-local loading states remain architectural constraints. The final checklist is in `frontendPerformanceOptimization.md`; Warehouse, reservation, e-Invoice, CRM, advanced accounting, and AI features remain out of scope.
 
 ## Recent Changes
+
+- Added the complete Stock Take module under `/InventoryCounts`: focused barcode/search entry, repeated-scan accumulation, inline quantity/note editing, draft persistence, approval/reopen flow, history, summary counts, quick incomplete-product creation, and `.xlsx`/`.csv` import. Stock-untracked service products are rejected both in the browser and application service.
+- Completion requires a dedicated permission plus explicit destructive confirmation and runs as one transactional unit of work. Counted products are replaced with physical quantities, omitted tracked products are set to zero, and each actual delta produces an `InventoryCount` stock movement. Completed retries are idempotent.
+- Added tenant-filtered inventory-count header/line persistence, a single-active-count database invariant, product incomplete-profile filtering, reset/audit integration, TR/EN localization, migration `20260804150340_Add_Inventory_Count_Workflow`, and focused integration tests. Solution build succeeds with zero errors, the affected EF test group passes 8/8, and EF reports no pending model changes.
 
 - Completed the frontend performance implementation workstream. Dashboard/alerts/reports use bounded database queries and independent paging; Dashboard has a 15-second tenant cache. Authenticated report HTML is not publicly cached. Main DataTables preserve state and debounce search, while high-volume list APIs cap page sizes and deep offsets.
 - Self-hosted and pinned Outfit, Material Icons, Alpine.js, JsBarcode, and QRCode; fingerprinted static assets receive immutable cache headers. Broad paint-heavy transitions and blur loading states were reduced, stable table space and reduced-motion behavior were added, and opted-in full-page forms reject duplicate submission without bypassing validation.

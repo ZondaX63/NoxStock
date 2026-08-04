@@ -103,6 +103,9 @@ public class ProductAppService :
             StringComparison.OrdinalIgnoreCase);
         await ValidateRelationsAsync(input);
         await base.UpdateAsync(id, input);
+        var savedProduct = await Repository.GetAsync(id);
+        savedProduct.IsIncompleteProfile = false;
+        await Repository.UpdateAsync(savedProduct, autoSave: true);
 
         // Approved purchase records are immutable.  The product profile is a
         // derived, current pricing view, though, so it can safely be rebased
@@ -197,7 +200,8 @@ public class ProductAppService :
                 product.Sku,
                 product.Barcode,
                 product.Unit,
-                product.Quantity
+                product.Quantity,
+                product.TrackStock
             }));
 
         return new PagedResultDto<ProductLookupDto>(
@@ -209,7 +213,8 @@ public class ProductAppService :
                 Sku = row.Sku,
                 Barcode = row.Barcode,
                 Unit = row.Unit,
-                Quantity = row.Quantity
+                Quantity = row.Quantity,
+                TrackStock = row.TrackStock
             }).ToList());
     }
 
@@ -252,6 +257,7 @@ public class ProductAppService :
             .WhereIf(costStatus == "available", x => x.LastPurchaseCostCurrencyAmount.HasValue && x.LastPurchaseCostCurrencyAmount > 0)
             .WhereIf(costStatus == "under-cost", x => x.PricingMode == ProductPricingMode.Manual && x.LastPurchaseCostTryAmount.HasValue && x.LastPurchaseCostTryAmount > 0 && x.SalePrice < x.LastPurchaseCostTryAmount)
             .WhereIf(costStatus == "recent", x => x.LastPurchaseDate.HasValue && x.LastPurchaseDate >= recentCostThreshold);
+        queryable = queryable.WhereIf(costStatus == "incomplete", x => x.IsIncompleteProfile);
 
         if (!string.IsNullOrWhiteSpace(filter))
         {

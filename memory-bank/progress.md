@@ -1,5 +1,14 @@
 # Progress
 
+## 2026-08-04 - Stok Sayım Modülü
+
+- Yeni `/InventoryCounts` akışı barkod/SKU araması, aynı barkodu kümulatif artırma, satır içi miktar/not düzenleme, taslak kaydetme, onaya gönderme, düzenlemeye açma, geçmiş ve canlı özetleri içeriyor.
+- Sayımda bulunup sistemde olmayan ürünler minimum alanlı uygulama içi modal ile eksik profilli ürün olarak açılabiliyor; Ürünler ekranındaki filtreyle daha sonra tamamlanabiliyor. Stok takibi kapalı hizmet ürünleri istemci ve sunucu tarafında sayıma alınmıyor.
+- `.xlsx`/`.csv` sayım aktarımı `SKU`, `Barkod`, `Miktar` kolonlarını destekliyor; tekrarlayan satır miktarları toplanıyor ve aktarım doğrudan stoğu değil yalnızca taslağı değiştiriyor.
+- Tamamlama ayrı yetki ve açık onay gerektiriyor. Tek transaction içinde listedeki miktarlar fiziki sayımla değiştiriliyor, listede olmayan stok takipli ürünler sıfırlanıyor ve her gerçek değişiklik için `InventoryCount` stok hareketi yazılıyor. Tamamlanmış komutun tekrarı yeni hareket üretmiyor.
+- Migration `20260804150340_Add_Inventory_Count_Workflow` iki tenant-scoped sayım tablosunu, tek aktif sayım invariantını ve `Product.IsIncompleteProfile` alanını ekliyor. Operasyonel veri sıfırlama ve null-tenant audit kapsamı güncellendi.
+- Doğrulama: çözüm derlemesi 0 hata; etkilenen EF test grubu 8/8; localization JSON ve `git diff --check` geçerli; EF modelinde bekleyen değişiklik yok.
+
 ## 2026-07-31 - Frontend Performance Workstream Completion
 
 - Completed source implementation for phases P0-P5 while keeping the production image-build/deployment phase deferred as requested. The only unchecked P0 items are real Oracle VM cold/warm evidence, because those values cannot be truthfully produced from the development workstation.

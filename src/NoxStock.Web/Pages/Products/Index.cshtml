@@ -217,6 +217,7 @@
             <button type="button" class="products-quick-filter" data-quick-filter="dynamic"><span class="material-icons-round" aria-hidden="true">currency_exchange</span>Dinamik fiyatlı</button>
             <button type="button" class="products-quick-filter" data-quick-filter="manual"><span class="material-icons-round" aria-hidden="true">sell</span>Manuel fiyatlı</button>
             <button type="button" class="products-quick-filter" data-quick-filter="missing-cost"><span class="material-icons-round" aria-hidden="true">receipt_long</span>Maliyeti olmayan</button>
+            <button type="button" class="products-quick-filter" data-quick-filter="incomplete"><span class="material-icons-round" aria-hidden="true">edit_note</span>Eksik bilgili</button>
             <button type="button" class="products-quick-filter" data-quick-filter="attention-stock"><span class="material-icons-round" aria-hidden="true">warning_amber</span>Stok uyarısı</button>
         </div>
         <div class="products-filter-panel">
@@ -225,7 +226,7 @@
             <select id="ProductCategoryFilter" class="input-field" aria-label="Kategori filtresi"><option value="">Tüm kategoriler</option>@foreach (var category in Model.Categories.Skip(1)) { <option value="@category.Value">@category.Text</option> }</select>
             <select id="ProductStockStatusFilter" class="input-field" aria-label="Stok durumu filtresi"><option value="">Tüm stok durumları</option><option value="attention">Kritik veya sıfır stok</option><option value="critical">Kritik stok</option><option value="zero">Sıfır stok</option><option value="normal">Normal stok</option><option value="untracked">Stok takibi kapalı</option></select>
             <select id="ProductPricingModeFilter" class="input-field" aria-label="Fiyatlandırma modu filtresi"><option value="">Tüm fiyatlandırmalar</option><option value="dynamic">Döviz bazlı dinamik</option><option value="manual">Manuel fiyat</option></select>
-            <select id="ProductCostStatusFilter" class="input-field" aria-label="Maliyet durumu filtresi"><option value="">Tüm maliyet durumları</option><option value="available">Onaylı maliyeti olan</option><option value="missing">Maliyet bilgisi olmayan</option><option value="under-cost">Maliyetin altında satma riski</option><option value="recent">Son 30 gün maliyet değişen</option></select>
+            <select id="ProductCostStatusFilter" class="input-field" aria-label="Maliyet durumu filtresi"><option value="">Tüm maliyet durumları</option><option value="incomplete">Eksik bilgili ürün</option><option value="available">Onaylı maliyeti olan</option><option value="missing">Maliyet bilgisi olmayan</option><option value="under-cost">Maliyetin altında satma riski</option><option value="recent">Son 30 gün maliyet değişen</option></select>
             <button id="ResetProductFilters" type="button" class="products-reset-action"><span class="material-icons-round" aria-hidden="true">restart_alt</span><span>Temizle</span></button>
         </div>
         <p class="products-search-help"><span class="material-icons-round" aria-hidden="true">tips_and_updates</span>OEM araması boşluk ve tireleri yok sayar; aynı referans numaralı tüm marka alternatifleri birlikte listelenir.</p>

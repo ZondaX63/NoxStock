@@ -9,6 +9,6 @@ public enum StockMovementType
     SalesInvoice = 5,
     PosSale = 6,
     Return = 7,
-    Reversal = 8
+    Reversal = 8,
+    InventoryCount = 9
 }
-

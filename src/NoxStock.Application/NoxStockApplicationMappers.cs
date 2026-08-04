@@ -106,6 +106,7 @@ public partial class NoxStockProductToProductDtoMapper : MapperBase<NoxStock.Pro
 [Mapper]
 public partial class NoxStockCreateUpdateProductDtoToProductMapper : MapperBase<NoxStock.Products.CreateUpdateProductDto, NoxStock.Products.Product>
 {
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.IsIncompleteProfile))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.OemCodes))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyCode))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyAmount))]
@@ -118,6 +119,7 @@ public partial class NoxStockCreateUpdateProductDtoToProductMapper : MapperBase<
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseSupplierId))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastCostUpdatedAt))]
     public override partial NoxStock.Products.Product Map(NoxStock.Products.CreateUpdateProductDto source);
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.IsIncompleteProfile))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.OemCodes))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyCode))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyAmount))]

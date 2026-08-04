@@ -11,6 +11,7 @@ using NoxStock.MultiTenancy;
 using NoxStock.Permissions;
 using NoxStock.Products;
 using NoxStock.StockMovements;
+using NoxStock.InventoryCounts;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Entities;
@@ -38,6 +39,8 @@ public class TenantOperationalDataResetAppService : ApplicationService, ITenantO
     private readonly IRepository<DocumentExchangeRateSnapshot, Guid> _documentExchangeRateSnapshotRepository;
     private readonly IRepository<StockMovement, Guid> _stockMovementRepository;
     private readonly IRepository<AccountTransaction, Guid> _accountTransactionRepository;
+    private readonly IRepository<InventoryCount, Guid> _inventoryCountRepository;
+    private readonly IRepository<InventoryCountItem, Guid> _inventoryCountItemRepository;
     private readonly ISettingManager _settingManager;
 
     public TenantOperationalDataResetAppService(
@@ -53,6 +56,8 @@ public class TenantOperationalDataResetAppService : ApplicationService, ITenantO
         IRepository<DocumentExchangeRateSnapshot, Guid> documentExchangeRateSnapshotRepository,
         IRepository<StockMovement, Guid> stockMovementRepository,
         IRepository<AccountTransaction, Guid> accountTransactionRepository,
+        IRepository<InventoryCount, Guid> inventoryCountRepository,
+        IRepository<InventoryCountItem, Guid> inventoryCountItemRepository,
         ISettingManager settingManager)
     {
         _productRepository = productRepository;
@@ -67,6 +72,8 @@ public class TenantOperationalDataResetAppService : ApplicationService, ITenantO
         _documentExchangeRateSnapshotRepository = documentExchangeRateSnapshotRepository;
         _stockMovementRepository = stockMovementRepository;
         _accountTransactionRepository = accountTransactionRepository;
+        _inventoryCountRepository = inventoryCountRepository;
+        _inventoryCountItemRepository = inventoryCountItemRepository;
         _settingManager = settingManager;
     }
 
@@ -83,6 +90,8 @@ public class TenantOperationalDataResetAppService : ApplicationService, ITenantO
 
         var result = new TenantOperationalDataResetResultDto
         {
+            InventoryCountItemCount = await DeleteAllAsync(_inventoryCountItemRepository),
+            InventoryCountCount = await DeleteAllAsync(_inventoryCountRepository),
             DocumentExchangeRateSnapshotCount = await DeleteAllAsync(_documentExchangeRateSnapshotRepository),
             ProductCostHistoryCount = await DeleteAllAsync(_productCostHistoryRepository),
             AccountTransactionCount = await DeleteAllAsync(_accountTransactionRepository),

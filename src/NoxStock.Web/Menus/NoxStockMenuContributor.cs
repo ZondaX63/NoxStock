@@ -66,6 +66,12 @@ public class NoxStockMenuContributor : IMenuContributor
                 ).RequirePermissions(NoxStockPermissions.StockMovements.Default)
             ).AddItem(
                 new ApplicationMenuItem(
+                    "Inventory.InventoryCounts",
+                    l["Menu:InventoryCounts"],
+                    url: "/InventoryCounts"
+                ).RequirePermissions(NoxStockPermissions.InventoryCounts.Default)
+            ).AddItem(
+                new ApplicationMenuItem(
                     "Inventory.PrintLabels",
                     l["Menu:PrintLabels"],
                     url: "/PrintLabels"

@@ -10,4 +10,5 @@ public class ProductLookupDto
     public string? Barcode { get; set; }
     public string Unit { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
+    public bool TrackStock { get; set; }
 }

@@ -9,6 +9,7 @@ using NoxStock.Documents;
 using NoxStock.StockMovements;
 using NoxStock.ExchangeRates;
 using NoxStock.Licensing;
+using NoxStock.InventoryCounts;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -50,6 +51,8 @@ public class NoxStockDbContext :
     public DbSet<Account> Accounts { get; set; }
     public DbSet<AccountTransaction> AccountTransactions { get; set; }
     public DbSet<StockMovement> StockMovements { get; set; }
+    public DbSet<InventoryCount> InventoryCounts { get; set; }
+    public DbSet<InventoryCountItem> InventoryCountItems { get; set; }
     public DbSet<LicensePlan> LicensePlans { get; set; }
     public DbSet<TenantLicense> TenantLicenses { get; set; }
     public DbSet<TenantLicenseFeature> TenantLicenseFeatures { get; set; }
@@ -156,6 +159,7 @@ public class NoxStockDbContext :
             b.Property(x => x.Quantity).HasColumnType("decimal(15,4)");
             b.Property(x => x.CriticalStockLevel).HasColumnType("decimal(15,4)");
             b.Property(x => x.PurchaseCurrency).IsRequired().HasMaxLength(3).HasDefaultValue("TRY");
+            b.Property(x => x.IsIncompleteProfile).HasDefaultValue(false);
 
             b.HasIndex(x => new { x.TenantId, x.Sku });
             b.HasIndex(x => new { x.TenantId, x.Barcode });
@@ -320,6 +324,47 @@ public class NoxStockDbContext :
             b.Property(x => x.Description).HasMaxLength(500);
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
             b.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId).IsRequired(false);
+        });
+
+        builder.Entity<InventoryCount>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "InventoryCounts", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.ReferenceNumber).IsRequired().HasMaxLength(40);
+            b.Property(x => x.Name).IsRequired().HasMaxLength(150);
+            b.Property(x => x.CountedByName).IsRequired().HasMaxLength(150);
+            b.Property(x => x.CompletedByName).HasMaxLength(150);
+            b.Property(x => x.TotalCountedQuantity).HasColumnType("decimal(18,4)");
+            b.HasIndex(x => new { x.TenantId, x.ReferenceNumber })
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            b.HasIndex(x => new { x.TenantId, x.Status, x.CountDate });
+            b.HasIndex(x => x.TenantId)
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE AND \"Status\" IN (1, 2)");
+        });
+
+        builder.Entity<InventoryCountItem>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "InventoryCountItems", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.ProductName).IsRequired().HasMaxLength(150);
+            b.Property(x => x.Sku).IsRequired().HasMaxLength(100);
+            b.Property(x => x.Barcode).HasMaxLength(100);
+            b.Property(x => x.Unit).IsRequired().HasMaxLength(50);
+            b.Property(x => x.SystemQuantity).HasColumnType("decimal(18,4)");
+            b.Property(x => x.CountedQuantity).HasColumnType("decimal(18,4)");
+            b.Property(x => x.Note).HasMaxLength(500);
+            b.HasOne<InventoryCount>().WithMany(x => x.Items)
+                .HasForeignKey(x => x.InventoryCountId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+            b.HasOne<Product>().WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.InventoryCountId, x.ProductId })
+                .IsUnique();
         });
 
         builder.Entity<LicensePlan>(b =>

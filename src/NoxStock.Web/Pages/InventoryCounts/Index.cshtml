@@ -1,0 +1,148 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using NoxStock.Localization
+@model NoxStock.Web.Pages.InventoryCounts.IndexModel
+@inject IHtmlLocalizer<NoxStockResource> L
+@{
+    Layout = "_AppLayout";
+    ViewData["Title"] = L["Menu:InventoryCounts"];
+}
+
+<div class="inventory-count-page" data-inventory-count-page>
+    <header class="inventory-count-header">
+        <div>
+            <span class="inventory-count-eyebrow">@L["InventoryCount:Eyebrow"]</span>
+            <h1>@L["InventoryCount:Title"]</h1>
+            <p>@L["InventoryCount:Subtitle"]</p>
+        </div>
+        <div class="inventory-count-actions">
+            @if (Model.CanQuickCreateProduct)
+            {
+                <button id="InventoryCountQuickAdd" type="button" class="inventory-count-button secondary" data-bs-toggle="modal" data-bs-target="#InventoryCountQuickProductModal">
+                    @L["InventoryCount:QuickAdd"]
+                </button>
+            }
+            <label class="inventory-count-button secondary" for="InventoryCountImportFile">
+                @L["InventoryCount:Import"]
+                <input id="InventoryCountImportFile" type="file" accept=".xlsx,.csv" hidden />
+            </label>
+            <button id="InventoryCountSave" type="button" class="inventory-count-button secondary">
+                @L["InventoryCount:SaveDraft"]
+            </button>
+            <button id="InventoryCountSubmit" type="button" class="inventory-count-button warning">
+                @L["InventoryCount:Submit"]
+            </button>
+            <button id="InventoryCountReopen" type="button" class="inventory-count-button secondary d-none">
+                @L["InventoryCount:Reopen"]
+            </button>
+            @if (Model.CanComplete)
+            {
+                <button id="InventoryCountComplete" type="button" class="inventory-count-button danger">
+                    @L["InventoryCount:Complete"]
+                </button>
+            }
+            <button id="InventoryCountNew" type="button" class="inventory-count-button primary d-none">
+                @L["InventoryCount:New"]
+            </button>
+        </div>
+    </header>
+
+    <section class="inventory-count-meta-card">
+        <div class="inventory-count-name-field">
+            <label for="InventoryCountName">@L["InventoryCount:Name"]</label>
+            <input id="InventoryCountName" maxlength="150" autocomplete="off" />
+        </div>
+        <div class="inventory-count-meta-item"><span>@L["InventoryCount:Reference"]</span><strong id="InventoryCountReference">—</strong></div>
+        <div class="inventory-count-meta-item"><span>@L["InventoryCount:Date"]</span><strong id="InventoryCountDate">—</strong></div>
+        <div class="inventory-count-meta-item"><span>@L["InventoryCount:CountedBy"]</span><strong id="InventoryCountUser">—</strong></div>
+        <div class="inventory-count-status-wrap"><span>@L["InventoryCount:Status"]</span><strong id="InventoryCountStatus" class="inventory-count-status draft">—</strong></div>
+    </section>
+
+    <section class="inventory-count-scanner-card">
+        <div class="inventory-count-scanner-heading">
+            <div><h2>@L["InventoryCount:ScannerTitle"]</h2><p>@L["InventoryCount:ScannerHint"]</p></div>
+        </div>
+        <div class="inventory-count-scanner-row">
+            <div class="inventory-count-search-wrap">
+                <input id="InventoryCountProductSearch" autocomplete="off" placeholder="@L["InventoryCount:SearchPlaceholder"]" />
+                <div id="InventoryCountSearchResults" class="inventory-count-search-results d-none"></div>
+            </div>
+            <div class="inventory-count-quantity-wrap">
+                <label for="InventoryCountQuantity">@L["InventoryCount:Quantity"]</label>
+                <input id="InventoryCountQuantity" type="number" min="0" step="1" value="1" />
+            </div>
+            <button id="InventoryCountAddProduct" type="button" class="inventory-count-button primary scanner-add">
+                @L["InventoryCount:Add"]
+            </button>
+        </div>
+    </section>
+
+    <section class="inventory-count-table-card">
+        <div class="inventory-count-table-heading">
+            <div><h2>@L["InventoryCount:Lines"]</h2><p id="InventoryCountLineHint">@L["InventoryCount:LinesHint"]</p></div>
+            <span id="InventoryCountDirtyBadge" class="inventory-count-dirty d-none">@L["InventoryCount:Unsaved"]</span>
+        </div>
+        <div class="inventory-count-table-scroll">
+            <table class="inventory-count-table">
+                <thead>
+                    <tr>
+                        <th>@L["InventoryCount:ProductCodes"]</th>
+                        <th>@L["InventoryCount:ProductName"]</th>
+                        <th>@L["InventoryCount:SystemStock"]</th>
+                        <th>@L["InventoryCount:CountedQuantity"]</th>
+                        <th>@L["InventoryCount:Difference"]</th>
+                        <th>@L["InventoryCount:StatusNote"]</th>
+                        <th class="inventory-count-action-column">@L["InventoryCount:Action"]</th>
+                    </tr>
+                </thead>
+                <tbody id="InventoryCountLines"></tbody>
+            </table>
+            <div id="InventoryCountEmpty" class="inventory-count-empty">
+                <strong>@L["InventoryCount:EmptyTitle"]</strong>
+                <p>@L["InventoryCount:EmptyHint"]</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="inventory-count-summary" aria-live="polite">
+        <article><div><small>@L["InventoryCount:CountedTypes"]</small><strong id="InventoryCountTypeTotal">0</strong><em>@L["InventoryCount:Items"]</em></div></article>
+        <article><div><small>@L["InventoryCount:TotalQuantity"]</small><strong id="InventoryCountQuantityTotal">0</strong><em>@L["InventoryCount:Units"]</em></div></article>
+        <article class="danger"><div><small>@L["InventoryCount:WillBeZeroed"]</small><strong id="InventoryCountZeroTotal">0</strong><em>@L["InventoryCount:Items"]</em></div></article>
+        <article><div><small>@L["InventoryCount:DifferentLines"]</small><strong id="InventoryCountDifferenceTotal">0</strong><em>@L["InventoryCount:Items"]</em></div></article>
+    </section>
+
+    <section class="inventory-count-history-card">
+        <div class="inventory-count-table-heading"><div><h2>@L["InventoryCount:History"]</h2><p>@L["InventoryCount:HistoryHint"]</p></div></div>
+        <div id="InventoryCountHistory" class="inventory-count-history"></div>
+    </section>
+</div>
+
+<div class="modal fade" id="InventoryCountQuickProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content inventory-count-modal">
+            <div class="modal-header">
+                <div><span class="inventory-count-eyebrow">@L["InventoryCount:QuickAddEyebrow"]</span><h5 class="modal-title">@L["InventoryCount:QuickAddTitle"]</h5></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
+            </div>
+            <form id="InventoryCountQuickProductForm">
+                <div class="modal-body">
+                    <div class="inventory-count-modal-note"><p>@L["InventoryCount:QuickAddHint"]</p></div>
+                    <div class="inventory-count-modal-grid">
+                        <label><span>@L["InventoryCount:Barcode"]</span><input id="InventoryQuickBarcode" maxlength="100" autocomplete="off" /></label>
+                        <label class="wide"><span>@L["InventoryCount:ProductNameRequired"]</span><input id="InventoryQuickName" maxlength="150" required autocomplete="off" /></label>
+                        <label><span>@L["InventoryCount:CountedQuantityRequired"]</span><input id="InventoryQuickQuantity" type="number" min="0" step="1" value="1" required /></label>
+                        <label><span>@L["InventoryCount:OptionalSalePrice"]</span><input id="InventoryQuickSalePrice" type="number" min="0" step="1" /></label>
+                        <label class="wide"><span>@L["InventoryCount:DraftNote"]</span><textarea id="InventoryQuickNote" maxlength="500" rows="3"></textarea></label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="inventory-count-button secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
+                    <button id="InventoryQuickSave" type="submit" class="inventory-count-button primary">@L["InventoryCount:CreateAndAdd"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Styles { <abp-style src="/Pages/InventoryCounts/Index.css" /> <abp-style src="/Pages/InventoryCounts/Index.overrides.css" /> }
+@section Scripts { <abp-script src="/Pages/InventoryCounts/Index.js" /> }

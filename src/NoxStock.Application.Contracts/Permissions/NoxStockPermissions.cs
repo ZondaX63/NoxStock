@@ -41,6 +41,13 @@ public static class NoxStockPermissions
         public const string Adjust = Default + ".Adjust";
     }
 
+    public static class InventoryCounts
+    {
+        public const string Default = GroupName + ".InventoryCounts";
+        public const string Create = Default + ".Create";
+        public const string Complete = Default + ".Complete";
+    }
+
     public static class BusinessPartners
     {
         public const string Default = GroupName + ".BusinessPartners";

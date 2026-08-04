@@ -275,6 +275,13 @@ namespace NoxStock.Migrations
                     b.Property<decimal>("CreditLimit")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("TRY");
+
                     b.Property<decimal>("DefaultSalesDiscount1")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(9,4)")
@@ -294,13 +301,6 @@ namespace NoxStock.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(9,4)")
                         .HasDefaultValue(0m);
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasDefaultValue("TRY");
 
                     b.Property<Guid?>("DeleterId")
                         .HasColumnType("uuid")
@@ -713,6 +713,19 @@ namespace NoxStock.Migrations
                         .HasColumnType("decimal(9,4)")
                         .HasDefaultValue(0m);
 
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ReferenceCurrencyCode")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal?>("ReferenceExchangeRate")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("ReferenceUnitPrice")
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<decimal>("SalesDiscount1")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(9,4)")
@@ -732,19 +745,6 @@ namespace NoxStock.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(9,4)")
                         .HasDefaultValue(0m);
-
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<string>("ReferenceCurrencyCode")
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
-
-                    b.Property<decimal?>("ReferenceExchangeRate")
-                        .HasColumnType("decimal(18,6)");
-
-                    b.Property<decimal?>("ReferenceUnitPrice")
-                        .HasColumnType("decimal(18,6)");
 
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uuid")
@@ -837,6 +837,185 @@ namespace NoxStock.Migrations
                         .IsUnique();
 
                     b.ToTable("AppExchangeRates", (string)null);
+                });
+
+            modelBuilder.Entity("NoxStock.InventoryCounts.InventoryCount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AdjustedProductCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CompletedByName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid?>("CompletedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CountDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CountedByName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<int>("CountedProductCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<decimal>("TotalCountedQuantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ZeroedProductCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE AND \"Status\" IN (1, 2)");
+
+                    b.HasIndex("TenantId", "ReferenceNumber")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TenantId", "Status", "CountDate");
+
+                    b.ToTable("AppInventoryCounts", (string)null);
+                });
+
+            modelBuilder.Entity("NoxStock.InventoryCounts.InventoryCountItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("CountedQuantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid>("InventoryCountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsQuickCreatedProduct")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("SystemQuantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InventoryCountId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("TenantId", "InventoryCountId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("AppInventoryCountItems", (string)null);
                 });
 
             modelBuilder.Entity("NoxStock.Licensing.LicensePlan", b =>
@@ -1230,6 +1409,11 @@ namespace NoxStock.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("IsDeleted");
+
+                    b.Property<bool>("IsIncompleteProfile")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<DateTime?>("LastCostUpdatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -3643,6 +3827,21 @@ namespace NoxStock.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NoxStock.InventoryCounts.InventoryCountItem", b =>
+                {
+                    b.HasOne("NoxStock.InventoryCounts.InventoryCount", null)
+                        .WithMany("Items")
+                        .HasForeignKey("InventoryCountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoxStock.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("NoxStock.Licensing.TenantLicense", b =>
                 {
                     b.HasOne("NoxStock.Licensing.LicensePlan", null)
@@ -3954,6 +4153,11 @@ namespace NoxStock.Migrations
                 {
                     b.Navigation("ExchangeRateSnapshots");
 
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("NoxStock.InventoryCounts.InventoryCount", b =>
+                {
                     b.Navigation("Items");
                 });
 

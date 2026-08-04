@@ -11,6 +11,7 @@ $(function () {
         if (type === 6) return '<span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded">POS satış</span>';
         if (type === 7) return '<span class="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded">İade</span>';
         if (type === 8) return '<span class="bg-slate-100 text-slate-800 text-xs font-medium px-2.5 py-0.5 rounded">Ters kayıt</span>';
+        if (type === 9) return '<span class="bg-violet-100 text-violet-800 text-xs font-medium px-2.5 py-0.5 rounded">Stok sayımı</span>';
         return type;
     }
 

@@ -412,7 +412,7 @@ $(function () {
         var isCritical = tracksStock && !isZero && quantity <= Number(row.criticalStockLevel || 0);
         var statusClass = !tracksStock ? 'is-untracked' : (isZero ? 'is-zero' : (isCritical ? 'is-critical' : 'is-normal'));
         var statusText = !tracksStock ? 'Stok takibi kapalı' : (isZero ? 'Sıfır stok' : (isCritical ? 'Kritik stok' : 'Normal stok'));
-        var stockValue = tracksStock ? quantity.toFixed(2) + ' ' + escapeHtml(row.unit || '') : 'Takip edilmiyor';
+        var stockValue = tracksStock ? formatDecimal(quantity, 4) + ' ' + escapeHtml(row.unit || '') : 'Takip edilmiyor';
         return '<div class="product-stock-value ' + statusClass + '">' + stockValue + '</div>' +
             '<div class="product-stock-status ' + statusClass + '">' + statusText + '</div>';
     }
@@ -430,6 +430,9 @@ $(function () {
     }
 
     function renderCostSource(row) {
+        if (row.isIncompleteProfile) {
+            return '<div class="product-cost-empty"><span class="material-icons-round" aria-hidden="true">edit_note</span><div><strong>Eksik bilgili ürün</strong><span>Sayım sırasında hızlı oluşturuldu; ürün kartını tamamlayın.</span></div></div>';
+        }
         if (!hasLastPurchaseCost(row)) {
             return '<div class="product-cost-empty"><span class="material-icons-round" aria-hidden="true">receipt_long</span><div><strong>Maliyet bilgisi yok</strong><span>İlk onaylı alış faturasıyla oluşur.</span></div></div>';
         }
@@ -976,6 +979,8 @@ $(function () {
             $('#ProductPricingModeFilter').val(filter);
         } else if (filter === 'missing-cost') {
             $('#ProductCostStatusFilter').val('missing');
+        } else if (filter === 'incomplete') {
+            $('#ProductCostStatusFilter').val('incomplete');
         } else if (filter === 'attention-stock') {
             $('#ProductStockStatusFilter').val('attention');
         }

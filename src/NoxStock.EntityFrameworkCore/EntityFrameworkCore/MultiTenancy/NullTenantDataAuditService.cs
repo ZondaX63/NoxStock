@@ -43,6 +43,8 @@ public class NullTenantDataAuditService : ITransientDependency
         await AddAuditAsync(results, "AppAccounts", dbContext.Accounts);
         await AddAuditAsync(results, "AppAccountTransactions", dbContext.AccountTransactions);
         await AddAuditAsync(results, "AppStockMovements", dbContext.StockMovements);
+        await AddAuditAsync(results, "AppInventoryCounts", dbContext.InventoryCounts);
+        await AddAuditAsync(results, "AppInventoryCountItems", dbContext.InventoryCountItems);
 
         foreach (var result in results.Where(x => x.RowCount > 0))
         {
