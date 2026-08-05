@@ -9,10 +9,16 @@ $(function () {
     var documentService = noxStock.documents.document;
     
     var createPaymentModal = new abp.ModalManager(abp.appPath + 'Payments/CreateModal');
+    var transferModal = new abp.ModalManager(abp.appPath + 'BusinessPartnerTransfers/CreateModal');
 
     createPaymentModal.onResult(function () {
         // reload the datatable and bp details
         $('#BpDocumentsTable').DataTable().ajax.reload();
+        loadBpDetails();
+        loadPaymentHistory();
+    });
+
+    transferModal.onResult(function () {
         loadBpDetails();
         loadPaymentHistory();
     });
@@ -25,6 +31,11 @@ $(function () {
     $('#NewPaymentBtn').click(function(e) {
         e.preventDefault();
         createPaymentModal.open({ type: 'Payment', businessPartnerId: businessPartnerId });
+    });
+
+    $('#CustomerTransferBtn').click(function (e) {
+        e.preventDefault();
+        transferModal.open({ customerId: businessPartnerId });
     });
 
     $('#PrintStatementButton').click(function () {

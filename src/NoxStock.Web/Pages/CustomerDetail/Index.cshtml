@@ -22,6 +22,9 @@
             <span class="material-icons-round mr-2 text-sm">add</span>
             Tahsilat Al
         </button>
+        <button id="CustomerTransferBtn" type="button" class="bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-md shadow-violet-500/30 flex items-center">
+            Cari virman yap
+        </button>
         <button id="NewPaymentBtn" type="button" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-md shadow-red-500/30 flex items-center">
             <span class="material-icons-round mr-2 text-sm">remove</span>
             Ödeme Yap
@@ -76,16 +79,16 @@
 
 <div class="card overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-none mb-6">
     <div class="p-6 border-b border-slate-100 dark:border-slate-700">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white">Tahsilat ve Ödeme Geçmişi</h3>
-        <p class="text-sm text-slate-500 mt-1">Faturalara bağlı kasa ve banka hareketleri.</p>
+        <h3 class="text-lg font-bold text-slate-800 dark:text-white">Cari hareket geçmişi</h3>
+        <p class="text-sm text-slate-500 mt-1">Tahsilat, ödeme ve cari virman işlemleri.</p>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full text-left whitespace-nowrap">
             <thead class="bg-slate-50/50 dark:bg-slate-800/50">
                 <tr>
                     <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider">Tarih</th>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider">Fatura</th>
-                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider">Kasa / Banka</th>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider">Referans</th>
+                    <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider">Karşı hesap / cari</th>
                     <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider">İşlem</th>
                     <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider text-right">Tutar</th>
                     <th class="py-4 px-6 text-slate-500 font-semibold uppercase text-xs tracking-wider">Açıklama</th>
