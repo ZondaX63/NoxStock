@@ -187,6 +187,71 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
 
     [Authorize(NoxStockPermissions.InventoryCounts.Create)]
     [TenantLicenseWrite]
+    [UnitOfWork(true)]
+    public async Task<InventoryCountDto> RestoreBackupAsync(RestoreInventoryCountBackupDto input)
+    {
+        CurrentTenant.RequireTenantId();
+        if (input.Items is null)
+        {
+            throw new BusinessException("NoxStock:InventoryCountInvalidBackup");
+        }
+
+        var products = await _productRepository.GetListAsync(x => x.TrackStock);
+        var byId = products.ToDictionary(x => x.Id);
+        var bySku = products
+            .Where(x => !string.IsNullOrWhiteSpace(x.Sku))
+            .GroupBy(x => x.Sku, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
+        var byBarcode = products
+            .Where(x => !string.IsNullOrWhiteSpace(x.Barcode))
+            .GroupBy(x => x.Barcode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
+
+        var items = new List<SaveInventoryCountItemDto>();
+        foreach (var source in input.Items)
+        {
+            Product? product = null;
+            if (source.ProductId.HasValue)
+            {
+                byId.TryGetValue(source.ProductId.Value, out product);
+            }
+            if (product is null && !string.IsNullOrWhiteSpace(source.Sku))
+            {
+                bySku.TryGetValue(source.Sku.Trim(), out product);
+            }
+            if (product is null && !string.IsNullOrWhiteSpace(source.Barcode))
+            {
+                byBarcode.TryGetValue(source.Barcode.Trim(), out product);
+            }
+            if (product is null || source.CountedQuantity < 0m)
+            {
+                throw new BusinessException("NoxStock:InventoryCountBackupProductNotFound")
+                    .WithData("Sku", source.Sku ?? string.Empty)
+                    .WithData("Barcode", source.Barcode ?? string.Empty);
+            }
+            if (items.Any(x => x.ProductId == product.Id))
+            {
+                throw new BusinessException("NoxStock:InventoryCountDuplicateProduct")
+                    .WithData("ProductId", product.Id);
+            }
+            items.Add(new SaveInventoryCountItemDto
+            {
+                ProductId = product.Id,
+                CountedQuantity = source.CountedQuantity,
+                Note = source.Note?.Trim()
+            });
+        }
+
+        return await SaveDraftAsync(new SaveInventoryCountDto
+        {
+            Id = input.Id,
+            Name = input.Name,
+            Items = items
+        });
+    }
+
+    [Authorize(NoxStockPermissions.InventoryCounts.Create)]
+    [TenantLicenseWrite]
     public async Task<InventoryCountDto> SubmitForApprovalAsync(Guid id)
     {
         var entity = await GetEntityWithItemsAsync(id);

@@ -11,6 +11,7 @@ public interface IInventoryCountAppService : IApplicationService
     Task<InventoryCountDto> GetAsync(Guid id);
     Task<PagedResultDto<InventoryCountListDto>> GetListAsync(InventoryCountGetListInput input);
     Task<InventoryCountDto> SaveDraftAsync(SaveInventoryCountDto input);
+    Task<InventoryCountDto> RestoreBackupAsync(RestoreInventoryCountBackupDto input);
     Task<InventoryCountDto> SubmitForApprovalAsync(Guid id);
     Task<InventoryCountDto> ReopenDraftAsync(Guid id);
     Task<InventoryCountDto> CompleteAsync(CompleteInventoryCountDto input);

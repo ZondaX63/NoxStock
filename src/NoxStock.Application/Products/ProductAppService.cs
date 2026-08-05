@@ -345,6 +345,45 @@ public class ProductAppService :
         return new PagedResultDto<ProductDto>(totalCount, productDtos);
     }
 
+    public async Task<ProductExportFileDto> ExportAsync()
+    {
+        CurrentTenant.RequireTenantId();
+        var products = (await Repository.GetListAsync()).OrderBy(x => x.Name).ToList();
+        var productIds = products.Select(x => x.Id).ToList();
+        var brands = await _brandRepository.GetListAsync();
+        var categories = await _categoryRepository.GetListAsync();
+        var brandNames = brands.ToDictionary(x => x.Id, x => x.Name);
+        var categoryNames = categories.ToDictionary(x => x.Id, x => x.Name);
+        var oemCodes = productIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await _productOemCodeRepository.GetListAsync(x => productIds.Contains(x.ProductId)))
+                .GroupBy(x => x.ProductId)
+                .ToDictionary(x => x.Key, x => string.Join(", ", x.Select(code => code.OemCode)));
+
+        var rows = products.Select(product => new Dictionary<string, object?>
+        {
+            ["Ürün Adı"] = product.Name,
+            ["SKU"] = product.Sku,
+            ["Barkod"] = product.Barcode,
+            ["Marka"] = product.BrandId.HasValue && brandNames.TryGetValue(product.BrandId.Value, out var brandName) ? brandName : string.Empty,
+            ["Kategori"] = product.CategoryId.HasValue && categoryNames.TryGetValue(product.CategoryId.Value, out var categoryName) ? categoryName : string.Empty,
+            ["Raf"] = product.ShelfLocation,
+            ["Miktar"] = product.Quantity,
+            ["Birim"] = product.Unit,
+            ["Açıklama"] = product.Description,
+            ["Etiketler"] = oemCodes.GetValueOrDefault(product.Id, string.Empty),
+            ["Kritik Stok Miktarı"] = product.CriticalStockLevel
+        }).ToList();
+
+        await using var stream = new MemoryStream();
+        await MiniExcel.SaveAsAsync(stream, rows);
+        return new ProductExportFileDto
+        {
+            FileName = $"noxstock-urunler-{Clock.Now:yyyyMMdd-HHmm}.xlsx",
+            Content = stream.ToArray()
+        };
+    }
+
     [Authorize(NoxStockPermissions.Products.Create)]
     [Authorize(NoxStockPermissions.Products.Edit)]
     [NoxStock.Licensing.TenantLicenseWrite]

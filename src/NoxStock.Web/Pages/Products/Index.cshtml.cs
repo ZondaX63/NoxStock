@@ -51,6 +51,15 @@ public class IndexModel : NoxStockPageModel
         await LoadLookupsAsync();
     }
 
+    public async Task<IActionResult> OnGetExportAsync()
+    {
+        var export = await _productAppService.ExportAsync();
+        return File(
+            export.Content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            export.FileName);
+    }
+
     public async Task<IActionResult> OnPostCreateAsync()
     {
         if (!ModelState.IsValid)

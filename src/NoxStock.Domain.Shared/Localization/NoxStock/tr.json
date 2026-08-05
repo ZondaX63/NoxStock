@@ -481,6 +481,8 @@
     "NoxStock:InventoryCountDuplicateProduct": "Aynı ürün sayım listesinde iki kez bulunamaz.",
     "NoxStock:InventoryCountNegativeQuantity": "Sayım miktarı negatif olamaz.",
     "NoxStock:InventoryCountProductNotFound": "Sayım satırlarındaki ürünlerden biri bulunamadı.",
+    "NoxStock:InventoryCountInvalidBackup": "Sayım yedek dosyası geçersiz.",
+    "NoxStock:InventoryCountBackupProductNotFound": "Yedekteki ürünlerden biri bulunamadı. Önce ürün Excel yedeğini içe aktarın.",
     "NoxStock:InventoryCountUntrackedProduct": "Stok takibi kapalı ürün sayıma eklenemez.",
     "NoxStock:InventoryCountEmpty": "Sayımı tamamlamak için en az bir ürün ekleyin.",
     "NoxStock:InventoryCountNotEditable": "Yalnızca taslak sayımlar düzenlenebilir.",

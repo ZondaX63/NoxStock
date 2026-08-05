@@ -445,6 +445,8 @@
     "NoxStock:InventoryCountDuplicateProduct": "A product cannot appear twice in the same stock take.",
     "NoxStock:InventoryCountNegativeQuantity": "Counted quantity cannot be negative.",
     "NoxStock:InventoryCountProductNotFound": "One of the products in the stock take could not be found.",
+    "NoxStock:InventoryCountInvalidBackup": "The stock take backup file is invalid.",
+    "NoxStock:InventoryCountBackupProductNotFound": "One of the products in the backup was not found. Import the product Excel backup first.",
     "NoxStock:InventoryCountUntrackedProduct": "A product with stock tracking disabled cannot be counted.",
     "NoxStock:InventoryCountEmpty": "Add at least one product before completing the count.",
     "NoxStock:InventoryCountNotEditable": "Only draft stock takes can be edited.",

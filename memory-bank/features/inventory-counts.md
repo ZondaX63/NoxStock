@@ -14,7 +14,7 @@ Tenant-scoped physical stock counting is implemented at `/InventoryCounts`. The 
 - Quick-created products are stock-tracked, start at zero, use a generated SKU, and are marked `IsIncompleteProfile` for later completion on Products.
 - Excel/CSV import accepts `SKU`, `Barkod`, and `Miktar`; duplicate source rows are accumulated. Import only changes the browser draft and never stock directly.
 - **Yedeği indir** exports the last server-saved count state as a versioned JSON file. It is read-only: it neither saves browser edits nor changes stock/count records. The UI explicitly warns when unsaved browser changes are excluded.
-- **Yedekten yükle** accepts only this versioned JSON backup and is available only while the count is an editable draft. It requires explicit confirmation, replaces all draft lines atomically through `SaveDraftAsync`, and does not change product stock until completion.
+- **Yedekten yükle** accepts only this versioned JSON backup and is available only while the count is an editable draft. It requires explicit confirmation, replaces all draft lines atomically and does not change product stock until completion. It resolves products by current tenant ID first, then SKU, then barcode; a product catalogue Excel export can therefore be imported before restoration when a database was recreated.
 - Submit changes Draft to AwaitingApproval. A Create-authorized user can reopen it; only `InventoryCounts.Complete` can apply the result.
 
 ## Completion Invariants

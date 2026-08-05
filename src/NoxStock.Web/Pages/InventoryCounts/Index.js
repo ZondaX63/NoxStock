@@ -216,6 +216,8 @@ $(function () {
             }
             restoredItems.set(productId, {
                 productId: productId,
+                sku: item.sku == null ? null : String(item.sku).slice(0, 100),
+                barcode: item.barcode == null ? null : String(item.barcode).slice(0, 100),
                 countedQuantity: quantity,
                 note: item.note == null ? null : String(item.note).slice(0, 500)
             });
@@ -414,7 +416,7 @@ $(function () {
                 text('InventoryCount:RestoreBackupWarning', 'Bu işlem açık taslaktaki tüm sayım satırlarını yedekteki satırlarla değiştirir. Ürün stokları sayım tamamlanana kadar değişmez. Devam edilsin mi?'),
                 text('InventoryCount:RestoreBackupTitle', 'Sayım yedeğini yükle'))).then(function (confirmed) {
                 if (!confirmed) return null;
-                return asPromise(service.saveDraft(restoreInput));
+                return asPromise(service.restoreBackup(restoreInput));
             }).then(function (dto) {
                 if (!dto) return;
                 hydrate(dto);

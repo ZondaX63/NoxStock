@@ -15,4 +15,5 @@ public interface IProductAppService :
     Task<ProductInventorySummaryDto> GetInventorySummaryAsync();
     Task<PagedResultDto<ProductLookupDto>> GetLookupListAsync(ProductLookupInput input);
     Task<ProductImportResultDto> ImportAsync(ProductImportInputDto input);
+    Task<ProductExportFileDto> ExportAsync();
 }

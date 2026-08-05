@@ -79,6 +79,35 @@ public class SaveInventoryCountItemDto
     public string? Note { get; set; }
 }
 
+public class RestoreInventoryCountBackupDto
+{
+    [Required]
+    public Guid Id { get; set; }
+
+    [Required]
+    [StringLength(150)]
+    public string Name { get; set; } = string.Empty;
+
+    public List<RestoreInventoryCountBackupItemDto> Items { get; set; } = new();
+}
+
+public class RestoreInventoryCountBackupItemDto
+{
+    public Guid? ProductId { get; set; }
+
+    [StringLength(100)]
+    public string? Sku { get; set; }
+
+    [StringLength(100)]
+    public string? Barcode { get; set; }
+
+    [Range(typeof(decimal), "0", "999999999999")]
+    public decimal CountedQuantity { get; set; }
+
+    [StringLength(500)]
+    public string? Note { get; set; }
+}
+
 public class CompleteInventoryCountDto
 {
     public Guid Id { get; set; }
