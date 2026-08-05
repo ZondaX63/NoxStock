@@ -26,6 +26,13 @@
                 @L["InventoryCount:Import"]
                 <input id="InventoryCountImportFile" type="file" accept=".xlsx,.csv" hidden />
             </label>
+            <button id="InventoryCountBackup" type="button" class="inventory-count-button secondary">
+                @L["InventoryCount:DownloadBackup"]
+            </button>
+            <label class="inventory-count-button secondary" for="InventoryCountRestoreFile">
+                @L["InventoryCount:RestoreBackup"]
+                <input id="InventoryCountRestoreFile" type="file" accept=".json,application/json" hidden />
+            </label>
             <button id="InventoryCountSave" type="button" class="inventory-count-button secondary">
                 @L["InventoryCount:SaveDraft"]
             </button>

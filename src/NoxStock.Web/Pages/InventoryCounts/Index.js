@@ -59,7 +59,7 @@ $(function () {
         $('#InventoryCountDate').text(current.countDate ? luxon.DateTime.fromISO(current.countDate).toFormat('dd.MM.yyyy HH:mm') : '—');
         $('#InventoryCountUser').text(current.countedByName || '—');
         $('#InventoryCountStatus').attr('class', 'inventory-count-status ' + status.css).text(status.label);
-        $('#InventoryCountName, #InventoryCountProductSearch, #InventoryCountQuantity, #InventoryCountAddProduct, #InventoryCountQuickAdd, #InventoryCountImportFile')
+        $('#InventoryCountName, #InventoryCountProductSearch, #InventoryCountQuantity, #InventoryCountAddProduct, #InventoryCountQuickAdd, #InventoryCountImportFile, #InventoryCountRestoreFile')
             .prop('disabled', !isEditable());
         $('#InventoryCountSave, #InventoryCountSubmit').toggleClass('d-none', !isEditable());
         $('#InventoryCountReopen').toggleClass('d-none', current.status !== 2);
@@ -149,6 +149,82 @@ $(function () {
             items: items.map(function (item) {
                 return { productId: item.productId, countedQuantity: Number(item.countedQuantity || 0), note: item.note || null };
             })
+        };
+    }
+
+    function safeFilePart(value) {
+        return String(value || 'stok-sayimi')
+            .replace(/[^a-z0-9ğüşıöç_-]+/gi, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 80) || 'stok-sayimi';
+    }
+
+    function downloadBackup(dto) {
+        var backup = {
+            format: 'NoxStock.InventoryCount.Backup',
+            version: 1,
+            exportedAtUtc: new Date().toISOString(),
+            count: {
+                id: dto.id,
+                referenceNumber: dto.referenceNumber,
+                name: dto.name,
+                countDate: dto.countDate,
+                status: dto.status,
+                countedByName: dto.countedByName,
+                countedProductCount: dto.countedProductCount,
+                totalCountedQuantity: dto.totalCountedQuantity
+            },
+            items: (dto.items || []).map(function (item) {
+                return {
+                    productId: item.productId,
+                    productName: item.productName,
+                    sku: item.sku,
+                    barcode: item.barcode,
+                    unit: item.unit,
+                    systemQuantity: Number(item.systemQuantity || 0),
+                    countedQuantity: Number(item.countedQuantity || 0),
+                    note: item.note || null,
+                    isQuickCreatedProduct: Boolean(item.isQuickCreatedProduct)
+                };
+            })
+        };
+        var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = safeFilePart(dto.referenceNumber || dto.name) + '-yedek-' + new Date().toISOString().slice(0, 10) + '.json';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+    }
+
+    function restoreBackup(backup) {
+        if (!backup || backup.format !== 'NoxStock.InventoryCount.Backup' || backup.version !== 1 || !backup.count || !Array.isArray(backup.items)) {
+            throw new Error(text('InventoryCount:InvalidBackup', 'Geçerli bir NoxStock stok sayımı yedek dosyası seçin.'));
+        }
+
+        var restoredItems = new Map();
+        backup.items.forEach(function (item) {
+            var productId = String(item && item.productId || '').trim();
+            var quantity = Number(item && item.countedQuantity);
+            if (!productId || !Number.isFinite(quantity) || quantity < 0) {
+                throw new Error(text('InventoryCount:InvalidBackup', 'Geçerli bir NoxStock stok sayımı yedek dosyası seçin.'));
+            }
+            if (restoredItems.has(productId)) {
+                throw new Error(text('InventoryCount:InvalidBackup', 'Geçerli bir NoxStock stok sayımı yedek dosyası seçin.'));
+            }
+            restoredItems.set(productId, {
+                productId: productId,
+                countedQuantity: quantity,
+                note: item.note == null ? null : String(item.note).slice(0, 500)
+            });
+        });
+
+        return {
+            id: current.id,
+            name: String(backup.count.name || current.name || '').trim().slice(0, 150) || current.name,
+            items: Array.from(restoredItems.values())
         };
     }
 
@@ -302,6 +378,60 @@ $(function () {
 
     $('#InventoryCountName').on('input', function () { setDirty(true); });
     $('#InventoryCountSave').on('click', function () { saveDraft(true); });
+
+    $('#InventoryCountBackup').on('click', function () {
+        if (!current) return;
+        var $button = $(this).prop('disabled', true);
+        asPromise(service.get(current.id)).then(function (dto) {
+            downloadBackup(dto);
+            var message = text('InventoryCount:BackupDownloaded', 'Son kaydedilmiş sayım taslağının yedeği indirildi.');
+            if (dirty) message += ' ' + text('InventoryCount:BackupUnsavedNotice', 'Ekrandaki kaydedilmemiş değişiklikler bu yedekte yer almaz.');
+            abp.notify.success(message);
+        }).catch(function (error) {
+            abp.notify.error(errorMessage(error, text('InventoryCount:BackupError', 'Sayım yedeği indirilemedi.')));
+        }).finally(function () {
+            $button.prop('disabled', false);
+        });
+    });
+
+    $('#InventoryCountRestoreFile').on('change', function () {
+        var file = this.files && this.files[0];
+        this.value = '';
+        if (!file || !current || !isEditable()) return;
+        var $input = $(this).prop('disabled', true);
+        var reader = new FileReader();
+        reader.onload = function () {
+            var restoreInput;
+            try {
+                restoreInput = restoreBackup(JSON.parse(String(reader.result || '')));
+            } catch (error) {
+                abp.notify.error(errorMessage(error, text('InventoryCount:InvalidBackup', 'Geçerli bir NoxStock stok sayımı yedek dosyası seçin.')));
+                $input.prop('disabled', false);
+                return;
+            }
+
+            asPromise(abp.message.confirm(
+                text('InventoryCount:RestoreBackupWarning', 'Bu işlem açık taslaktaki tüm sayım satırlarını yedekteki satırlarla değiştirir. Ürün stokları sayım tamamlanana kadar değişmez. Devam edilsin mi?'),
+                text('InventoryCount:RestoreBackupTitle', 'Sayım yedeğini yükle'))).then(function (confirmed) {
+                if (!confirmed) return null;
+                return asPromise(service.saveDraft(restoreInput));
+            }).then(function (dto) {
+                if (!dto) return;
+                hydrate(dto);
+                loadHistory();
+                abp.notify.success(text('InventoryCount:BackupRestored', 'Sayım yedeği açık taslağa yüklendi. Stoklar henüz değiştirilmedi.'));
+            }).catch(function (error) {
+                if (error) abp.notify.error(errorMessage(error, text('InventoryCount:RestoreError', 'Sayım yedeği yüklenemedi.')));
+            }).finally(function () {
+                $input.prop('disabled', false);
+            });
+        };
+        reader.onerror = function () {
+            abp.notify.error(text('InventoryCount:RestoreError', 'Sayım yedeği yüklenemedi.'));
+            $input.prop('disabled', false);
+        };
+        reader.readAsText(file, 'utf-8');
+    });
 
     $('#InventoryCountSubmit').on('click', function () {
         saveDraft(false).then(function () {

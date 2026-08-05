@@ -13,6 +13,8 @@ Tenant-scoped physical stock counting is implemented at `/InventoryCounts`. The 
 - Draft lines snapshot product name, SKU, barcode, unit and system quantity; counted quantity and note remain editable while Draft.
 - Quick-created products are stock-tracked, start at zero, use a generated SKU, and are marked `IsIncompleteProfile` for later completion on Products.
 - Excel/CSV import accepts `SKU`, `Barkod`, and `Miktar`; duplicate source rows are accumulated. Import only changes the browser draft and never stock directly.
+- **Yedeği indir** exports the last server-saved count state as a versioned JSON file. It is read-only: it neither saves browser edits nor changes stock/count records. The UI explicitly warns when unsaved browser changes are excluded.
+- **Yedekten yükle** accepts only this versioned JSON backup and is available only while the count is an editable draft. It requires explicit confirmation, replaces all draft lines atomically through `SaveDraftAsync`, and does not change product stock until completion.
 - Submit changes Draft to AwaitingApproval. A Create-authorized user can reopen it; only `InventoryCounts.Complete` can apply the result.
 
 ## Completion Invariants
