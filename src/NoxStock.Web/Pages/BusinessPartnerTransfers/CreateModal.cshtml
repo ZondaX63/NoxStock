@@ -1,0 +1,51 @@
+@page
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NoxStock.Web.Pages.BusinessPartnerTransfers.CreateModalModel
+@{ Layout = null; }
+
+<form asp-page="/BusinessPartnerTransfers/CreateModal">
+    <abp-modal class="business-partner-modal">
+        <abp-modal-header title="Müşteriden tedarikçiye virman"></abp-modal-header>
+        <abp-modal-body>
+            <input type="hidden" asp-for="Transfer.CustomerId" />
+            <div class="virman-intro">
+                <strong>Nakit hareketi olmadan cari kapatma</strong>
+                <span>Müşterinizin size olan borcu, seçtiğiniz tedarikçiye doğrudan ödeme olarak kaydedilir.</span>
+            </div>
+            <div class="virman-source-card">
+                <span>Müşteri alacağı</span>
+                <strong>@Model.CustomerName</strong>
+                <em>@Model.CustomerReceivable.ToString("N2") @Model.Currency kullanılabilir</em>
+            </div>
+            @if (Model.Suppliers.Count == 1)
+            {
+                <div class="alert alert-warning mb-3">Bu para biriminde açık borcu olan tedarikçi bulunmuyor.</div>
+            }
+            <div class="row g-3">
+                <div class="col-12">
+                    <label asp-for="Transfer.SupplierId" class="form-label">Ödeme yapılacak tedarikçi</label>
+                    <select asp-for="Transfer.SupplierId" asp-items="Model.Suppliers" class="form-select"></select>
+                </div>
+                <div class="col-md-6"><abp-input asp-for="Transfer.Amount" label="Virman tutarı" type="number" min="0.01" step="0.01" /></div>
+                <div class="col-md-6"><abp-input asp-for="Transfer.TransferDate" label="Virman tarihi" /></div>
+                <div class="col-12"><abp-input asp-for="Transfer.Description" label="Açıklama (opsiyonel)" /></div>
+            </div>
+            <div class="virman-impact"><span>Müşteri alacağı azalır</span><span>Tedarikçi borcu azalır</span><small>Kasa / banka bakiyesi etkilenmez.</small></div>
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>
+<style>
+    .business-partner-modal .modal-content { border: 0; border-radius: 18px; overflow: hidden; box-shadow: 0 24px 70px rgba(15, 23, 42, .22); }
+    .business-partner-modal .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e5e7eb; background: linear-gradient(135deg, #f5f3ff, #fff); }
+    .business-partner-modal .modal-body { padding: 1.5rem; }
+    .business-partner-modal .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e5e7eb; background: #fafcff; }
+    .virman-intro { display: grid; gap: .25rem; padding: 1rem 1.1rem; margin-bottom: 1rem; border-radius: 12px; border: 1px solid #ddd6fe; background: #f5f3ff; color: #4c1d95; }
+    .virman-intro strong { font-size: .92rem; } .virman-intro span { font-size: .8rem; color: #6d5aa4; }
+    .virman-source-card { display: grid; gap: .25rem; padding: 1rem 1.1rem; margin-bottom: 1rem; border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff; }
+    .virman-source-card span { font-size: .72rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: .05em; }
+    .virman-source-card strong { color: #172554; } .virman-source-card em { font-size: .85rem; color: #047857; font-style: normal; font-weight: 700; }
+    .virman-impact { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px dashed #cbd5e1; }
+    .virman-impact span { padding: .28rem .55rem; border-radius: 999px; background: #ecfdf5; color: #047857; font-size: .75rem; font-weight: 700; }
+    .virman-impact small { flex-basis: 100%; color: #64748b; }
+</style>

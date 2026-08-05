@@ -54,4 +54,30 @@ public class IndexModel : NoxStockPageModel
     }
 
     public string FormatDate(DateTime value) => value.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR"));
+
+    public string GetActivityText(AuditLogItemDto item)
+    {
+        var area = item.Url.ToLowerInvariant() switch
+        {
+            var url when url.Contains("product") => "Ürünler",
+            var url when url.Contains("document") || url.Contains("invoice") => "Faturalar",
+            var url when url.Contains("pos") || url.Contains("sale") => "Perakende satış",
+            var url when url.Contains("business-partner") || url.Contains("customer") || url.Contains("supplier") => "Cari hesaplar",
+            var url when url.Contains("inventory-count") => "Stok sayımı",
+            var url when url.Contains("account") => "Kasa ve bankalar",
+            var url when url.Contains("setting") => "Ayarlar",
+            _ => "Uygulama"
+        };
+
+        var action = item.HttpMethod.ToUpperInvariant() switch
+        {
+            "POST" => "işlemi gerçekleştirildi",
+            "PUT" or "PATCH" => "kaydı güncellendi",
+            "DELETE" => "kaydı silindi",
+            "GET" => "ekranı görüntülendi",
+            _ => "işlemi gerçekleştirildi"
+        };
+
+        return $"{area} {action}";
+    }
 }

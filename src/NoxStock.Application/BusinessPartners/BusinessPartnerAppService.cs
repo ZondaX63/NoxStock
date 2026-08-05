@@ -8,6 +8,9 @@ using Volo.Abp.Domain.Repositories;
 using NoxStock.Permissions;
 using NoxStock.Common;
 using NoxStock.MultiTenancy;
+using NoxStock.BusinessPartnerTransfers;
+using Volo.Abp;
+using Volo.Abp.Uow;
 
 namespace NoxStock.BusinessPartners;
 
@@ -21,9 +24,14 @@ public class BusinessPartnerAppService :
         CreateUpdateBusinessPartnerDto>,
     IBusinessPartnerAppService
 {
-    public BusinessPartnerAppService(IRepository<BusinessPartner, Guid> repository)
+    private readonly IRepository<BusinessPartnerTransfer, Guid> _transferRepository;
+
+    public BusinessPartnerAppService(
+        IRepository<BusinessPartner, Guid> repository,
+        IRepository<BusinessPartnerTransfer, Guid> transferRepository)
         : base(repository)
     {
+        _transferRepository = transferRepository;
         GetPolicyName = NoxStockPermissions.BusinessPartners.Default;
         GetListPolicyName = NoxStockPermissions.BusinessPartners.Default;
         CreatePolicyName = NoxStockPermissions.BusinessPartners.Create;
@@ -135,5 +143,58 @@ public class BusinessPartnerAppService :
 
         await accountRepository.UpdateAsync(account);
         await Repository.UpdateAsync(partner);
+    }
+
+    [Authorize(NoxStockPermissions.BusinessPartners.Transfer)]
+    [NoxStock.Licensing.TenantLicenseWrite]
+    [UnitOfWork(true)]
+    public async Task<BusinessPartnerTransferDto> TransferCustomerReceivableAsync(CreateBusinessPartnerTransferDto input)
+    {
+        var tenantId = CurrentTenant.RequireTenantId();
+        if (input.CustomerId == Guid.Empty || input.SupplierId == Guid.Empty || input.CustomerId == input.SupplierId)
+            throw new BusinessException("NoxStock:BusinessPartnerTransferInvalidParties");
+        if (input.Amount <= 0m)
+            throw new BusinessException("NoxStock:BusinessPartnerTransferAmountRequired");
+
+        var customer = await Repository.GetAsync(input.CustomerId);
+        var supplier = await Repository.GetAsync(input.SupplierId);
+        if (customer.Type is not (BusinessPartnerType.Customer or BusinessPartnerType.Both) ||
+            supplier.Type is not (BusinessPartnerType.Supplier or BusinessPartnerType.Both))
+            throw new BusinessException("NoxStock:BusinessPartnerTransferInvalidParties");
+        if (!string.Equals(customer.Currency, supplier.Currency, StringComparison.OrdinalIgnoreCase))
+            throw new BusinessException("NoxStock:BusinessPartnerTransferCurrencyMismatch")
+                .WithData("CustomerCurrency", customer.Currency)
+                .WithData("SupplierCurrency", supplier.Currency);
+        if (customer.Balance < input.Amount)
+            throw new BusinessException("NoxStock:BusinessPartnerTransferExceedsCustomerReceivable")
+                .WithData("AvailableAmount", customer.Balance);
+        if (-supplier.Balance < input.Amount)
+            throw new BusinessException("NoxStock:BusinessPartnerTransferExceedsSupplierPayable")
+                .WithData("AvailableAmount", -supplier.Balance);
+
+        var date = input.TransferDate == default ? Clock.Now : input.TransferDate;
+        var referenceNumber = await CreateTransferReferenceAsync(date);
+        customer.Balance -= input.Amount;
+        supplier.Balance += input.Amount;
+        await Repository.UpdateAsync(customer, autoSave: false);
+        await Repository.UpdateAsync(supplier, autoSave: false);
+
+        var transfer = new BusinessPartnerTransfer(GuidGenerator.Create(), tenantId, customer.Id, supplier.Id,
+            referenceNumber, input.Amount, customer.Currency.ToUpperInvariant(), date, input.Description?.Trim());
+        await _transferRepository.InsertAsync(transfer, autoSave: true);
+
+        return new BusinessPartnerTransferDto
+        {
+            Id = transfer.Id, ReferenceNumber = transfer.ReferenceNumber, Amount = transfer.Amount,
+            Currency = transfer.Currency, TransferDate = transfer.TransferDate,
+            CustomerName = customer.Name, SupplierName = supplier.Name, Description = transfer.Description
+        };
+    }
+
+    private async Task<string> CreateTransferReferenceAsync(DateTime date)
+    {
+        var prefix = $"VIR-{date:yyyyMMdd}";
+        var count = await _transferRepository.CountAsync(x => x.ReferenceNumber.StartsWith(prefix));
+        return $"{prefix}-{count + 1:00}";
     }
 }

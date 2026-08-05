@@ -54,6 +54,7 @@ public static class NoxStockPermissions
         public const string Create = Default + ".Create";
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
+        public const string Transfer = Default + ".Transfer";
     }
 
     public static class Accounts

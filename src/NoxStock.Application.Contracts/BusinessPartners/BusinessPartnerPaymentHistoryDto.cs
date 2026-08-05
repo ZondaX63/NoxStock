@@ -16,4 +16,6 @@ public class BusinessPartnerPaymentHistoryDto
     public string Currency { get; set; } = "TRY";
     public DateTime TransactionDate { get; set; }
     public string? Description { get; set; }
+    public bool IsBusinessPartnerTransfer { get; set; }
+    public string? CounterpartyName { get; set; }
 }

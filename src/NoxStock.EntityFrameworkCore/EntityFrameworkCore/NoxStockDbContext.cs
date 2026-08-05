@@ -5,6 +5,7 @@ using NoxStock.Brands;
 using NoxStock.Categories;
 using NoxStock.Products;
 using NoxStock.BusinessPartners;
+using NoxStock.BusinessPartnerTransfers;
 using NoxStock.Documents;
 using NoxStock.StockMovements;
 using NoxStock.ExchangeRates;
@@ -45,6 +46,7 @@ public class NoxStockDbContext :
     public DbSet<ExchangeRate> ExchangeRates { get; set; }
 
     public DbSet<BusinessPartner> BusinessPartners { get; set; }
+    public DbSet<BusinessPartnerTransfer> BusinessPartnerTransfers { get; set; }
     public DbSet<Document> Documents { get; set; }
     public DbSet<DocumentItem> DocumentItems { get; set; }
     public DbSet<DocumentExchangeRateSnapshot> DocumentExchangeRateSnapshots { get; set; }
@@ -212,6 +214,21 @@ public class NoxStockDbContext :
             b.Property(x => x.DefaultSalesDiscount2).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
             b.Property(x => x.DefaultSalesDiscount3).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
             b.Property(x => x.DefaultSalesDiscount4).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+        });
+
+        builder.Entity<BusinessPartnerTransfer>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "BusinessPartnerTransfers", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.ReferenceNumber).IsRequired().HasMaxLength(50);
+            b.Property(x => x.Amount).HasColumnType("decimal(18,4)");
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            b.Property(x => x.Description).HasMaxLength(500);
+            b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.TenantId, x.ReferenceNumber }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.CustomerId, x.TransferDate });
+            b.HasIndex(x => new { x.TenantId, x.SupplierId, x.TransferDate });
         });
 
         builder.Entity<Document>(b =>

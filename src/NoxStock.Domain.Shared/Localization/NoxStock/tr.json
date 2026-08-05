@@ -84,6 +84,7 @@
     "Permission:BusinessPartners.Create": "Müşteri ve tedarikçi oluşturma",
     "Permission:BusinessPartners.Edit": "Müşteri ve tedarikçi düzenleme",
     "Permission:BusinessPartners.Delete": "Müşteri ve tedarikçi silme",
+    "Permission:BusinessPartners.Transfer": "Cari virman yapma",
     "Permission:Accounts": "Hesap yönetimi",
     "Permission:Accounts.Create": "Hesap oluşturma",
     "Permission:Accounts.Edit": "Hesap düzenleme",
@@ -491,6 +492,11 @@
     "NoxStock:InventoryCountBarcodeExists": "Bu barkodla kayıtlı bir ürün zaten var.",
     "NoxStock:InventoryCountInvalidWorkbook": "Sayım dosyası okunamadı. Kolon başlıklarını ve dosya biçimini kontrol edin.",
     "NoxStock:InventoryCountInvalidFileSize": "Sayım dosyası boş olamaz ve 10 MB sınırını aşamaz.",
-    "NoxStock:InventoryCountInvalidFileType": "Yalnızca .xlsx veya .csv sayım dosyaları yüklenebilir."
+    "NoxStock:InventoryCountInvalidFileType": "Yalnızca .xlsx veya .csv sayım dosyaları yüklenebilir.",
+    "NoxStock:BusinessPartnerTransferInvalidParties": "Virman için geçerli bir müşteri ve tedarikçi seçin.",
+    "NoxStock:BusinessPartnerTransferAmountRequired": "Virman tutarı sıfırdan büyük olmalıdır.",
+    "NoxStock:BusinessPartnerTransferCurrencyMismatch": "Müşteri ve tedarikçinin para birimleri aynı olmalıdır.",
+    "NoxStock:BusinessPartnerTransferExceedsCustomerReceivable": "Virman tutarı müşterinin mevcut alacağını aşamaz.",
+    "NoxStock:BusinessPartnerTransferExceedsSupplierPayable": "Virman tutarı tedarikçiye olan mevcut borcu aşamaz."
   }
 }

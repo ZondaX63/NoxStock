@@ -12,4 +12,5 @@ public interface IBusinessPartnerAppService :
         CreateUpdateBusinessPartnerDto>
 {
     System.Threading.Tasks.Task ProcessPaymentAsync(ProcessPaymentDto input);
+    System.Threading.Tasks.Task<BusinessPartnerTransferDto> TransferCustomerReceivableAsync(CreateBusinessPartnerTransferDto input);
 }

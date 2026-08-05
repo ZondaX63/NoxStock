@@ -2031,6 +2031,35 @@ html.dark .border-slate-200 {
     border-color: var(--nx-border) !important;
 }
 
+/* Customer, supplier and direct-settlement modals */
+.business-partner-modal .modal-content {
+    border: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, .22);
+}
+
+.business-partner-modal .modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #f5f3ff, #fff);
+}
+
+.business-partner-modal .modal-body { padding: 1.35rem 1.5rem; }
+.business-partner-modal .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e5e7eb; background: #fafcff; }
+.partner-form-intro { padding: .9rem 1rem; margin-bottom: 1rem; border: 1px solid #ddd6fe; border-radius: 12px; background: #f5f3ff; color: #4c1d95; }
+.partner-form-intro strong { display: block; font-size: .9rem; }
+.partner-form-intro span { display: block; margin-top: .2rem; color: #6d5aa4; font-size: .8rem; }
+.partner-form-section { padding: 1rem; margin-bottom: .85rem; border: 1px solid #e2e8f0; border-radius: 13px; background: #fff; }
+.partner-form-section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: .8rem; }
+.partner-form-section-heading strong { color: #172554; font-size: .88rem; }
+.partner-form-section-heading span { color: #64748b; font-size: .75rem; text-align: right; }
+.partner-form-section .mb-3:last-child { margin-bottom: 0 !important; }
+.partner-limit-note { margin-top: .6rem; color: #64748b; font-size: .75rem; }
+
+html.dark .partner-form-section { border-color: var(--nx-border); background: var(--nx-surface); }
+html.dark .partner-form-section-heading strong { color: var(--nx-text); }
+
 @media (min-width: 640px) {
     .app-main {
         padding: 1rem 1.25rem 1.25rem;

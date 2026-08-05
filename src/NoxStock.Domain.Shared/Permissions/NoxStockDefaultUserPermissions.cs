@@ -12,6 +12,7 @@ public static class NoxStockDefaultUserPermissions
         "NoxStock.InventoryCounts",
         "NoxStock.InventoryCounts.Create",
         "NoxStock.BusinessPartners",
+        "NoxStock.BusinessPartners.Transfer",
         "NoxStock.Accounts",
         "NoxStock.Documents",
         "NoxStock.Offers",

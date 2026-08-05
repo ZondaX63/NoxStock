@@ -54,7 +54,9 @@ $(function () {
         return $('<div>').text(value || '').html();
     }
 
-    function paymentTypeText(type) {
+    function paymentTypeText(item) {
+        if (item.isBusinessPartnerTransfer) return '<span class="bg-violet-100 text-violet-800 text-xs font-medium px-2 py-0.5 rounded">Cari virman</span>';
+        var type = item.transactionType;
         if (type === 6) return '<span class="bg-emerald-100 text-emerald-800 text-xs font-medium px-2 py-0.5 rounded">Tahsilat</span>';
         if (type === 7) return '<span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded">Ödeme</span>';
         return '<span class="bg-slate-100 text-slate-700 text-xs font-medium px-2 py-0.5 rounded">Ters Kayıt</span>';
@@ -73,12 +75,15 @@ $(function () {
             items.forEach(function (item) {
                 var amountClass = item.amount < 0 ? 'text-red-600' : 'text-emerald-600';
                 var sign = item.amount > 0 ? '+' : '';
+                var accountOrCounterparty = item.isBusinessPartnerTransfer
+                    ? 'Karşı cari: ' + escapeHtml(item.counterpartyName || '--')
+                    : escapeHtml(item.accountName);
                 $body.append(
                     '<tr>' +
                     '<td class="py-3 px-6 text-slate-600 dark:text-slate-300">' + luxon.DateTime.fromISO(item.transactionDate).toFormat('dd.MM.yyyy') + '</td>' +
                     '<td class="py-3 px-6 font-semibold text-slate-800 dark:text-white">' + escapeHtml(item.documentNumber) + '</td>' +
-                    '<td class="py-3 px-6 text-slate-600 dark:text-slate-300">' + escapeHtml(item.accountName) + '</td>' +
-                    '<td class="py-3 px-6">' + paymentTypeText(item.transactionType) + '</td>' +
+                    '<td class="py-3 px-6 text-slate-600 dark:text-slate-300">' + accountOrCounterparty + '</td>' +
+                    '<td class="py-3 px-6">' + paymentTypeText(item) + '</td>' +
                     '<td class="py-3 px-6 text-right font-bold ' + amountClass + '">' + sign + item.amount + ' ' + escapeHtml(item.currency) + '</td>' +
                     '<td class="py-3 px-6 text-slate-500 max-w-xs truncate">' + escapeHtml(item.description) + '</td>' +
                     '</tr>'

@@ -31,8 +31,9 @@ public class NoxStockPermissionDefinitionProvider : PermissionDefinitionProvider
         AddTenantChild(inventoryCountsPermission, NoxStockPermissions.InventoryCounts.Create, L("Permission:InventoryCounts.Create"));
         AddTenantChild(inventoryCountsPermission, NoxStockPermissions.InventoryCounts.Complete, L("Permission:InventoryCounts.Complete"));
 
-        AddCrudPermissions(myGroup, NoxStockPermissions.BusinessPartners.Default, L("Permission:BusinessPartners"),
+        var businessPartnersPermission = AddCrudPermissions(myGroup, NoxStockPermissions.BusinessPartners.Default, L("Permission:BusinessPartners"),
             NoxStockPermissions.BusinessPartners.Create, NoxStockPermissions.BusinessPartners.Edit, NoxStockPermissions.BusinessPartners.Delete);
+        AddTenantChild(businessPartnersPermission, NoxStockPermissions.BusinessPartners.Transfer, L("Permission:BusinessPartners.Transfer"));
 
         var accountsPermission = AddCrudPermissions(myGroup, NoxStockPermissions.Accounts.Default, L("Permission:Accounts"),
             NoxStockPermissions.Accounts.Create, NoxStockPermissions.Accounts.Edit, NoxStockPermissions.Accounts.Delete);

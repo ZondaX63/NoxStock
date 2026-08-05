@@ -6,6 +6,8 @@ This is a layered startup solution based on [Domain Driven Design (DDD)](https:/
 
 ## Private Beta Prototype
 
+Current beta: `1.0.0-beta.1`
+
 NoxStock is currently prepared for a controlled private beta, not unrestricted production scale. The pilot target is 5-10 active tenants, limited users, and 5,000-10,000 products per tenant.
 
 Supported beta flows include tenant URL login/logout, tenant management by host admin, product creation and OEM search, dynamic TRY/USD/EUR pricing, POS sale and cancellation, sales invoice approval, payment/collection, account and current-account movement checks, dashboard, TR/EN switching, and tenant isolation guards.

@@ -1,6 +1,6 @@
 # Active Context
 
-Last updated: 2026-08-04
+Last updated: 2026-08-06
 
 ## Current Work Focus
 
@@ -9,6 +9,10 @@ The tenant-scoped **Stock Take / Inventory Audit** workflow is now implemented. 
 The active target remains **Private Beta Prototype Release**. The frontend-first implementation phases are complete: shared-layout deferral/caching, local pinned assets, Product/POS/document batching, exact and bounded remote lookups, bounded alerts, cached Dashboard aggregates, database-aggregated/paged reports, stable DataTable state, reduced paint work, request/browser timing telemetry, and a repeatable cold/warm navigation script are implemented. The remaining performance release evidence is operational rather than source work: run the prepared cold/warm browser and PostgreSQL capture on the 1 OCPU / 6 GB Oracle VM and compare it with `docs/performance/frontend-budget.md`. Production image build/deployment optimization remains explicitly deferred. ABP Razor Pages, tenant/license/audit enforcement, server-authoritative financial calculations, and component-local loading states remain architectural constraints. The final checklist is in `frontendPerformanceOptimization.md`; Warehouse, reservation, e-Invoice, CRM, advanced accounting, and AI features remain out of scope.
 
 ## Recent Changes
+
+- Prepared controlled beta `1.0.0-beta.1`: customer-to-supplier cari virman, auditable partner statement entries, partner modal UX refresh, and customer-facing audit activity summaries are included. This is a limited pilot build, not a general-production scale certification.
+
+- Added the tenant-scoped customer-to-supplier direct-settlement workflow. A customer receivable can now close an equal portion of a same-currency supplier payable without creating a cash/bank transaction. The operation is validated atomically, writes immutable `BusinessPartnerTransfer` evidence with a tenant-unique VIR reference, and is surfaced in both partner statement histories. Migration `20260805211438_Add_Business_Partner_Transfers` is required. Customer and supplier create/edit modals now use the shared sectioned partner-card design. Detailed scope: `features/business-partner-transfers.md`.
 
 - Added the complete Stock Take module under `/InventoryCounts`: focused barcode/search entry, repeated-scan accumulation, inline quantity/note editing, draft persistence, approval/reopen flow, history, summary counts, quick incomplete-product creation, and `.xlsx`/`.csv` import. Stock-untracked service products are rejected both in the browser and application service.
 - Completion requires a dedicated permission plus explicit destructive confirmation and runs as one transactional unit of work. Counted products are replaced with physical quantities, omitted tracked products are set to zero, and each actual delta produces an `InventoryCount` stock movement. Completed retries are idempotent.

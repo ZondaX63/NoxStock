@@ -95,6 +95,7 @@
     "Permission:BusinessPartners.Create": "Creating customers and suppliers",
     "Permission:BusinessPartners.Edit": "Editing customers and suppliers",
     "Permission:BusinessPartners.Delete": "Deleting customers and suppliers",
+    "Permission:BusinessPartners.Transfer": "Make receivable transfers",
     "Permission:Accounts": "Account Management",
     "Permission:Accounts.Create": "Creating accounts",
     "Permission:Accounts.Edit": "Editing accounts",
@@ -455,6 +456,11 @@
     "NoxStock:InventoryCountBarcodeExists": "A product with this barcode already exists.",
     "NoxStock:InventoryCountInvalidWorkbook": "The count file could not be read. Check its columns and file format.",
     "NoxStock:InventoryCountInvalidFileSize": "The count file cannot be empty or exceed 10 MB.",
-    "NoxStock:InventoryCountInvalidFileType": "Only .xlsx or .csv count files are supported."
+    "NoxStock:InventoryCountInvalidFileType": "Only .xlsx or .csv count files are supported.",
+    "NoxStock:BusinessPartnerTransferInvalidParties": "Select a valid customer and supplier for the transfer.",
+    "NoxStock:BusinessPartnerTransferAmountRequired": "The transfer amount must be greater than zero.",
+    "NoxStock:BusinessPartnerTransferCurrencyMismatch": "Customer and supplier currencies must match.",
+    "NoxStock:BusinessPartnerTransferExceedsCustomerReceivable": "The transfer amount cannot exceed the customer's outstanding receivable.",
+    "NoxStock:BusinessPartnerTransferExceedsSupplierPayable": "The transfer amount cannot exceed the outstanding supplier payable."
   }
 }

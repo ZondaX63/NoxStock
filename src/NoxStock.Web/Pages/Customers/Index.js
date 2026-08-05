@@ -4,10 +4,12 @@ $(function () {
     var createModal = new abp.ModalManager(abp.appPath + 'Customers/CreateModal');
     var editModal = new abp.ModalManager(abp.appPath + 'Customers/EditModal');
     var paymentModal = new abp.ModalManager(abp.appPath + 'Shared/PaymentModal');
+    var transferModal = new abp.ModalManager(abp.appPath + 'BusinessPartnerTransfers/CreateModal');
 
     paymentModal.onResult(function () {
         dataTable.ajax.reload();
     });
+    transferModal.onResult(function () { dataTable.ajax.reload(); });
 
     var dataTable = $('#CustomersTable').DataTable(abp.libs.datatables.normalizeConfiguration({
         serverSide: true,
@@ -43,6 +45,12 @@ $(function () {
                                 text: 'Tahsilat Al',
                                 action: function (data) {
                                     paymentModal.open({ businessPartnerId: data.record.id, isCollection: true });
+                                }
+                            },
+                            {
+                                text: 'Tedarikçiye virman yap',
+                                action: function (data) {
+                                    transferModal.open({ customerId: data.record.id });
                                 }
                             },
                             {
