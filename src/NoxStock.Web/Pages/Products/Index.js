@@ -103,10 +103,14 @@ $(function () {
         return Number(row.pricingMode) === 1;
     }
 
-    function hasLastPurchaseCost(row) {
+    function hasVerifiedCost(row) {
         return Number(row.averageInventoryCostTry || 0) > 0 ||
             Number(row.lastPurchaseCostCurrencyAmount || 0) > 0 ||
             Number(row.lastPurchaseCostTryAmount || 0) > 0;
+    }
+
+    function hasCostInfo(row) {
+        return hasVerifiedCost(row) || Number(row.currentNetCostInTry || 0) > 0;
     }
 
     function renderProductIdentity(row) {
@@ -146,8 +150,8 @@ $(function () {
         if (row.isIncompleteProfile) {
             return '<div class="product-cost-empty"><span class="material-icons-round" aria-hidden="true">edit_note</span><div><strong>Eksik bilgili ürün</strong><span>Sayım sırasında hızlı oluşturuldu; ürün kartını tamamlayın.</span></div></div>';
         }
-        if (!hasLastPurchaseCost(row)) {
-            return '<div class="product-cost-empty"><span class="material-icons-round" aria-hidden="true">receipt_long</span><div><strong>Maliyet bilgisi yok</strong><span>İlk onaylı alış faturasıyla oluşur.</span></div></div>';
+        if (!hasCostInfo(row)) {
+            return '<div class="product-cost-empty"><span class="material-icons-round" aria-hidden="true">receipt_long</span><div><strong>Maliyet bilgisi yok</strong><span>Referans maliyet veya alış faturası ekleyin.</span></div></div>';
         }
 
         var sourceCurrency = row.lastPurchaseSourceCurrencyCode || 'TRY';
@@ -165,10 +169,11 @@ $(function () {
     }
 
     function renderReferenceCost(row) {
-        if (!hasLastPurchaseCost(row)) {
-            return '<div class="product-table-empty"><strong>—</strong><span>Onaylı maliyet oluşmadı</span></div>';
+        if (!hasCostInfo(row)) {
+            return '<div class="product-table-empty"><strong>—</strong><span>Maliyet bilgisi yok</span></div>';
         }
 
+        var isVerified = hasVerifiedCost(row);
         var currency = row.purchaseCurrency || row.lastPurchaseCostCurrencyCode || 'TRY';
         var currentTryCost = row.averageInventoryCostTry != null
             ? row.averageInventoryCostTry
@@ -178,9 +183,9 @@ $(function () {
         var sourceRate = Number(row.lastPurchaseSourceExchangeRate || row.lastPurchaseExchangeRate || 0);
         var lastPurchaseTitle = sourceAmount > 0
             ? 'Son alış: ' + formatMoney(sourceAmount, sourceCurrency) + (sourceRate > 0 ? ' · Kur ' + formatDecimal(sourceRate, 2) : '') + (row.lastPurchaseCostTryAmount ? ' · ' + formatMoney(row.lastPurchaseCostTryAmount, 'TRY') : '')
-            : 'Son alış bilgisi yok';
+            : 'Referans maliyet: ' + formatMoney(currentTryCost, 'TRY') + (row.purchaseCurrency && row.purchaseCurrency !== 'TRY' ? ' · Kur ' + formatDecimal(row.exchangeRateAtPurchase || 0, 2) : '');
         return '<div class="product-cost-value">' + escapeHtml(formatMoney(currentTryCost, 'TRY')) + '</div>' +
-            '<div class="product-table-subtitle" title="' + escapeHtml(lastPurchaseTitle) + '">Güncel maliyet · Son alış için üzerine gelin</div>';
+            '<div class="product-table-subtitle" title="' + escapeHtml(lastPurchaseTitle) + '">' + (isVerified ? 'Onaylı alış maliyeti · detay için üzerine gelin' : 'Referans maliyet · alış faturasıyla doğrulanır') + '</div>';
     }
 
     function renderProfit(row) {
@@ -198,7 +203,8 @@ $(function () {
         var states = [];
         states.push('<span class="product-status-pill ' + (dynamic ? 'is-auto' : 'is-manual') + '">' + (dynamic ? 'Otomatik fiyat' : 'Manuel fiyat') + '</span>');
         if (row.isIncompleteProfile) states.push('<span class="product-status-pill is-warning">Bilgileri eksik</span>');
-        if (!hasLastPurchaseCost(row)) states.push('<span class="product-status-pill is-muted">Maliyet bekliyor</span>');
+        if (!hasCostInfo(row)) states.push('<span class="product-status-pill is-muted">Maliyet bekliyor</span>');
+        else if (!hasVerifiedCost(row)) states.push('<span class="product-status-pill is-warning">Referans maliyet</span>');
         if (row.isBelowTargetMarkup) states.push('<span class="product-status-pill is-warning">Hedef kârın altında</span>');
         return '<div class="product-status-list">' + states.join('') + '</div>';
     }
@@ -230,7 +236,7 @@ $(function () {
 
     function renderSalePreview(row) {
         var dynamic = isDynamicPrice(row);
-        if (!row.isSuggestedSaleAvailable && dynamic && !hasLastPurchaseCost(row)) {
+        if (!row.isSuggestedSaleAvailable && dynamic && !hasCostInfo(row)) {
             return '<div class="product-sale-unavailable"><span class="material-icons-round" aria-hidden="true">schedule</span><div><strong>Hesaplanmayı bekliyor</strong><span>Onaylı alış maliyeti yok.</span></div></div>';
         }
 

@@ -355,6 +355,7 @@ Last updated: 2026-07-16
 
 - 2026-08-13: Production pricing UI pass completed across Products, invoice create/edit, POS, price history and purchase stock movements. Technical property/model names were replaced with current cost, latest purchase, active sale and profit language; purchase cost impact and live below-cost feedback are now visible at the point of work. Focused integration tests pass 31/31.
 - 2026-08-13: POS quick-customer creation was added as a compact modal, and POS product cards now display shelf/location information when available.
+- 2026-08-13: Fixed the inventory-summary cost-source mismatch: reference costs were used for product profit but excluded from total stock value and missing-cost counts. The summary now uses the same effective cost path and labels reference-based values honestly.
 
 - 2026-08-03: Invoice quick-product creation now uses the ABP/jQuery promise `always` lifecycle to restore the save button after either outcome; this fixes subsequent in-invoice product creation being stuck at “Kaydediliyor…”.
 - 2026-08-03: POS kartları ürün sayısı arttığında kaydırma alanının önceki konumunda kalmayacak şekilde sıfırlanıyor; sepet içindeki fiyat/KDV kontrolleri dar panelde dengeli oranlarla hizalanıyor.

@@ -28,7 +28,9 @@ public class ProductImportAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         var product = await _productAppService.CreateAsync(new CreateUpdateProductDto
         {
             Name = "Minimum alanlı ürün",
-            Sku = string.Empty
+            Sku = string.Empty,
+            PurchaseCurrency = "TRY",
+            ExchangeRateAtPurchase = 1m
         });
 
         product.Name.ShouldBe("Minimum alanlı ürün");
@@ -120,6 +122,52 @@ public class ProductImportAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         products.Single(product => product.Sku == "STOCK-002").Barcode.ShouldBe(string.Empty);
         products.Single(product => product.Sku == "STOCK-003").Quantity.ShouldBe(1m);
         products.Single(product => product.Sku == "STOCK-003").CriticalStockLevel.ShouldBe(1.5m);
+    }
+
+    [Fact]
+    public async Task Should_Import_Reference_Cost_And_Pricing_Policy_Without_Losing_Precision()
+    {
+        using var stream = new MemoryStream();
+        var rows = new List<Dictionary<string, object?>>
+        {
+            new()
+            {
+                ["Ürün Adı"] = "Dövizli maliyetli ürün",
+                ["SKU"] = "PRICE-IMPORT-001",
+                ["Miktar"] = 3m,
+                ["Liste Alış Fiyatı"] = 100m,
+                ["Alış Para Birimi"] = "EUR",
+                ["Alış Kuru (TL)"] = 40m,
+                ["Alış İskonto 1 (%)"] = 10m,
+                ["Alış İskonto 2 (%)"] = 0m,
+                ["Alış İskonto 3 (%)"] = 0m,
+                ["Alış İskonto 4 (%)"] = 0m,
+                ["Fiyatlandırma Modu"] = "Dövize Çıpalı Dinamik",
+                ["Satış Fiyatı (KDV Hariç TL)"] = 1m,
+                ["Hedef Kâr Ekleme Oranı (%)"] = 30m,
+                ["KDV Oranı (%)"] = 20m,
+                ["Stok Takibi"] = "Evet"
+            }
+        };
+        stream.SaveAs(rows);
+
+        var result = await _productAppService.ImportAsync(new ProductImportInputDto
+        {
+            FileName = "fiyat-politikasi.xlsx",
+            Content = stream.ToArray()
+        });
+
+        result.CreatedCount.ShouldBe(1);
+        var product = (await _productRepository.GetListAsync(x => x.Sku == "PRICE-IMPORT-001")).Single();
+        product.PurchaseListPrice.ShouldBe(100m);
+        product.PurchaseCurrency.ShouldBe("EUR");
+        product.ExchangeRateAtPurchase.ShouldBe(40m);
+        product.PurchaseDiscount1.ShouldBe(10m);
+        product.AverageInventoryCostTry.ShouldBe(3600m);
+        product.PricingMode.ShouldBe(ProductPricingMode.DynamicCurrencyMarkup);
+        product.ProfitMarkupPercent.ShouldBe(30m);
+        product.SalePrice.ShouldBe(4680m);
+        product.VatRate.ShouldBe(20);
     }
 
 }

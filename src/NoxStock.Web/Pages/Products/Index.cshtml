@@ -80,9 +80,9 @@
         <div class="products-overview-card products-overview-cost">
             <span class="material-icons-round" aria-hidden="true">account_balance_wallet</span>
             <div>
-                <span>Toplam stok maliyeti</span>
+                <span>Tahmini stok değeri</span>
                 <strong id="ProductTotalInventoryValue" class="text-lg">-</strong>
-                <small>Mevcut miktar × güncel birim maliyet</small>
+                <small>Onaylı maliyet, yoksa referans maliyet</small>
             </div>
         </div>
         <div class="products-overview-card products-overview-revenue">
@@ -285,6 +285,8 @@
                             <li>Aynı stok kodunun ilk satırı alınır; stok miktarı iki kez eklenmez.</li>
                             <li>Mevcut stok kodunda miktar ve dolu operasyon bilgileri güncellenir.</li>
                             <li>Boş marka, kategori, barkod, raf ve açıklama aktarımı engellemez.</li>
+                            <li>Excel’e aktarılan alış fiyatı, para birimi, kur, dört alış iskontosu, satış fiyatı, fiyatlandırma modu, kâr oranı ve KDV tekrar içe aktarılabilir.</li>
+                            <li><b>Onaylı birim maliyet</b> ve <b>son alış birim maliyeti</b> yalnızca bilgi içindir; geçmiş maliyetler Excel ile ezilmez.</li>
                         </ul>
                     </div>
                 </div>

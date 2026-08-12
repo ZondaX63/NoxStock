@@ -22,6 +22,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     private readonly IDocumentWorkflowAppService _documentWorkflowAppService;
     private readonly IRepository<ExchangeRate, Guid> _exchangeRateRepository;
     private readonly ILabelProductLookupAppService _labelProductLookupAppService;
+    private readonly IRepository<Product, Guid> _productRepository;
 
     public ProductPricingAppServiceTests()
     {
@@ -32,6 +33,42 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         _documentWorkflowAppService = ServiceProvider.GetRequiredService<IDocumentWorkflowAppService>();
         _exchangeRateRepository = ServiceProvider.GetRequiredService<IRepository<ExchangeRate, Guid>>();
         _labelProductLookupAppService = ServiceProvider.GetRequiredService<ILabelProductLookupAppService>();
+        _productRepository = ServiceProvider.GetRequiredService<IRepository<Product, Guid>>();
+    }
+
+    [Fact]
+    public async Task Should_Include_Reference_Cost_In_Inventory_Summary_When_Approved_Cost_Is_Not_Available()
+    {
+        var before = await _productAppService.GetInventorySummaryAsync();
+        var product = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Reference Cost Summary Product",
+            Sku = "REFERENCE-SUMMARY-001",
+            Barcode = "869000009901",
+            Description = string.Empty,
+            Unit = "Adet",
+            ShelfLocation = string.Empty,
+            PurchaseListPrice = 1000m,
+            PurchaseCurrency = "TRY",
+            ExchangeRateAtPurchase = 1m,
+            SalePrice = 1500m,
+            PricingMode = ProductPricingMode.Manual,
+            ProfitMarkupPercent = 50m,
+            Quantity = 30m,
+            TrackStock = true
+        });
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var saved = await _productRepository.GetAsync(product.Id);
+            saved.AverageInventoryCostTry = null;
+            await _productRepository.UpdateAsync(saved, autoSave: true);
+        });
+
+        var after = await _productAppService.GetInventorySummaryAsync();
+
+        (after.TotalInventoryCost - before.TotalInventoryCost).ShouldBe(30000m);
+        after.MissingCostCount.ShouldBe(before.MissingCostCount);
     }
 
     [Fact]

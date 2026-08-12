@@ -212,35 +212,48 @@ public class ProductAppService :
     {
         CurrentTenant.RequireTenantId();
         var query = await Repository.GetQueryableAsync();
-
-        var stockQuery = query.Where(x => x.TrackStock && x.Quantity > 0);
-        var productsInStock = await AsyncExecuter.ToListAsync(stockQuery);
+        var products = await AsyncExecuter.ToListAsync(query);
         decimal totalInventoryCost = 0m;
         decimal totalPotentialRevenue = 0m;
-        foreach (var product in productsInStock)
+        long missingCostCount = 0;
+
+        foreach (var product in products)
         {
-            totalInventoryCost += product.Quantity * (product.AverageInventoryCostTry ?? product.LastPurchaseCostTryAmount ?? 0m);
             try
             {
                 var price = await _priceCalculator.CalculateAsync(product);
-                if (price.IsAvailable)
+                var effectiveCost = price.NetCostInTry;
+                if (effectiveCost <= 0m)
                 {
-                    totalPotentialRevenue += product.Quantity * price.ListSalePriceInTry;
+                    missingCostCount++;
+                    continue;
+                }
+
+                if (product.TrackStock && product.Quantity > 0m)
+                {
+                    // Onaylı alış maliyeti varsa hesaplayıcı onu önceliklendirir;
+                    // yoksa ürün kartındaki referans maliyeti kullanır. Böylece
+                    // stok değeri, listede görünen birim kâr hesabıyla aynı
+                    // maliyet kaynağını kullanır.
+                    totalInventoryCost += product.Quantity * effectiveCost;
+                    if (price.IsAvailable)
+                    {
+                        totalPotentialRevenue += product.Quantity * price.ListSalePriceInTry;
+                    }
                 }
             }
             catch (BusinessException)
             {
-                // Kur veya onaylı maliyet bulunmayan ürünler potansiyel satış
-                // değerini yapay olarak yükseltmemek için toplama alınmaz.
+                missingCostCount++;
             }
         }
 
         return new ProductInventorySummaryDto
         {
-            TotalCount = await AsyncExecuter.CountAsync(query),
-            DynamicPricingCount = await AsyncExecuter.CountAsync(query.Where(x => x.PricingMode == ProductPricingMode.DynamicCurrencyMarkup)),
-            MissingCostCount = await AsyncExecuter.CountAsync(query.Where(x => !x.AverageInventoryCostTry.HasValue || x.AverageInventoryCostTry <= 0)),
-            AttentionStockCount = await AsyncExecuter.CountAsync(query.Where(x => x.TrackStock && x.Quantity <= x.CriticalStockLevel)),
+            TotalCount = products.Count,
+            DynamicPricingCount = products.LongCount(x => x.PricingMode == ProductPricingMode.DynamicCurrencyMarkup),
+            MissingCostCount = missingCostCount,
+            AttentionStockCount = products.LongCount(x => x.TrackStock && x.Quantity <= x.CriticalStockLevel),
             TotalInventoryCost = Math.Round(totalInventoryCost, 2, MidpointRounding.AwayFromZero),
             TotalPotentialRevenue = Math.Round(totalPotentialRevenue, 2, MidpointRounding.AwayFromZero)
         };
@@ -386,7 +399,26 @@ public class ProductAppService :
             ["Birim"] = product.Unit,
             ["Açıklama"] = product.Description,
             ["Etiketler"] = oemCodes.GetValueOrDefault(product.Id, string.Empty),
-            ["Kritik Stok Miktarı"] = product.CriticalStockLevel
+            ["Kritik Stok Miktarı"] = product.CriticalStockLevel,
+            ["Liste Alış Fiyatı"] = product.PurchaseListPrice,
+            ["Alış Para Birimi"] = product.PurchaseCurrency,
+            ["Alış Kuru (TL)"] = product.ExchangeRateAtPurchase,
+            ["Alış İskonto 1 (%)"] = product.PurchaseDiscount1,
+            ["Alış İskonto 2 (%)"] = product.PurchaseDiscount2,
+            ["Alış İskonto 3 (%)"] = product.PurchaseDiscount3,
+            ["Alış İskonto 4 (%)"] = product.PurchaseDiscount4,
+            ["Fiyatlandırma Modu"] = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup ? "Dövize Çıpalı Dinamik" : "Sabit TL",
+            ["Satış Fiyatı (KDV Hariç TL)"] = product.SalePrice,
+            ["Hedef Kâr Ekleme Oranı (%)"] = product.ProfitMarkupPercent,
+            ["KDV Oranı (%)"] = product.VatRate,
+            ["Satış İskonto 1 (%)"] = product.SalesDiscount1,
+            ["Satış İskonto 2 (%)"] = product.SalesDiscount2,
+            ["Satış İskonto 3 (%)"] = product.SalesDiscount3,
+            ["Satış İskonto 4 (%)"] = product.SalesDiscount4,
+            ["Stok Takibi"] = product.TrackStock ? "Evet" : "Hayır",
+            // Historical/approved costs are export-only: an Excel workbook must not overwrite them.
+            ["Onaylı Birim Maliyet (TL) - Bilgi"] = product.AverageInventoryCostTry,
+            ["Son Alış Birim Maliyeti (TL) - Bilgi"] = product.LastPurchaseCostTryAmount
         }).ToList();
 
         await using var stream = new MemoryStream();
@@ -539,6 +571,11 @@ public class ProductAppService :
                 FindId(brandByName, row.BrandName),
                 FindId(categoryByName, row.CategoryName),
                 isNew);
+
+            // A first stock migration may supply a reference cost. It only seeds an
+            // empty opening cost and never overwrites approved purchase history.
+            InitializeOpeningInventoryCost(product!);
+            ApplyAutomaticPrice(product!);
 
             if (isNew)
             {
@@ -701,7 +738,23 @@ public class ProductAppService :
             Description = CellText(source.Description),
             OemCodes = Limit(CellText(source.Tags), 1000),
             Quantity = ParseDecimal(source.Quantity),
-            CriticalStockLevel = ParseDecimal(source.CriticalStockLevel)
+            CriticalStockLevel = ParseDecimal(source.CriticalStockLevel),
+            PurchaseListPrice = ParseNonNegativeDecimal(source.PurchaseListPrice, "Liste alış fiyatı", rowNumber, result),
+            PurchaseCurrency = ParseCurrency(source.PurchaseCurrency, rowNumber, result),
+            ExchangeRateAtPurchase = ParsePositiveDecimal(source.ExchangeRateAtPurchase, "Alış kuru", rowNumber, result),
+            PurchaseDiscount1 = ParsePercentage(source.PurchaseDiscount1, "Alış iskontosu 1", rowNumber, result),
+            PurchaseDiscount2 = ParsePercentage(source.PurchaseDiscount2, "Alış iskontosu 2", rowNumber, result),
+            PurchaseDiscount3 = ParsePercentage(source.PurchaseDiscount3, "Alış iskontosu 3", rowNumber, result),
+            PurchaseDiscount4 = ParsePercentage(source.PurchaseDiscount4, "Alış iskontosu 4", rowNumber, result),
+            PricingMode = ParsePricingMode(source.PricingMode, rowNumber, result),
+            SalePrice = ParseNonNegativeDecimal(source.SalePrice, "Satış fiyatı", rowNumber, result),
+            ProfitMarkupPercent = ParseNonNegativeDecimal(source.ProfitMarkupPercent, "Hedef kâr ekleme oranı", rowNumber, result),
+            VatRate = ParseVatRate(source.VatRate, rowNumber, result),
+            SalesDiscount1 = ParsePercentage(source.SalesDiscount1, "Satış iskontosu 1", rowNumber, result),
+            SalesDiscount2 = ParsePercentage(source.SalesDiscount2, "Satış iskontosu 2", rowNumber, result),
+            SalesDiscount3 = ParsePercentage(source.SalesDiscount3, "Satış iskontosu 3", rowNumber, result),
+            SalesDiscount4 = ParsePercentage(source.SalesDiscount4, "Satış iskontosu 4", rowNumber, result),
+            TrackStock = ParseBoolean(source.TrackStock, "Stok takibi", rowNumber, result)
         };
     }
 
@@ -722,9 +775,30 @@ public class ProductAppService :
         if (categoryId.HasValue) product.CategoryId = categoryId;
         if (row.Quantity.HasValue) product.Quantity = RoundMoney(row.Quantity.Value);
         if (row.CriticalStockLevel.HasValue) product.CriticalStockLevel = RoundMoney(row.CriticalStockLevel.Value);
+        if (row.PurchaseListPrice.HasValue)
+        {
+            product.PurchaseListPrice = RoundMoney(row.PurchaseListPrice.Value);
+            // Legacy price remains synchronized for existing document workflows.
+            product.PurchasePrice = product.PurchaseListPrice;
+        }
+        if (!string.IsNullOrWhiteSpace(row.PurchaseCurrency)) product.PurchaseCurrency = row.PurchaseCurrency;
+        if (row.ExchangeRateAtPurchase.HasValue) product.ExchangeRateAtPurchase = RoundMoney(row.ExchangeRateAtPurchase.Value);
+        if (row.PurchaseDiscount1.HasValue) product.PurchaseDiscount1 = RoundMoney(row.PurchaseDiscount1.Value);
+        if (row.PurchaseDiscount2.HasValue) product.PurchaseDiscount2 = RoundMoney(row.PurchaseDiscount2.Value);
+        if (row.PurchaseDiscount3.HasValue) product.PurchaseDiscount3 = RoundMoney(row.PurchaseDiscount3.Value);
+        if (row.PurchaseDiscount4.HasValue) product.PurchaseDiscount4 = RoundMoney(row.PurchaseDiscount4.Value);
+        if (row.PricingMode.HasValue) product.PricingMode = row.PricingMode.Value;
+        if (row.SalePrice.HasValue) product.SalePrice = RoundMoney(row.SalePrice.Value);
+        if (row.ProfitMarkupPercent.HasValue) product.ProfitMarkupPercent = RoundMoney(row.ProfitMarkupPercent.Value);
+        if (row.VatRate.HasValue) product.VatRate = row.VatRate.Value;
+        if (row.SalesDiscount1.HasValue) product.SalesDiscount1 = RoundMoney(row.SalesDiscount1.Value);
+        if (row.SalesDiscount2.HasValue) product.SalesDiscount2 = RoundMoney(row.SalesDiscount2.Value);
+        if (row.SalesDiscount3.HasValue) product.SalesDiscount3 = RoundMoney(row.SalesDiscount3.Value);
+        if (row.SalesDiscount4.HasValue) product.SalesDiscount4 = RoundMoney(row.SalesDiscount4.Value);
+        if (row.TrackStock.HasValue) product.TrackStock = row.TrackStock.Value;
         if (isNew)
         {
-            product.TrackStock = true;
+            product.TrackStock = row.TrackStock ?? true;
         }
     }
 
@@ -809,6 +883,76 @@ public class ProductAppService :
         return Regex.IsMatch(value, @"^[+-]?\d+(?:[\.,]\d+)?[eE][+-]?\d+$", RegexOptions.CultureInvariant);
     }
 
+    private static decimal? ParseNonNegativeDecimal(object? value, string field, int rowNumber, ProductImportResultDto result)
+    {
+        var parsed = ParseDecimal(value);
+        if (!parsed.HasValue || parsed.Value >= 0m) return parsed;
+        AddImportIssue(result, rowNumber, $"{field} negatif olamayacağı için yok sayıldı.");
+        return null;
+    }
+
+    private static decimal? ParsePositiveDecimal(object? value, string field, int rowNumber, ProductImportResultDto result)
+    {
+        if (string.IsNullOrWhiteSpace(CellText(value))) return null;
+        var parsed = ParseDecimal(value);
+        if (parsed is > 0m) return parsed;
+        AddImportIssue(result, rowNumber, $"{field} sıfırdan büyük olmalıdır; mevcut değer korunmuştur.");
+        return null;
+    }
+
+    private static decimal? ParsePercentage(object? value, string field, int rowNumber, ProductImportResultDto result)
+    {
+        if (string.IsNullOrWhiteSpace(CellText(value))) return null;
+        var parsed = ParseDecimal(value);
+        if (parsed is >= 0m and <= 100m) return parsed;
+        AddImportIssue(result, rowNumber, $"{field} %0 ile %100 arasında olmalıdır; mevcut değer korunmuştur.");
+        return null;
+    }
+
+    private static int? ParseVatRate(object? value, int rowNumber, ProductImportResultDto result)
+    {
+        if (string.IsNullOrWhiteSpace(CellText(value))) return null;
+        var parsed = ParseDecimal(value);
+        if (parsed is 0m or 1m or 10m or 20m) return (int)parsed.Value;
+        AddImportIssue(result, rowNumber, "KDV oranı yalnızca %0, %1, %10 veya %20 olabilir; mevcut değer korunmuştur.");
+        return null;
+    }
+
+    private static string? ParseCurrency(object? value, int rowNumber, ProductImportResultDto result)
+    {
+        var currency = CellText(value).ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(currency)) return null;
+        if (currency is "TRY" or "USD" or "EUR") return currency;
+        AddImportIssue(result, rowNumber, "Alış para birimi TRY, USD veya EUR olmalıdır; mevcut değer korunmuştur.");
+        return null;
+    }
+
+    private static ProductPricingMode? ParsePricingMode(object? value, int rowNumber, ProductImportResultDto result)
+    {
+        var mode = CellText(value);
+        if (string.IsNullOrWhiteSpace(mode)) return null;
+        var normalized = mode.Trim()
+            .Replace('ı', 'i')
+            .Replace('İ', 'I')
+            .ToUpperInvariant();
+        if (normalized is "SABIT TL" or "MANUEL" or "MANUAL") return ProductPricingMode.Manual;
+        if (normalized is "DÖVIZE ÇIPALI DINAMIK" or "DINAMIK" or "OTOMATIK" or "DYNAMICCURRENCYMARKUP")
+            return ProductPricingMode.DynamicCurrencyMarkup;
+
+        AddImportIssue(result, rowNumber, "Fiyatlandırma modu 'Sabit TL' veya 'Dövize Çıpalı Dinamik' olmalıdır; mevcut değer korunmuştur.");
+        return null;
+    }
+
+    private static bool? ParseBoolean(object? value, string field, int rowNumber, ProductImportResultDto result)
+    {
+        var text = CellText(value).ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        if (text is "EVET" or "E" or "TRUE" or "1") return true;
+        if (text is "HAYIR" or "H" or "FALSE" or "0") return false;
+        AddImportIssue(result, rowNumber, $"{field} için Evet veya Hayır yazılmalıdır; mevcut değer korunmuştur.");
+        return null;
+    }
+
     private static string Limit(string value, int maximumLength)
     {
         var trimmed = value.Trim();
@@ -835,6 +979,22 @@ public class ProductAppService :
         public string OemCodes { get; init; } = string.Empty;
         public decimal? Quantity { get; init; }
         public decimal? CriticalStockLevel { get; init; }
+        public decimal? PurchaseListPrice { get; init; }
+        public string? PurchaseCurrency { get; init; }
+        public decimal? ExchangeRateAtPurchase { get; init; }
+        public decimal? PurchaseDiscount1 { get; init; }
+        public decimal? PurchaseDiscount2 { get; init; }
+        public decimal? PurchaseDiscount3 { get; init; }
+        public decimal? PurchaseDiscount4 { get; init; }
+        public ProductPricingMode? PricingMode { get; init; }
+        public decimal? SalePrice { get; init; }
+        public decimal? ProfitMarkupPercent { get; init; }
+        public int? VatRate { get; init; }
+        public decimal? SalesDiscount1 { get; init; }
+        public decimal? SalesDiscount2 { get; init; }
+        public decimal? SalesDiscount3 { get; init; }
+        public decimal? SalesDiscount4 { get; init; }
+        public bool? TrackStock { get; init; }
     }
 
     private sealed class ProductImportSpreadsheetRow
@@ -850,6 +1010,22 @@ public class ProductAppService :
         [ExcelColumnName("Açıklama")] public object? Description { get; set; }
         [ExcelColumnName("Etiketler")] public object? Tags { get; set; }
         [ExcelColumnName("Kritik Stok Miktarı")] public object? CriticalStockLevel { get; set; }
+        [ExcelColumnName("Liste Alış Fiyatı")] public object? PurchaseListPrice { get; set; }
+        [ExcelColumnName("Alış Para Birimi")] public object? PurchaseCurrency { get; set; }
+        [ExcelColumnName("Alış Kuru (TL)")] public object? ExchangeRateAtPurchase { get; set; }
+        [ExcelColumnName("Alış İskonto 1 (%)")] public object? PurchaseDiscount1 { get; set; }
+        [ExcelColumnName("Alış İskonto 2 (%)")] public object? PurchaseDiscount2 { get; set; }
+        [ExcelColumnName("Alış İskonto 3 (%)")] public object? PurchaseDiscount3 { get; set; }
+        [ExcelColumnName("Alış İskonto 4 (%)")] public object? PurchaseDiscount4 { get; set; }
+        [ExcelColumnName("Fiyatlandırma Modu")] public object? PricingMode { get; set; }
+        [ExcelColumnName("Satış Fiyatı (KDV Hariç TL)")] public object? SalePrice { get; set; }
+        [ExcelColumnName("Hedef Kâr Ekleme Oranı (%)")] public object? ProfitMarkupPercent { get; set; }
+        [ExcelColumnName("KDV Oranı (%)")] public object? VatRate { get; set; }
+        [ExcelColumnName("Satış İskonto 1 (%)")] public object? SalesDiscount1 { get; set; }
+        [ExcelColumnName("Satış İskonto 2 (%)")] public object? SalesDiscount2 { get; set; }
+        [ExcelColumnName("Satış İskonto 3 (%)")] public object? SalesDiscount3 { get; set; }
+        [ExcelColumnName("Satış İskonto 4 (%)")] public object? SalesDiscount4 { get; set; }
+        [ExcelColumnName("Stok Takibi")] public object? TrackStock { get; set; }
 
         public bool IsEmpty()
         {
