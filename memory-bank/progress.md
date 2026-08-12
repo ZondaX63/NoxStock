@@ -1,5 +1,16 @@
 # Progress
 
+## 2026-08-13 - Weighted-Average Inventory Pricing
+
+- Added separate weighted-average TRY inventory cost and last-purchase snapshots; purchase approval now updates stock, average cost, latest purchase and automatic sale price atomically.
+- Purchase lines and cost history preserve source currency/rate, source net unit cost, TRY unit/total cost, quantity and before/after average-cost context.
+- Unified automatic/manual behavior in the shared backend calculator and shared Product Card modal pipeline. Manual prices remain fixed; automatic prices follow cost plus target markup.
+- Product list/card, purchase preview, reporting and POS/sales snapshots now use the average inventory cost. Below-cost sales require explicit confirmation plus ABP permission.
+- Removed active reliance on the legacy live-FX flag and product-level default sales discounts without dropping compatibility columns or altering historical beta documents.
+- Normalized touched money, rate and quantity entry/display paths to at most two decimals; foreign card rates omitted by API are resolved instead of silently defaulting to 1 TL.
+- Added backward-compatible migration `20260813010000_AddWeightedAverageInventoryPricing`. Reliable existing last-purchase TRY values are backfilled; unknown costs remain unknown.
+- Verification: focused ProductPricing/ProductCostProfile/POS integration tests pass 31/31; Application and Web builds complete with zero errors; `git diff --check` passes.
+
 ## 2026-08-04 - Stok Sayım Modülü
 
 - Yeni `/InventoryCounts` akışı barkod/SKU araması, aynı barkodu kümulatif artırma, satır içi miktar/not düzenleme, taslak kaydetme, onaya gönderme, düzenlemeye açma, geçmiş ve canlı özetleri içeriyor.
@@ -341,6 +352,9 @@ Last updated: 2026-07-16
 - Gate P0.1 removed the MessagePack and Microsoft.OpenApi runtime chains, pinned patched Scriban 7.2.5, and added CI scanning. Current Web and DbMigrator transitive scans report no advisories.
 
 ## Decision History
+
+- 2026-08-13: Production pricing UI pass completed across Products, invoice create/edit, POS, price history and purchase stock movements. Technical property/model names were replaced with current cost, latest purchase, active sale and profit language; purchase cost impact and live below-cost feedback are now visible at the point of work. Focused integration tests pass 31/31.
+- 2026-08-13: POS quick-customer creation was added as a compact modal, and POS product cards now display shelf/location information when available.
 
 - 2026-08-03: Invoice quick-product creation now uses the ABP/jQuery promise `always` lifecycle to restore the save button after either outcome; this fixes subsequent in-invoice product creation being stuck at “Kaydediliyor…”.
 - 2026-08-03: POS kartları ürün sayısı arttığında kaydırma alanının önceki konumunda kalmayacak şekilde sıfırlanıyor; sepet içindeki fiyat/KDV kontrolleri dar panelde dengeli oranlarla hizalanıyor.

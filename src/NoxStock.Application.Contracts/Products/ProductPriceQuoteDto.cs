@@ -10,6 +10,7 @@ public class ProductPriceQuoteInputDto
 public class ProductPriceQuoteDto
 {
     public Guid ProductId { get; set; }
+    public decimal Quantity { get; set; }
     public bool IsAvailable { get; set; } = true;
     public string? UnavailableReason { get; set; }
     public string Currency { get; set; } = "TRY";
@@ -46,6 +47,11 @@ public class ProductPriceQuoteDto
     public string? LastPurchaseCostCurrencyCode { get; set; }
     public decimal? LastPurchaseCostCurrencyAmount { get; set; }
     public decimal? LastPurchaseCostTryAmount { get; set; }
+    public decimal? AverageInventoryCostTry { get; set; }
+    public decimal SuggestedSalePriceInTry { get; set; }
+    public decimal ActiveSalePriceInTry { get; set; }
+    public decimal ActualMarkupPercent { get; set; }
+    public bool IsBelowTargetMarkup { get; set; }
     public string? LastPurchaseSourceCurrencyCode { get; set; }
     public decimal? LastPurchaseSourceNetUnitCost { get; set; }
     public decimal? LastPurchaseSourceExchangeRate { get; set; }

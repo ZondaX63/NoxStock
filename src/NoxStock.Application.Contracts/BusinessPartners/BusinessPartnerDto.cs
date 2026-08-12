@@ -19,4 +19,10 @@ public class BusinessPartnerDto : FullAuditedEntityDto<Guid>
     public decimal DefaultSalesDiscount2 { get; set; }
     public decimal DefaultSalesDiscount3 { get; set; }
     public decimal DefaultSalesDiscount4 { get; set; }
+    public decimal OverdueAmount { get; set; }
+    public int OpenDocumentCount { get; set; }
+    public DateTime? LastSaleDate { get; set; }
+    public DateTime? LastPurchaseDate { get; set; }
+    public DateTime? LastCollectionDate { get; set; }
+    public DateTime? LastPaymentDate { get; set; }
 }

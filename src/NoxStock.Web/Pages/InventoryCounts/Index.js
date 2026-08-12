@@ -19,7 +19,7 @@ $(function () {
     function compact(value) {
         var number = Number(value || 0);
         if (!Number.isFinite(number)) return '0';
-        return number.toLocaleString(undefined, { maximumFractionDigits: 4 });
+        return number.toLocaleString(undefined, { maximumFractionDigits: 2 });
     }
 
     function escapeHtml(value) {

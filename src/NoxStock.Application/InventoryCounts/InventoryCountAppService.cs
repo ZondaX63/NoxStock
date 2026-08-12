@@ -170,8 +170,8 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
                 Sku = product.Sku,
                 Barcode = product.Barcode,
                 Unit = string.IsNullOrWhiteSpace(product.Unit) ? "Adet" : product.Unit,
-                SystemQuantity = product.Quantity,
-                CountedQuantity = source.CountedQuantity,
+                SystemQuantity = RoundQuantity(product.Quantity),
+                CountedQuantity = RoundQuantity(source.CountedQuantity),
                 Note = source.Note?.Trim(),
                 IsQuickCreatedProduct = product.IsIncompleteProfile
             };
@@ -180,7 +180,7 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
         }
 
         entity.CountedProductCount = input.Items.Count;
-        entity.TotalCountedQuantity = input.Items.Sum(x => x.CountedQuantity);
+        entity.TotalCountedQuantity = RoundQuantity(input.Items.Sum(x => x.CountedQuantity));
         await _countRepository.UpdateAsync(entity, autoSave: true);
         return await GetAsync(entity.Id);
     }
@@ -237,7 +237,7 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
             items.Add(new SaveInventoryCountItemDto
             {
                 ProductId = product.Id,
-                CountedQuantity = source.CountedQuantity,
+                CountedQuantity = RoundQuantity(source.CountedQuantity),
                 Note = source.Note?.Trim()
             });
         }
@@ -319,7 +319,7 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
         foreach (var product in products)
         {
             var targetQuantity = itemByProductId.TryGetValue(product.Id, out var item)
-                ? item.CountedQuantity
+                ? RoundQuantity(item.CountedQuantity)
                 : 0m;
             if (product.Quantity == targetQuantity)
             {
@@ -360,7 +360,7 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
         entity.CompletedByUserId = CurrentUser.Id;
         entity.CompletedByName = CurrentUser.Name ?? CurrentUser.UserName ?? "-";
         entity.CountedProductCount = entity.Items.Count;
-        entity.TotalCountedQuantity = entity.Items.Sum(x => x.CountedQuantity);
+        entity.TotalCountedQuantity = RoundQuantity(entity.Items.Sum(x => x.CountedQuantity));
         entity.ZeroedProductCount = zeroed;
         entity.AdjustedProductCount = adjusted;
         await _countRepository.UpdateAsync(entity, autoSave: true);
@@ -403,7 +403,7 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
             Description = input.Note?.Trim() ?? string.Empty,
             Unit = "Adet",
             ShelfLocation = string.Empty,
-            SalePrice = input.SalePrice ?? 0m,
+            SalePrice = RoundQuantity(input.SalePrice ?? 0m),
             PurchaseCurrency = "EUR",
             ExchangeRateAtPurchase = 1m,
             VatRate = 20,
@@ -423,7 +423,7 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
             Barcode = product.Barcode,
             Unit = product.Unit,
             SystemQuantity = 0m,
-            CountedQuantity = input.CountedQuantity,
+            CountedQuantity = RoundQuantity(input.CountedQuantity),
             Note = input.Note?.Trim(),
             IsQuickCreatedProduct = true
         };
@@ -489,7 +489,8 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
                 continue;
             }
 
-            quantities[product.Id] = quantities.GetValueOrDefault(product.Id) + quantity.Value;
+            quantities[product.Id] = RoundQuantity(
+                quantities.GetValueOrDefault(product.Id) + quantity.Value);
         }
 
         var productById = products.ToDictionary(x => x.Id);
@@ -503,8 +504,8 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
                 Sku = product.Sku,
                 Barcode = product.Barcode,
                 Unit = product.Unit,
-                SystemQuantity = product.Quantity,
-                CountedQuantity = pair.Value
+                SystemQuantity = RoundQuantity(product.Quantity),
+                CountedQuantity = RoundQuantity(pair.Value)
             };
         }).OrderBy(x => x.ProductName).ToList();
         result.MatchedProductCount = result.Items.Count;
@@ -649,6 +650,9 @@ public class InventoryCountAppService : NoxStockAppService, IInventoryCountAppSe
         }
         return decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariant) ? invariant : null;
     }
+
+    private static decimal RoundQuantity(decimal value) =>
+        Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
     private static void AddIssue(InventoryCountImportResultDto result, int rowNumber, string message)
     {

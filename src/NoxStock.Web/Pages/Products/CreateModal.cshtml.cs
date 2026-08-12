@@ -165,7 +165,7 @@ public class CreateModalModel : NoxStockPageModel
         if (string.IsNullOrWhiteSpace(raw) || !TryParsePostedDecimal(raw, out var value)) return;
 
         ModelState.Remove(key);
-        assign(value);
+        assign(Math.Round(value, 2, MidpointRounding.AwayFromZero));
     }
 
     private void NormalizeInteger(string key, Action<int> assign)

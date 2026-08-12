@@ -30,7 +30,7 @@
                         <th class="px-6 py-4">Şirket</th>
                         <th class="px-6 py-4">Durum</th>
                         <th class="px-6 py-4">Oluşturulma</th>
-                        <th class="px-6 py-4 text-right">Giriş</th>
+                        <th class="px-6 py-4 text-right">Yönetim</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -65,10 +65,6 @@
                                                 @(isActive ? "Pasife al" : "Etkinleştir")
                                             </button>
                                         </form>
-                                        <a href="/TenantManagement/Tenants?handler=SwitchToTenant&tenantName=@tenant.Name" class="inline-flex items-center gap-1.5 font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200">
-                                            Giriş sayfası
-                                            <span class="material-icons-round text-base">open_in_new</span>
-                                        </a>
                                     </div>
                                 </td>
                             </tr>

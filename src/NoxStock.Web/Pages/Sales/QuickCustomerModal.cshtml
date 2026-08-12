@@ -1,0 +1,27 @@
+@page
+@using NoxStock.BusinessPartners
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NoxStock.Web.Pages.Sales.QuickCustomerModalModel
+@{
+    Layout = null;
+}
+
+<form asp-page="/Sales/QuickCustomerModal" class="quick-customer-form">
+    <abp-modal modal-class="quick-customer-modal">
+        <abp-modal-header title="Hızlı müşteri ekle"></abp-modal-header>
+        <abp-modal-body>
+            <p class="text-sm text-slate-500 mb-4">Satışı bekletmeden yeni müşteri kartı oluşturun. Diğer bilgileri daha sonra tamamlayabilirsiniz.</p>
+            <input asp-for="Customer.Type" type="hidden" />
+            <div class="mb-3">
+                <label asp-for="Customer.Name" class="form-label">Adı / Ünvanı <span class="text-danger">*</span></label>
+                <input asp-for="Customer.Name" class="form-control" autocomplete="off" required autofocus />
+                <span asp-validation-for="Customer.Name" class="text-danger small"></span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6"><label asp-for="Customer.Phone" class="form-label">Telefon</label><input asp-for="Customer.Phone" class="form-control" autocomplete="off" /></div>
+                <div class="col-md-6"><label asp-for="Customer.TaxNumber" class="form-label">Vergi no / TCKN</label><input asp-for="Customer.TaxNumber" class="form-control" autocomplete="off" /></div>
+            </div>
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

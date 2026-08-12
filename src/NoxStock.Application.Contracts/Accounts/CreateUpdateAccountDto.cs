@@ -14,7 +14,12 @@ public class CreateUpdateAccountDto
     [StringLength(3)]
     public string Currency { get; set; } = "TRY";
 
+    /// <summary>
+    /// Eski istemcilerle geriye uyumluluk için korunur.
+    /// Sunucu bu değeri hesap oluşturma veya güncelleme sırasında uygulamaz.
+    /// Açılış bakiyesi için <see cref="CreateAccountWithOpeningDto"/> veya
+    /// <see cref="CreateAccountOpeningBalanceDto"/> kullanılmalıdır.
+    /// </summary>
     public decimal Balance { get; set; }
     public bool IsActive { get; set; } = true;
 }
-

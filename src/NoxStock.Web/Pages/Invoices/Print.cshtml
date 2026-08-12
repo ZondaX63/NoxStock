@@ -56,7 +56,7 @@ Vergi Dairesi: @Model.Company.TaxOffice | Vergi No: @Model.Company.TaxNumber</di
             <div class="party">
                 <div class="section-label">Para Birimi</div>
                 <div class="party-name">@Model.Document.Currency</div>
-                @if (Model.Document.Currency != "TRY") { <div class="muted">Belge kuru: @Model.Document.ExchangeRate.ToString("N4") TRY</div> }
+                @if (Model.Document.Currency != "TRY") { <div class="muted">Belge kuru: @Model.Document.ExchangeRate.ToString("N2") TRY</div> }
             </div>
         </section>
         <table>
@@ -64,11 +64,11 @@ Vergi Dairesi: @Model.Company.TaxOffice | Vergi No: @Model.Company.TaxNumber</di
             <tbody>
             @foreach (var item in Model.Document.Items)
             {
-                <tr><td>@item.ProductName</td><td class="right">@item.Quantity.ToString("N4")</td><td class="right">@item.UnitPrice.ToString("N4") @Model.Document.Currency</td><td class="right">%@item.DiscountRate.ToString("N2")</td><td class="right">%@item.VatRate.ToString("N2")</td><td class="right">@item.Total.ToString("N4") @Model.Document.Currency</td></tr>
+                <tr><td>@item.ProductName</td><td class="right">@item.Quantity.ToString("N2")</td><td class="right">@item.UnitPrice.ToString("N2") @Model.Document.Currency</td><td class="right">%@item.DiscountRate.ToString("N2")</td><td class="right">%@item.VatRate.ToString("N2")</td><td class="right">@item.Total.ToString("N2") @Model.Document.Currency</td></tr>
             }
             </tbody>
         </table>
-        <section class="summary"><div class="summary-table"><div class="summary-row"><span>Ara Toplam</span><strong>@Model.Document.Subtotal.ToString("N4") @Model.Document.Currency</strong></div><div class="summary-row"><span>İskonto</span><strong>@Model.Document.DiscountTotal.ToString("N4") @Model.Document.Currency</strong></div><div class="summary-row"><span>KDV</span><strong>@Model.Document.VatTotal.ToString("N4") @Model.Document.Currency</strong></div><div class="summary-row total"><span>Genel Toplam</span><span>@Model.Document.GrandTotal.ToString("N4") @Model.Document.Currency</span></div></div></section>
+        <section class="summary"><div class="summary-table"><div class="summary-row"><span>Ara Toplam</span><strong>@Model.Document.Subtotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row"><span>İskonto</span><strong>@Model.Document.DiscountTotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row"><span>KDV</span><strong>@Model.Document.VatTotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row total"><span>Genel Toplam</span><span>@Model.Document.GrandTotal.ToString("N2") @Model.Document.Currency</span></div></div></section>
         @if (!string.IsNullOrWhiteSpace(Model.Document.Description)) { <section class="notes"><strong>Açıklama</strong><br />@Model.Document.Description</section> }
     </main>
 </body>

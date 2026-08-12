@@ -1,7 +1,9 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using NoxStock.MultiTenancy;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Security.Claims;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.Users;
 
@@ -31,7 +33,8 @@ public sealed class TenantActivationMiddleware
                 return;
             }
 
-            if (currentUser.IsAuthenticated && currentUser.TenantId != pathTenant.Id)
+            if (context.User.Identity?.IsAuthenticated == true &&
+                !HasMatchingTenantClaim(context, pathTenant.Id))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return;
@@ -49,6 +52,16 @@ public sealed class TenantActivationMiddleware
             var tenant = await tenantRepository.FindAsync(currentTenant.Id.Value);
             if (tenant is not null)
             {
+                // A tenant claim must not make host URLs act as a tenant workspace.
+                // Keep workspace routes canonical so that permissions, links and
+                // browser navigation always retain the tenant URL prefix.
+                if (currentUser.IsAuthenticated && ShouldRedirectToTenantPath(context.Request.Path))
+                {
+                    var destination = $"/t/{Uri.EscapeDataString(tenant.Name)}{context.Request.Path}{context.Request.QueryString}";
+                    context.Response.Redirect(destination);
+                    return;
+                }
+
                 await ContinueForTenantAsync(context, tenant);
                 return;
             }
@@ -67,5 +80,26 @@ public sealed class TenantActivationMiddleware
         }
 
         await _next(context);
+    }
+
+    private static bool ShouldRedirectToTenantPath(PathString path)
+    {
+        // These host/public endpoints must remain reachable without adding a
+        // tenant prefix. Host-only routes are subsequently rejected by the
+        // platform middleware for tenant sessions.
+        return !path.StartsWithSegments("/Account", System.StringComparison.OrdinalIgnoreCase) &&
+               !path.StartsWithSegments("/admin", System.StringComparison.OrdinalIgnoreCase) &&
+               !path.StartsWithSegments("/TenantManagement", System.StringComparison.OrdinalIgnoreCase) &&
+               !path.StartsWithSegments("/LicenseManagement", System.StringComparison.OrdinalIgnoreCase) &&
+               !path.StartsWithSegments("/host", System.StringComparison.OrdinalIgnoreCase) &&
+               !path.StartsWithSegments("/health", System.StringComparison.OrdinalIgnoreCase) &&
+               !path.Equals("/", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasMatchingTenantClaim(HttpContext context, Guid tenantId)
+    {
+        var tenantIdClaim = context.User.FindFirst(AbpClaimTypes.TenantId)?.Value;
+        return Guid.TryParse(tenantIdClaim, out var authenticatedTenantId) &&
+               authenticatedTenantId == tenantId;
     }
 }

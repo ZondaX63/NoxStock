@@ -3,11 +3,13 @@ $(function () {
     var businessPartnerService = noxStock.businessPartners.businessPartner;
     var createModal = new abp.ModalManager(abp.appPath + 'Suppliers/CreateModal');
     var editModal = new abp.ModalManager(abp.appPath + 'Suppliers/EditModal');
-    var paymentModal = new abp.ModalManager(abp.appPath + 'Shared/PaymentModal');
+    var paymentModal = new abp.ModalManager({ viewUrl: abp.appPath + 'Shared/PaymentModal', modalClass: 'BusinessPartnerPaymentModal' });
+    var openingModal = new abp.ModalManager({ viewUrl: abp.appPath + 'Shared/BusinessPartnerOpeningBalanceModal', modalClass: 'BusinessPartnerOpeningBalanceModal' });
 
     paymentModal.onResult(function () {
         dataTable.ajax.reload();
     });
+    openingModal.onResult(function () { dataTable.ajax.reload(); });
 
     var dataTable = $('#SuppliersTable').DataTable(abp.libs.datatables.normalizeConfiguration({
         serverSide: true,
@@ -41,9 +43,15 @@ $(function () {
                             },
                             {
                                 text: 'Ödeme Yap',
+                                visible: abp.auth.isGranted('NoxStock.BusinessPartners.Payment'),
                                 action: function (data) {
                                     paymentModal.open({ businessPartnerId: data.record.id, isCollection: false });
                                 }
+                            },
+                            {
+                                text: 'Açılış bakiyesi gir',
+                                visible: abp.auth.isGranted('NoxStock.BusinessPartners.OpeningBalance'),
+                                action: function (data) { openingModal.open({ businessPartnerId: data.record.id }); }
                             },
                             {
                                 text: 'Düzenle',
@@ -76,11 +84,19 @@ $(function () {
                 data: "phone"
             },
             {
-                title: 'Bakiye',
+                title: 'Vadesi Geçmiş', data: 'overdueAmount',
+                render: function (data, type, row) { return data > 0 ? '<span class="font-semibold text-red-600">' + Number(data).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ' + row.currency + '</span>' : '—'; }
+            },
+            { title: 'Son Alış', data: 'lastPurchaseDate', render: function (data) { return data ? new Date(data).toLocaleDateString('tr-TR') : '—'; } },
+            { title: 'Son Ödeme', data: 'lastPaymentDate', render: function (data) { return data ? new Date(data).toLocaleDateString('tr-TR') : '—'; } },
+            {
+                title: 'Borcumuz',
                 data: "balance",
                 render: function (data, type, row) {
                     var color = data < 0 ? 'text-red-600' : (data > 0 ? 'text-green-600' : 'text-slate-600');
-                    return `<span class="font-semibold ${color}">${data} ${row.currency}</span>`;
+                    var amount = Math.abs(data).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    var text = data < 0 ? amount + ' ' + row.currency + ' borcumuz var' : (data > 0 ? amount + ' ' + row.currency + ' alacağımız var' : 'Bakiye yok');
+                    return `<span class="font-semibold ${color}">${text}</span>`;
                 }
             }
         ]
@@ -100,7 +116,7 @@ $(function () {
     });
 
     $('#SuppliersTable tbody').on('click', 'tr', function (event) {
-        if ($(event.target).closest('a, button, .dropdown-menu, .dropdown-toggle').length) {
+        if (!document.body.contains(event.target) || $(event.target).closest('a, button, .dropdown-menu, .dropdown-toggle, td:first-child').length) {
             return;
         }
 

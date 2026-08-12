@@ -7,9 +7,9 @@
 
 <form asp-page="/Accounts/AddTransactionModal" class="finance-modal-form">
     <abp-modal>
-        <abp-modal-header title="İşlem Ekle (Gelir/Gider)"></abp-modal-header>
+        <abp-modal-header title="Para Girişi / Çıkışı"></abp-modal-header>
         <abp-modal-body class="finance-modal-body">
-            <div class="finance-modal-intro finance-modal-intro-emerald"><span class="material-icons-round">payments</span><div><strong>Gelir veya gider kaydı</strong><small>Hesap bakiyesi seçtiğiniz işleme göre anında güncellenir.</small></div></div>
+            <div class="finance-modal-intro finance-modal-intro-emerald"><div><strong>Hesap hareketi</strong><small>Hesap bakiyesi seçtiğiniz işleme göre güncellenir.</small></div></div>
             <div class="finance-form-grid">
                 <div class="finance-field-wide"><abp-select asp-for="Transaction.AccountId" asp-items="Model.Accounts" label="İşlem Yapılacak Hesap" /></div>
                 <abp-select asp-for="Transaction.Type" asp-items="Model.TransactionTypes" label="İşlem Tipi" />

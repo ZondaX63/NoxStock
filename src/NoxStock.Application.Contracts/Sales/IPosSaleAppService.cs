@@ -13,5 +13,6 @@ public interface IPosSaleAppService : IApplicationService
     Task<PosCheckoutOptionsDto> GetCheckoutOptionsAsync();
     Task<PosSaleDto> CreateAsync(CreatePosSaleDto input);
     Task<List<PosSaleDto>> GetRecentAsync();
+    Task<PosReceiptDto> GetReceiptAsync(Guid id);
     Task<PosSaleDto> CancelAsync(Guid id);
 }

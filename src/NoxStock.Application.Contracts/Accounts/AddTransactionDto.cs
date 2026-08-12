@@ -18,4 +18,7 @@ public class AddTransactionDto
 
     [MaxLength(500)]
     public string? Description { get; set; }
+
+    [MaxLength(100)]
+    public string? OperationKey { get; set; } = Guid.NewGuid().ToString("N");
 }

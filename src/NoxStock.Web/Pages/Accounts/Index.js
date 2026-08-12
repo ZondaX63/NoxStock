@@ -2,6 +2,12 @@ $(function () {
     var accountService = noxStock.accounts.account;
     var createModal = new abp.ModalManager(abp.appPath + 'Accounts/CreateModal');
     var editModal = new abp.ModalManager(abp.appPath + 'Accounts/EditModal');
+    var openingModal = new abp.ModalManager({
+        viewUrl: abp.appPath + 'Accounts/OpeningBalanceModal',
+        scriptUrl: abp.appPath + 'Pages/Accounts/OpeningBalanceModal.js',
+        modalClass: 'AccountOpeningBalanceModal'
+    });
+    var cancelTransactionModal = new abp.ModalManager(abp.appPath + 'Accounts/CancelTransactionModal');
 
     // ── Hesap Hareketleri Modal ──────────────────────────────────────────────
     // The TransactionsModal class is defined HERE (not in a separate scriptUrl file)
@@ -47,10 +53,10 @@ $(function () {
                                 render: function (data) {
                                     var map = {
                                         1: ['bg-blue-100 text-blue-800', 'Açılış Bakiyesi'],
-                                        2: ['bg-emerald-100 text-emerald-800', 'Gelir'],
-                                        3: ['bg-red-100 text-red-800', 'Gider'],
-                                        4: ['bg-blue-100 text-blue-800', 'Transfer Giriş'],
-                                        5: ['bg-orange-100 text-orange-800', 'Transfer Çıkış'],
+                                        2: ['bg-emerald-100 text-emerald-800', 'Para girişi'],
+                                        3: ['bg-red-100 text-red-800', 'Para çıkışı'],
+                                        4: ['bg-blue-100 text-blue-800', 'Hesaplar arası transfer (giriş)'],
+                                        5: ['bg-orange-100 text-orange-800', 'Hesaplar arası transfer (çıkış)'],
                                         6: ['bg-emerald-100 text-emerald-800', 'Tahsilat'],
                                         7: ['bg-red-100 text-red-800', 'Ödeme'],
                                         8: ['bg-slate-100 text-slate-800', 'Ters Kayıt']
@@ -63,15 +69,56 @@ $(function () {
                                 }
                             },
                             {
-                                title: 'Tutar',
-                                data: 'amount',
-                                render: function (data) {
-                                    var color = data < 0 ? 'text-red-600' : (data > 0 ? 'text-emerald-600' : 'text-slate-600');
-                                    return '<span class="font-bold ' + color + '">' + (data > 0 ? '+' : '') + data + '</span>';
+                                title: 'Açıklama', data: 'description'
+                            },
+                            {
+                                title: 'Giriş', data: null, className: 'text-end',
+                                render: function (data, type, row) {
+                                    var isEntry = [1, 2, 4, 6].indexOf(row.type) >= 0 || (row.type === 8 && row.amount > 0);
+                                    return isEntry ? '<span class="font-bold text-emerald-600">' + Math.abs(row.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ' + row.currency + '</span>' : '—';
                                 }
                             },
-                            { title: 'Para Birimi', data: 'currency' },
-                            { title: 'Açıklama', data: 'description' }
+                            {
+                                title: 'Çıkış', data: null, className: 'text-end',
+                                render: function (data, type, row) {
+                                    var isExit = [3, 5, 7].indexOf(row.type) >= 0 || (row.type === 8 && row.amount < 0);
+                                    return isExit ? '<span class="font-bold text-red-600">' + Math.abs(row.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ' + row.currency + '</span>' : '—';
+                                }
+                            },
+                            {
+                                title: 'İşlem Sonrası',
+                                data: 'balanceAfter',
+                                render: function (data, type, row) {
+                                    return data === null || data === undefined ? '—' : Number(data).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + row.currency;
+                                }
+                            },
+                            {
+                                title: 'Durum',
+                                data: 'status',
+                                render: function (data) {
+                                    return data === 2
+                                        ? '<span class="badge bg-secondary">İptal edildi</span>'
+                                        : '<span class="badge bg-success">Geçerli</span>';
+                                }
+                            },
+                            {
+                                title: 'Aksiyon',
+                                rowAction: {
+                                    items: [{
+                                        text: 'İptal et',
+                                        visible: function (data) {
+                                            var row = data.record;
+                                            if (row.status !== 1 || row.type === 8 || row.documentId) return false;
+                                            if (row.type === 1) return abp.auth.isGranted('NoxStock.Accounts.CancelOpeningBalance');
+                                            if (row.type === 4 || row.type === 5) return abp.auth.isGranted('NoxStock.Accounts.CancelTransfer');
+                                            return abp.auth.isGranted('NoxStock.Accounts.CancelTransaction');
+                                        },
+                                        action: function (data) {
+                                            cancelTransactionModal.open({ transactionId: data.record.id });
+                                        }
+                                    }]
+                                }
+                            }
                         ]
                     }));
                 }
@@ -120,6 +167,13 @@ $(function () {
                             }
                         },
                         {
+                            text: 'Açılış bakiyesi gir',
+                            visible: function () { return abp.auth.isGranted('NoxStock.Accounts.OpeningBalance'); },
+                            action: function (data) {
+                                openingModal.open({ accountId: data.record.id });
+                            }
+                        },
+                        {
                             text: 'Düzenle',
                             action: function (data) {
                                 editModal.open({ id: data.record.id });
@@ -157,6 +211,18 @@ $(function () {
                 }
             },
             {
+                title: 'Bugünkü Giriş', data: 'todayIncome', className: 'text-end',
+                render: function (data, type, row) { return Number(data || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + row.currency; }
+            },
+            {
+                title: 'Bugünkü Çıkış', data: 'todayExpense', className: 'text-end',
+                render: function (data, type, row) { return Number(data || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + row.currency; }
+            },
+            {
+                title: 'Son Hareket', data: 'lastTransactionDate',
+                render: function (data) { return data ? new Date(data).toLocaleString('tr-TR') : 'Henüz hareket yok'; }
+            },
+            {
                 title: 'Durum',
                 data: 'isActive',
                 render: function (data) {
@@ -170,13 +236,24 @@ $(function () {
 
     createModal.onResult(function () { dataTable.ajax.reload(); });
     editModal.onResult(function () { dataTable.ajax.reload(); });
+    openingModal.onResult(function () { dataTable.ajax.reload(null, false); });
+    cancelTransactionModal.onResult(function () {
+        dataTable.ajax.reload(null, false);
+        if ($.fn.DataTable.isDataTable('#AccountTransactionsTable')) {
+            $('#AccountTransactionsTable').DataTable().ajax.reload(null, false);
+        }
+    });
 
     $('#NewAccountButton').click(function (e) {
         e.preventDefault();
         createModal.open();
     });
 
-    var transferModal = new abp.ModalManager(abp.appPath + 'Accounts/TransferModal');
+    var transferModal = new abp.ModalManager({
+        viewUrl: abp.appPath + 'Accounts/TransferModal',
+        scriptUrl: abp.appPath + 'Pages/Accounts/TransferModal.js',
+        modalClass: 'AccountTransferModal'
+    });
     var addTransactionModal = new abp.ModalManager(abp.appPath + 'Accounts/AddTransactionModal');
 
     transferModal.onResult(function () { dataTable.ajax.reload(); });
@@ -186,6 +263,9 @@ $(function () {
         e.preventDefault();
         transferModal.open();
     });
+
+    if (!abp.auth.isGranted('NoxStock.Accounts.Transfer')) $('#TransferButton').remove();
+    if (!abp.auth.isGranted('NoxStock.Accounts.AddTransaction')) $('#AddTransactionButton').remove();
 
     $('#AddTransactionButton').click(function (e) {
         e.preventDefault();

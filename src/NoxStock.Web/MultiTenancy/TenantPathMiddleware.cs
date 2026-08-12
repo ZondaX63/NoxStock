@@ -19,6 +19,15 @@ public sealed class TenantPathMiddleware
     {
         if (TryExtractTenantPath(context.Request.Path, out var tenantName, out var tenantPrefix, out var remainingPath))
         {
+            // Tenant-specific login URLs are intentionally no longer part of the
+            // public architecture. All company users authenticate from the common
+            // login screen, which resolves their workspace after authentication.
+            if (remainingPath.Equals("/Account/Login", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.Redirect("/Account/Login");
+                return;
+            }
+
             context.Items[TenantNameItem] = tenantName;
             context.Request.PathBase = context.Request.PathBase.Add(tenantPrefix);
             context.Request.Path = remainingPath;

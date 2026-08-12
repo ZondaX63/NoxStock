@@ -222,6 +222,7 @@ public class NoxStockWebModule : AbpModule
         
         Configure<RazorPagesOptions>(options =>
         {
+            options.Conventions.AddPageRoute("/TenantManagement/Tenants/Index", "/admin");
             options.Conventions.AddPageRoute("/LicenseManagement/Index", "/host/licenses");
             options.Conventions.AuthorizePage("/License/Unavailable");
             options.Conventions.AuthorizePage("/Dashboard/Index");
@@ -237,6 +238,7 @@ public class NoxStockWebModule : AbpModule
             options.Conventions.AuthorizePage("/Offers/Index", NoxStockPermissions.Offers.Default);
             options.Conventions.AuthorizePage("/Orders/Index", NoxStockPermissions.Orders.Default);
             options.Conventions.AuthorizePage("/Sales/Index", NoxStockPermissions.Sales.Default);
+            options.Conventions.AuthorizePage("/Sales/Receipt", NoxStockPermissions.Sales.Default);
             options.Conventions.AuthorizePage("/Reports/Index", NoxStockPermissions.Reports.Default);
             options.Conventions.AuthorizePage("/Notifications/Index", NoxStockPermissions.Notifications.Default);
             options.Conventions.AuthorizeFolder("/LicenseManagement", NoxStockPermissions.Licenses.Default);

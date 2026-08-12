@@ -271,6 +271,7 @@ public class DocumentAppService :
 
     private async Task ApplyInputAsync(Document document, CreateUpdateDocumentDto input, bool isNewDocument)
     {
+        NormalizeFinancialInput(input);
         var businessPartner = await _businessPartnerRepository.FindAsync(input.BusinessPartnerId);
         if (businessPartner is null)
         {
@@ -325,8 +326,9 @@ public class DocumentAppService :
 
             var unitPrice = inputItem.UnitPrice;
             ProductPriceCalculation? priceCalculation = null;
-            var usesDynamicPricing = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup ||
-                product.UseCurrentExchangeRateForSale;
+            // PricingMode is the single active policy. The former live-FX flag
+            // remains persisted only for beta-data compatibility.
+            var usesDynamicPricing = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup;
             if (IsSalesDocument(document.Type))
             {
                 if (!priceCalculationsByProductId.TryGetValue(product.Id, out priceCalculation))
@@ -530,7 +532,34 @@ public class DocumentAppService :
         }
     }
 
-    private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
+    private static decimal RoundMoney(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+    private static void NormalizeFinancialInput(CreateUpdateDocumentDto input)
+    {
+        input.ExchangeRate = RoundMoney(input.ExchangeRate);
+        input.Subtotal = RoundMoney(input.Subtotal);
+        input.DiscountTotal = RoundMoney(input.DiscountTotal);
+        input.VatTotal = RoundMoney(input.VatTotal);
+        input.GrandTotal = RoundMoney(input.GrandTotal);
+        input.PaidAmount = RoundMoney(input.PaidAmount);
+
+        foreach (var item in input.Items)
+        {
+            item.Quantity = RoundMoney(item.Quantity);
+            item.UnitPrice = RoundMoney(item.UnitPrice);
+            item.VatRate = RoundMoney(item.VatRate);
+            item.DiscountRate = RoundMoney(item.DiscountRate);
+            item.PurchaseDiscount1 = RoundMoney(item.PurchaseDiscount1);
+            item.PurchaseDiscount2 = RoundMoney(item.PurchaseDiscount2);
+            item.PurchaseDiscount3 = RoundMoney(item.PurchaseDiscount3);
+            item.PurchaseDiscount4 = RoundMoney(item.PurchaseDiscount4);
+            item.SalesDiscount1 = RoundMoney(item.SalesDiscount1);
+            item.SalesDiscount2 = RoundMoney(item.SalesDiscount2);
+            item.SalesDiscount3 = RoundMoney(item.SalesDiscount3);
+            item.SalesDiscount4 = RoundMoney(item.SalesDiscount4);
+            item.Total = RoundMoney(item.Total);
+        }
+    }
 
     private static void ApplyPricingSnapshot(
         DocumentItem item,
@@ -553,6 +582,7 @@ public class DocumentAppService :
         item.CostTryAmount = calculation.NetCostInTry > 0m
             ? calculation.NetCostInTry
             : product.LastPurchaseCostTryAmount;
+        item.TotalCostTryAmount = RoundMoney((item.CostTryAmount ?? 0m) * item.Quantity);
         item.AppliedMarkupPercent = calculation.MarkupPercent;
         item.ReferenceCurrencyCode = calculation.ReferenceCurrencyCode;
         item.ReferenceUnitPrice = calculation.ReferenceSaleUnitPrice;

@@ -101,7 +101,7 @@ public class EditModalModel : NoxStockPageModel
         "NoxStock:ProductDiscountOutOfRange" => "İskonto oranları %0 ile %100 arasında olmalıdır.",
         "NoxStock:UnsupportedVatRate" => "Geçerli bir KDV oranı seçin.",
         "NoxStock:UnsupportedCurrency" => "Geçerli bir referans para birimi seçin.",
-        "NoxStock:DocumentExchangeRateSnapshotUnavailable" => "Geçmiş alış belgesinde seçilen para birimi için kur snapshotı yok.",
+        "NoxStock:DocumentExchangeRateSnapshotUnavailable" => "Geçmiş alış belgesinde seçilen para birimi için kayıtlı kur bulunamadı.",
         _ => "Ürün kaydedilemedi. Lütfen alanları ve lisans limitlerini kontrol edin."
     };
 
@@ -161,7 +161,7 @@ public class EditModalModel : NoxStockPageModel
         if (string.IsNullOrWhiteSpace(raw) || !TryParsePostedDecimal(raw, out var value)) return;
 
         ModelState.Remove(key);
-        assign(value);
+        assign(Math.Round(value, 2, MidpointRounding.AwayFromZero));
     }
 
     private void NormalizeInteger(string key, Action<int> assign)

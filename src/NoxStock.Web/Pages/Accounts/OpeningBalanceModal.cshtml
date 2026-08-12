@@ -1,0 +1,32 @@
+@page
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NoxStock.Web.Pages.Accounts.OpeningBalanceModalModel
+@{ Layout = null; }
+
+<form asp-page="/Accounts/OpeningBalanceModal" class="finance-modal-form">
+    <abp-modal>
+        <abp-modal-header title="Açılış Bakiyesi Gir"></abp-modal-header>
+        <abp-modal-body class="finance-modal-body">
+            <input type="hidden" asp-for="Opening.AccountId" />
+            <input type="hidden" asp-for="Opening.OperationKey" />
+            <div class="finance-modal-intro finance-modal-intro-indigo">
+                <div><strong>@Model.Account.Name</strong><small>@Model.Account.Currency hesabı · Mevcut bakiye: @Model.Account.Balance.ToString("N2") @Model.Account.Currency</small></div>
+            </div>
+            @if (Model.Account.Balance != 0m)
+            {
+                <div class="alert alert-warning py-2">
+                    Bu hesabın mevcut bir bakiyesi var. Açılış tutarı mevcut bakiyeye eklenecektir.
+                </div>
+            }
+            <div class="finance-form-grid">
+                <abp-input asp-for="Opening.Amount" label="Açılış Tutarı" type="number" min="0.01" step="0.01" />
+                <abp-input asp-for="Opening.OpeningDate" label="Açılış Tarihi" />
+                <div class="finance-field-wide"><abp-input asp-for="Opening.Description" label="Açıklama (opsiyonel)" /></div>
+            </div>
+            <div class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-900">
+                İşlem sonrası bakiye: <strong id="AccountOpeningPreview" data-current="@Model.Account.Balance">@Model.Account.Balance.ToString("N2") @Model.Account.Currency</strong>
+            </div>
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

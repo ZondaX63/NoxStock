@@ -107,12 +107,12 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
 
         quote.NetCostInTry.ShouldBe(1026m);
         quote.ListSalePriceInTry.ShouldBe(2000m);
-        quote.SalesDiscountAmountInTry.ShouldBe(100m);
-        quote.UnitPrice.ShouldBe(1900m);
-        quote.VatAmountInTry.ShouldBe(380m);
-        quote.CustomerFinalPriceInTry.ShouldBe(2280m);
-        quote.EstimatedProfitInTry.ShouldBe(874m);
-        quote.EstimatedNetMarginPercent.ShouldBe(46m);
+        quote.SalesDiscountAmountInTry.ShouldBe(0m);
+        quote.UnitPrice.ShouldBe(2000m);
+        quote.VatAmountInTry.ShouldBe(400m);
+        quote.CustomerFinalPriceInTry.ShouldBe(2400m);
+        quote.EstimatedProfitInTry.ShouldBe(974m);
+        quote.EstimatedNetMarginPercent.ShouldBe(48.7m);
 
         await WithUnitOfWorkAsync(async () =>
         {
@@ -122,7 +122,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         });
         var afterRateChange = await _productPricingAppService.GetQuoteAsync(
             new ProductPriceQuoteInputDto { ProductId = product.Id });
-        afterRateChange.UnitPrice.ShouldBe(1900m);
+        afterRateChange.UnitPrice.ShouldBe(2000m);
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = 40m,
             UseCurrentExchangeRateForSale = true,
-            Quantity = 10m,
+            Quantity = 0m,
             CriticalStockLevel = 1m,
             TrackStock = true
         });
@@ -163,7 +163,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
 
         quote.UnitPrice.ShouldBe(1715m);
         quote.PriceInTry.ShouldBe(1715m);
-        quote.UsesCurrentExchangeRate.ShouldBeTrue();
+        quote.UsesCurrentExchangeRate.ShouldBeFalse();
 
         var document = await _documentAppService.CreateAsync(new CreateUpdateDocumentDto
         {
@@ -235,7 +235,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = 40m,
             UseCurrentExchangeRateForSale = true,
-            Quantity = 10m,
+            Quantity = 0m,
             CriticalStockLevel = 1m,
             TrackStock = true
         });
@@ -291,7 +291,7 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = 20m,
             UseCurrentExchangeRateForSale = true,
-            Quantity = 10m,
+            Quantity = 0m,
             CriticalStockLevel = 1m,
             TrackStock = true
         });
@@ -312,8 +312,8 @@ public class ProductPricingAppServiceTests : NoxStockEntityFrameworkCoreTestBase
 
         var row = list.Items.Single();
         row.IsSuggestedSaleAvailable.ShouldBeTrue();
-        row.SuggestedSaleUnitPrice.ShouldBe(1230m);
-        row.ReferenceSaleUnitPrice.ShouldBe(30m);
+        row.SuggestedSaleUnitPrice.ShouldBe(1200m);
+        row.ReferenceSaleUnitPrice.ShouldBe(29.27m);
         row.CurrentReferenceCurrencyExchangeRate.ShouldBe(41m);
         row.LastPurchaseCostCurrencyAmount.ShouldBe(25m);
     }

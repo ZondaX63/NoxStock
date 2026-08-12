@@ -15,6 +15,16 @@ $(function () {
         return type;
     }
 
+    function formatMoney(value, currency) {
+        return new Intl.NumberFormat(document.documentElement.lang === 'en' ? 'en-US' : 'tr-TR', {
+            style: 'currency', currency: currency || 'TRY', minimumFractionDigits: 2, maximumFractionDigits: 2
+        }).format(Number(value || 0));
+    }
+
+    function escapeHtml(value) {
+        return $('<div>').text(value == null ? '' : value).html();
+    }
+
     function getFilterPayload() {
         return {
             productId: $('#ProductMovementFilter').val() || null
@@ -55,10 +65,16 @@ $(function () {
                 data: 'documentId',
                 render: function (data, type, row) {
                     if (data) {
-                        return '<div class="font-medium text-slate-800 dark:text-white">Belge</div><div class="mt-0.5 text-xs text-slate-500">' + data + '</div>';
+                        var purchase = Number(row.type) === 4 && row.purchaseUnitCost != null
+                            ? '<div class="mt-1 text-xs text-slate-500">Alış: ' + escapeHtml(formatMoney(row.purchaseUnitCost, row.purchaseCurrency || 'TRY')) +
+                                (Number(row.purchaseExchangeRate || 0) > 0 && row.purchaseCurrency !== 'TRY' ? ' · Kur ' + Number(row.purchaseExchangeRate).toFixed(2) : '') +
+                                (row.purchaseUnitCostTry != null ? ' · ' + escapeHtml(formatMoney(row.purchaseUnitCostTry, 'TRY')) + '/birim' : '') +
+                                (row.purchaseTotalCostTry != null ? ' · Toplam ' + escapeHtml(formatMoney(row.purchaseTotalCostTry, 'TRY')) : '') + '</div>'
+                            : '';
+                        return '<div class="font-medium text-slate-800 dark:text-white">' + escapeHtml(row.documentNumber || 'Belge') + '</div>' + purchase;
                     }
 
-                    return '<span class="text-slate-500">Manuel</span><div class="mt-0.5 text-xs text-slate-400">' + (row.description || '-') + '</div>';
+                    return '<span class="text-slate-500">Manuel</span><div class="mt-0.5 text-xs text-slate-400">' + escapeHtml(row.description || '-') + '</div>';
                 }
             },
             {

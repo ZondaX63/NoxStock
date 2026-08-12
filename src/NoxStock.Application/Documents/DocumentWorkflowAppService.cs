@@ -81,7 +81,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
 
         if (document.Type == DocumentType.SaleInvoice)
         {
-            await LockSalesPricingSnapshotsAsync(document);
+            await LockSalesPricingSnapshotsAsync(document, input.ConfirmBelowCost);
         }
 
         var paymentAmount = document.Type is DocumentType.Collection or DocumentType.Payment
@@ -262,7 +262,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         }
     }
 
-    private async Task LockSalesPricingSnapshotsAsync(Document document)
+    private async Task LockSalesPricingSnapshotsAsync(Document document, bool confirmBelowCost)
     {
         if (!string.Equals(document.Currency, "TRY", StringComparison.OrdinalIgnoreCase))
         {
@@ -316,7 +316,21 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
             var lineNet = item.Quantity * item.UnitPrice;
             var discount = lineNet * item.DiscountRate / 100m;
             var taxable = lineNet - discount;
+            var netUnitSale = item.Quantity > 0m ? taxable / item.Quantity : 0m;
+            if (calculation.NetCostInTry > 0m && netUnitSale < calculation.NetCostInTry)
+            {
+                var canOverride = await AuthorizationService.IsGrantedAsync(NoxStockPermissions.Documents.SellBelowCost);
+                if (!confirmBelowCost || !canOverride)
+                {
+                    throw new BusinessException("NoxStock:SaleBelowInventoryCost")
+                        .WithData("ProductName", product.Name)
+                        .WithData("InventoryCost", calculation.NetCostInTry)
+                        .WithData("NetSalePrice", RoundMoney(netUnitSale))
+                        .WithData("CanOverride", canOverride);
+                }
+            }
             item.Total = RoundMoney(taxable + taxable * item.VatRate / 100m);
+            item.TotalCostTryAmount = RoundMoney((item.CostTryAmount ?? 0m) * item.Quantity);
         }
 
         if (firstCalculation is not null)
@@ -336,7 +350,7 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
         document.GrandTotal = RoundMoney(document.Subtotal - document.DiscountTotal + document.VatTotal);
     }
 
-    private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
+    private static decimal RoundMoney(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
     private static void ApplyBusinessPartnerSalesDiscountDefaults(DocumentItem item, BusinessPartner businessPartner)
     {

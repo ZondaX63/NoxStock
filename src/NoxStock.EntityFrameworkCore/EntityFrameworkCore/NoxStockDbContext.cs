@@ -46,6 +46,7 @@ public class NoxStockDbContext :
     public DbSet<ExchangeRate> ExchangeRates { get; set; }
 
     public DbSet<BusinessPartner> BusinessPartners { get; set; }
+    public DbSet<BusinessPartnerOpeningBalance> BusinessPartnerOpeningBalances { get; set; }
     public DbSet<BusinessPartnerTransfer> BusinessPartnerTransfers { get; set; }
     public DbSet<Document> Documents { get; set; }
     public DbSet<DocumentItem> DocumentItems { get; set; }
@@ -157,6 +158,7 @@ public class NoxStockDbContext :
             b.Property(x => x.LastPurchaseCostCurrencyCode).HasMaxLength(3);
             b.Property(x => x.LastPurchaseCostCurrencyAmount).HasColumnType("decimal(18,6)");
             b.Property(x => x.LastPurchaseCostTryAmount).HasColumnType("decimal(18,6)");
+            b.Property(x => x.AverageInventoryCostTry).HasColumnType("decimal(18,2)");
             b.Property(x => x.LastPurchaseExchangeRate).HasColumnType("decimal(18,6)");
             b.Property(x => x.Quantity).HasColumnType("decimal(15,4)");
             b.Property(x => x.CriticalStockLevel).HasColumnType("decimal(15,4)");
@@ -190,6 +192,11 @@ public class NoxStockDbContext :
             b.Property(x => x.TryEquivalentNetUnitCost).HasColumnType("decimal(18,6)");
             b.Property(x => x.ReferenceCurrencyCode).IsRequired().HasMaxLength(3);
             b.Property(x => x.ReferenceCurrencyEquivalentCost).HasColumnType("decimal(18,6)");
+            b.Property(x => x.Quantity).HasColumnType("decimal(18,4)");
+            b.Property(x => x.QuantityBefore).HasColumnType("decimal(18,4)");
+            b.Property(x => x.AverageCostBeforeTry).HasColumnType("decimal(18,2)");
+            b.Property(x => x.QuantityAfter).HasColumnType("decimal(18,4)");
+            b.Property(x => x.AverageCostAfterTry).HasColumnType("decimal(18,2)");
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
             b.HasOne<Document>().WithMany().HasForeignKey(x => x.SourceDocumentId).IsRequired();
             b.HasOne<DocumentItem>().WithMany().HasForeignKey(x => x.SourceDocumentItemId).IsRequired();
@@ -214,6 +221,24 @@ public class NoxStockDbContext :
             b.Property(x => x.DefaultSalesDiscount2).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
             b.Property(x => x.DefaultSalesDiscount3).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
             b.Property(x => x.DefaultSalesDiscount4).HasColumnType("decimal(9,4)").HasDefaultValue(0m);
+        });
+
+        builder.Entity<BusinessPartnerOpeningBalance>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "BusinessPartnerOpeningBalances", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Amount).HasColumnType("decimal(18,4)");
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            b.Property(x => x.OperationKey).IsRequired().HasMaxLength(100);
+            b.Property(x => x.Description).HasMaxLength(500);
+            b.Property(x => x.CancellationReason).HasMaxLength(500);
+            b.Property(x => x.Status).HasDefaultValue(BusinessPartnerOpeningStatus.Active);
+            b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.BusinessPartnerId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<BusinessPartnerOpeningBalance>().WithMany().HasForeignKey(x => x.ReversalOfOpeningBalanceId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.TenantId, x.OperationKey }).IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            b.HasIndex(x => new { x.TenantId, x.BusinessPartnerId }).IsUnique()
+                .HasFilter("\"Status\" = 1 AND \"IsDeleted\" = FALSE");
         });
 
         builder.Entity<BusinessPartnerTransfer>(b =>
@@ -288,6 +313,7 @@ public class NoxStockDbContext :
             b.Property(x => x.CostCurrencyCode).HasMaxLength(3);
             b.Property(x => x.CostCurrencyAmount).HasColumnType("decimal(18,6)");
             b.Property(x => x.CostTryAmount).HasColumnType("decimal(18,6)");
+            b.Property(x => x.TotalCostTryAmount).HasColumnType("decimal(18,2)");
             b.Property(x => x.AppliedMarkupPercent).HasColumnType("decimal(9,4)");
             b.Property(x => x.ReferenceCurrencyCode).HasMaxLength(3);
             b.Property(x => x.ReferenceUnitPrice).HasColumnType("decimal(18,6)");
@@ -325,11 +351,25 @@ public class NoxStockDbContext :
             b.Property(x => x.Currency).IsRequired().HasMaxLength(3).HasDefaultValue("TRY");
             b.Property(x => x.Description).HasMaxLength(500);
             b.Property(x => x.OperationKey).HasMaxLength(100);
+            b.Property(x => x.CancellationReason).HasMaxLength(500);
+            b.Property(x => x.PaymentMethod).HasMaxLength(30);
+            b.Property(x => x.ReferenceNumber).HasMaxLength(100);
+            b.Property(x => x.Status).HasDefaultValue(AccountTransactionStatus.Active);
+            b.Property(x => x.BalanceAfter).HasColumnType("decimal(18,4)");
             b.HasOne<Account>().WithMany().HasForeignKey(x => x.AccountId).IsRequired();
             b.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId).IsRequired(false);
+            b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.BusinessPartnerId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Account>().WithMany().HasForeignKey(x => x.RelatedAccountId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<AccountTransaction>().WithMany().HasForeignKey(x => x.ReversalOfTransactionId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.TenantId, x.DocumentId, x.OperationKey })
                 .IsUnique()
                 .HasFilter("\"OperationKey\" IS NOT NULL AND \"IsDeleted\" = FALSE");
+            b.HasIndex(x => new { x.TenantId, x.OperationKey, x.Type })
+                .IsUnique()
+                .HasFilter("\"OperationKey\" IS NOT NULL AND \"DocumentId\" IS NULL AND \"IsDeleted\" = FALSE");
+            b.HasIndex(x => new { x.TenantId, x.AccountId })
+                .IsUnique()
+                .HasFilter("\"Type\" = 1 AND \"Status\" = 1 AND \"OperationKey\" IS NOT NULL AND \"IsDeleted\" = FALSE");
         });
 
         builder.Entity<StockMovement>(b =>

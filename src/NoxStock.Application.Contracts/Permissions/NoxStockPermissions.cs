@@ -55,6 +55,12 @@ public static class NoxStockPermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
         public const string Transfer = Default + ".Transfer";
+        public const string OpeningBalance = Default + ".OpeningBalance";
+        public const string CancelOpeningBalance = Default + ".CancelOpeningBalance";
+        public const string Collection = Default + ".Collection";
+        public const string CancelCollection = Default + ".CancelCollection";
+        public const string Payment = Default + ".Payment";
+        public const string CancelPayment = Default + ".CancelPayment";
     }
 
     public static class Accounts
@@ -64,6 +70,11 @@ public static class NoxStockPermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
         public const string Transfer = Default + ".Transfer";
+        public const string CancelTransfer = Default + ".CancelTransfer";
+        public const string OpeningBalance = Default + ".OpeningBalance";
+        public const string CancelOpeningBalance = Default + ".CancelOpeningBalance";
+        public const string AddTransaction = Default + ".AddTransaction";
+        public const string CancelTransaction = Default + ".CancelTransaction";
     }
 
     public static class Documents
@@ -74,6 +85,7 @@ public static class NoxStockPermissions
         public const string Delete = Default + ".Delete";
         public const string Approve = Default + ".Approve";
         public const string Cancel = Default + ".Cancel";
+        public const string SellBelowCost = Default + ".SellBelowCost";
     }
 
     public static class Offers
@@ -99,6 +111,7 @@ public static class NoxStockPermissions
         public const string Default = GroupName + ".Sales";
         public const string Create = Default + ".Create";
         public const string Cancel = Default + ".Cancel";
+        public const string SellBelowCost = Default + ".SellBelowCost";
     }
 
     public static class Reports

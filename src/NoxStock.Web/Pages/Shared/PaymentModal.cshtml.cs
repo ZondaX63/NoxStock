@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using NoxStock.Accounts;
 using NoxStock.BusinessPartners;
 
@@ -18,7 +17,10 @@ public class PaymentModalModel : NoxStockPageModel
     public ProcessPaymentDto Payment { get; set; } = new();
 
     public string BusinessPartnerName { get; set; } = string.Empty;
-    public List<SelectListItem> Accounts { get; set; } = new();
+    public string Currency { get; set; } = "TRY";
+    public decimal AvailableAmount { get; set; }
+    public List<AccountDto> Accounts { get; set; } = new();
+    public decimal PartnerBalance { get; set; }
 
     public PaymentModalModel(IBusinessPartnerAppService businessPartnerAppService, IAccountAppService accountAppService)
     {
@@ -30,12 +32,17 @@ public class PaymentModalModel : NoxStockPageModel
     {
         var partner = await _businessPartnerAppService.GetAsync(businessPartnerId);
         BusinessPartnerName = partner.Name;
+        Currency = partner.Currency;
+        AvailableAmount = isCollection ? Math.Max(0m, partner.Balance) : Math.Max(0m, -partner.Balance);
+        PartnerBalance = partner.Balance;
 
         Payment.BusinessPartnerId = businessPartnerId;
         Payment.IsCollection = isCollection;
 
         var accountLookup = await _accountAppService.GetListAsync(new Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
-        Accounts = accountLookup.Items.Select(x => new SelectListItem(x.Name + " (" + x.Currency + ")", x.Id.ToString())).ToList();
+        Accounts = accountLookup.Items
+            .Where(x => x.IsActive && string.Equals(x.Currency, partner.Currency, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     public async Task<IActionResult> OnPostAsync()

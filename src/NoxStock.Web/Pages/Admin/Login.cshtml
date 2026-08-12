@@ -1,0 +1,60 @@
+@page "/admin/login"
+@using Microsoft.AspNetCore.Mvc.Localization
+@using NoxStock.Localization
+@model NoxStock.Web.Pages.Admin.LoginModel
+@inject IHtmlLocalizer<NoxStockResource> L
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Platform yöneticisi girişi";
+    ViewData["AuthMode"] = "PlatformAdmin";
+}
+
+<div class="mb-8 text-left">
+    <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[.12em] text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <span class="material-icons-round text-base">admin_panel_settings</span>
+        Platform yönetimi
+    </div>
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Yönetici girişi</h1>
+    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Bu alan yalnızca NoxStock platform yöneticileri içindir. Şirket kullanıcıları ana giriş ekranını kullanmalıdır.</p>
+</div>
+
+<form method="post" class="space-y-5" data-nx-submit-lock>
+    <input asp-for="ReturnUrl" type="hidden" />
+
+    <div asp-validation-summary="ModelOnly" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"></div>
+
+    <div class="space-y-1">
+        <label asp-for="LoginInput.UserNameOrEmailAddress" class="ml-1 block text-sm font-bold text-slate-700 dark:text-slate-200">Yönetici kullanıcı adı veya e-posta</label>
+        <div class="relative">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><span class="material-icons-round text-xl">shield</span></div>
+            <input asp-for="LoginInput.UserNameOrEmailAddress" autocomplete="username" class="auth-input block w-full rounded-md py-3 pl-10 pr-3 text-sm outline-none" placeholder="platform yöneticisi" />
+        </div>
+        <span asp-validation-for="LoginInput.UserNameOrEmailAddress" class="ml-1 mt-1 block text-xs font-medium text-red-500"></span>
+    </div>
+
+    <div class="space-y-1">
+        <label asp-for="LoginInput.Password" class="ml-1 block text-sm font-bold text-slate-700 dark:text-slate-200">Şifre</label>
+        <div class="relative">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><span class="material-icons-round text-xl">lock</span></div>
+            <input asp-for="LoginInput.Password" type="password" autocomplete="current-password" class="auth-input block w-full rounded-md py-3 pl-10 pr-3 text-sm outline-none" placeholder="••••••••" />
+        </div>
+        <span asp-validation-for="LoginInput.Password" class="ml-1 mt-1 block text-xs font-medium text-red-500"></span>
+    </div>
+
+    <label class="mt-6 flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+        <input asp-for="LoginInput.RememberMe" class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+        <span>@L["Auth:RememberMe"]</span>
+    </label>
+
+    <button type="submit" class="auth-btn mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-amber-700">
+        Yönetim paneline gir
+        <span class="material-icons-round text-lg">arrow_forward</span>
+    </button>
+</form>
+
+<div class="mt-8 border-t border-slate-200 pt-5 dark:border-slate-700">
+    <a href="~/Account/Login" class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-300">
+        <span class="material-icons-round text-base">arrow_back</span>
+        Şirket kullanıcı girişi
+    </a>
+</div>

@@ -44,6 +44,7 @@ public class ProductPricingAppService : ApplicationService, IProductPricingAppSe
         var quote = new ProductPriceQuoteDto
         {
             ProductId = product.Id,
+            Quantity = ProductPriceCalculator.RoundMoney(product.Quantity),
             IsAvailable = calculation.IsAvailable,
             UnavailableReason = calculation.UnavailableReason,
             Currency = calculation.Currency,
@@ -80,6 +81,13 @@ public class ProductPricingAppService : ApplicationService, IProductPricingAppSe
             LastPurchaseCostCurrencyCode = product.LastPurchaseCostCurrencyCode,
             LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
             LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
+            AverageInventoryCostTry = product.AverageInventoryCostTry,
+            SuggestedSalePriceInTry = ProductPriceCalculator.CalculateSuggestedSalePrice(
+                calculation.NetCostInTry,
+                product.ProfitMarkupPercent),
+            ActiveSalePriceInTry = calculation.ListSalePriceInTry,
+            ActualMarkupPercent = calculation.RealizedMarkupPercent,
+            IsBelowTargetMarkup = calculation.RealizedMarkupPercent < product.ProfitMarkupPercent,
             ReferenceCurrencyExchangeRate = calculation.ReferenceCurrencyExchangeRate,
             ReferenceCurrencyRateDate = calculation.ReferenceCurrencyRateDate,
             ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice,

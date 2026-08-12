@@ -9,12 +9,13 @@ namespace NoxStock.Pages;
 public class Index_Tests : NoxStockWebTestBase
 {
     [Fact]
-    public async Task Root_Page_Should_Redirect_To_Dashboard()
+    public async Task Root_Page_Should_Show_Public_Landing_Page()
     {
-        var response = await GetResponseAsync("/", HttpStatusCode.Found);
+        var response = await GetResponseAsync("/", HttpStatusCode.OK);
 
-        response.Headers.Location.ShouldNotBeNull();
-        response.Headers.Location!.OriginalString.ShouldBe("/Dashboard");
+        var content = await response.Content.ReadAsStringAsync();
+        content.ShouldContain("Giriş yap");
+        content.ShouldContain("NoxStock");
     }
 
     [Fact]

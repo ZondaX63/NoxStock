@@ -2,13 +2,14 @@ $(function () {
     function compactInputNumber(value, digits) {
         var number = Number(value || 0);
         if (!Number.isFinite(number)) return '0';
-        return number.toFixed(digits || 6).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '').replace(/\.$/, '');
+        return number.toFixed(digits == null ? 2 : digits).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '').replace(/\.$/, '');
     }
     var $tbody = $('#ItemsTbody');
     var $template = $('#ItemRowTemplate').html();
     var currency = $('#InvoiceCurrency').val() || $('#InvoiceForm').data('currency') || 'TRY';
     var useProductPricing = String($('#InvoiceForm').data('use-product-pricing')) === 'true';
     var usePurchaseCosting = String($('#InvoiceForm').data('use-purchase-costing')) === 'true';
+    var canViewCost = Boolean(abp.auth && abp.auth.isGranted && abp.auth.isGranted('NoxStock.Products.Edit'));
     var productLookupUrl = String($('#InvoiceForm').data('product-lookup-url') || '');
     var businessPartnerLookupUrl = String($('#InvoiceForm').data('business-partner-lookup-url') || '');
     var rates = {};
@@ -82,7 +83,7 @@ $(function () {
         }).then(function (response) { return response.ok ? response.json() : null; })
             .then(function (data) {
                 var rate = data && data[selectedCurrency.toLowerCase()] && data[selectedCurrency.toLowerCase()].rate;
-                if (Number(rate) > 0) $rate.val(compactInputNumber(rate, 6));
+                if (Number(rate) > 0) $rate.val(compactInputNumber(rate, 2));
             })
             .catch(function () { /* A manual rate can still be supplied. */ });
     }
@@ -90,11 +91,11 @@ $(function () {
     function syncInvoiceProductCardMode($form) {
         var dynamic = String($form.find('#Product_PricingMode').val() || '0') === '1';
         var $salePrice = $form.find('#Product_SalePrice');
-        $salePrice.prop('disabled', dynamic);
+        $salePrice.prop('readonly', dynamic);
         $form.find('[data-manual-sale-field]').toggleClass('is-automatic', dynamic);
         $form.find('[data-sale-price-label]').text(dynamic
-            ? 'Otomatik satış fiyatı (KDV\'siz)'
-            : 'Manuel satış fiyatı (KDV\'siz, TL)');
+            ? 'Aktif otomatik satış fiyatı (KDV\'siz)'
+            : 'Aktif manuel satış fiyatı (KDV\'siz, TL)');
         $form.find('[data-sale-price-hint]').text(dynamic
             ? 'Maliyet ve hedef kâr oranından onaylı alış maliyeti oluştuğunda hesaplanır.'
             : 'Satışta kullanılacak sabit TL liste fiyatını girin.');
@@ -343,7 +344,7 @@ $(function () {
             var existing = $row.find('.sales-discount-input').map(function () { return Number($(this).val()) || 0; }).get();
             if (existing.some(function (value) { return value !== 0; }) && !$row.data('customerDiscountApplied')) return;
             $row.find('.sales-discount-input').each(function (index) {
-                $(this).val(compactInputNumber(discounts[index], 6));
+                $(this).val(compactInputNumber(discounts[index], 2));
             });
             $row.data('customerDiscountApplied', true);
         });
@@ -376,10 +377,10 @@ $(function () {
                     return;
                 }
                 if (isLatestQuote && !hasManualPrice && useProductPricing) {
-                    $row.find('.price-input').val(compactInputNumber(quote.listSalePriceInTry || quote.unitPrice || 0, 6));
-                    $row.find('.vat-input').val(compactInputNumber(quote.vatRate || 0, 6));
+                    $row.find('.price-input').val(compactInputNumber(quote.listSalePriceInTry || quote.unitPrice || 0, 2));
+                    $row.find('.vat-input').val(compactInputNumber(quote.vatRate || 0, 2));
                 } else if (isLatestQuote && !hasManualPrice) {
-                    $row.find('.price-input').val(compactInputNumber(quote.purchaseListPrice || quote.purchasePrice || 0, 6));
+                    $row.find('.price-input').val(compactInputNumber(quote.purchaseListPrice || quote.purchasePrice || 0, 2));
                 }
                 if (usePurchaseCosting) {
                     [
@@ -388,7 +389,7 @@ $(function () {
                         quote.purchaseDiscount3,
                         quote.purchaseDiscount4
                     ].forEach(function (value, index) {
-                        $row.find('.purchase-discount-input').eq(index).val(compactInputNumber(value, 6));
+                        $row.find('.purchase-discount-input').eq(index).val(compactInputNumber(value, 2));
                     });
                 }
 
@@ -396,26 +397,24 @@ $(function () {
                 var pricingCurrency = quote.referenceCurrencyCode || quote.lastPurchaseCostCurrencyCode || quote.purchaseCurrency || 'TRY';
                 var hasLastCost = Number(quote.lastPurchaseCostCurrencyAmount || 0) > 0;
                 var sourceDetails = hasLastCost
-                    ? 'Son onaylı alış: ' + compactInputNumber(quote.lastPurchaseSourceNetUnitCost, 6) + ' ' + sourceCurrency +
-                        ' · fiyatlama maliyeti: ' + compactInputNumber(quote.lastPurchaseCostCurrencyAmount, 6) + ' ' + pricingCurrency +
+                    ? 'Son onaylı alış: ' + compactInputNumber(quote.lastPurchaseSourceNetUnitCost, 2) + ' ' + sourceCurrency +
+                        ' · güncel stok maliyeti: ' + formatAmount(quote.averageInventoryCostTry || quote.netCostInTry, 'TRY') +
                         (quote.lastPurchaseDocumentNumber ? ' · ' + quote.lastPurchaseDocumentNumber : '') +
                         (quote.lastPurchaseSupplierName ? ' · ' + quote.lastPurchaseSupplierName : '')
                     : 'Bu ürün için onaylı alış maliyeti yok.';
                 var priceDetails;
-                if (useProductPricing && quote.usesCurrentExchangeRate && hasLastCost) {
+                if (useProductPricing && quote.pricingMode === 1 && hasLastCost) {
                     var pricingRate = Number(quote.referenceCurrencyExchangeRate || 1);
                     priceDetails = '<span class="invoice-price-badge invoice-price-badge-dynamic">Güncel satış fiyatı</span>' +
-                        '<span class="invoice-price-detail">' + sourceDetails + '</span>' +
-                        '<span class="invoice-price-detail">Referans satış: ' + formatAmount(quote.referenceSaleUnitPrice || 0, pricingCurrency) + '</span>' +
-                        '<span class="invoice-price-detail">' + pricingCurrency + '/TRY: ' + compactInputNumber(pricingRate, 6) + ' · %' + compactInputNumber(quote.profitMarkupPercent, 6) + ' markup</span>' +
-                        '<span class="invoice-price-detail">Taslakta önerilir; onayda güncel kurla yeniden hesaplanıp kilitlenir. Fiyatı değiştirirseniz manuel override korunur.</span>';
+                        (canViewCost ? '<span class="invoice-price-detail">' + sourceDetails + '</span>' : '') +
+                        '<span class="invoice-price-detail">Ürün kartındaki aktif fiyat uygulandı. Bu belge kaydedildiğinde satır fiyatı korunur.</span>';
                 } else if (useProductPricing) {
-                    priceDetails = '<span class="invoice-price-badge invoice-price-badge-warning">Dinamik maliyet beklemede</span>' +
-                        '<span class="invoice-price-detail">' + sourceDetails + '</span>' +
-                        '<span class="invoice-price-detail">Satış fiyatı ürün kartındaki değerden başlatıldı.</span>';
+                    priceDetails = '<span class="invoice-price-badge invoice-price-badge-warning">Manuel satış fiyatı</span>' +
+                        (canViewCost ? '<span class="invoice-price-detail">' + sourceDetails + '</span>' : '') +
+                        '<span class="invoice-price-detail">Satış fiyatı ürün kartındaki aktif değerden başlatıldı.</span>';
                 } else {
                     priceDetails = '<span class="invoice-price-badge invoice-price-badge-purchase">Alış maliyeti</span>' +
-                        '<span class="invoice-price-detail">Bu belge onaylandığında net alış maliyeti ürünün maliyet profilini günceller.</span>' +
+                        '<span class="invoice-price-detail">Bu belge onaylandığında ürünün güncel maliyeti net alış tutarıyla güncellenir.</span>' +
                         (hasLastCost ? '<span class="invoice-price-detail">Önceki maliyet: ' + sourceDetails + '</span>' : '<span class="invoice-price-detail">Önceki onaylı alış maliyeti bulunmuyor.</span>');
                 }
                 $row.find('.price-source').html(priceDetails);
@@ -446,6 +445,7 @@ $(function () {
             var lineTotal = taxable + vat;
 
             $row.find('.row-total').text(lineTotal.toFixed(2));
+            renderLinePricing($row, quantity, price, taxable);
 
             subtotal += lineNet;
             discountTotal += discount;
@@ -458,6 +458,43 @@ $(function () {
         $('#SumDiscount').text(discountTotal.toFixed(2) + ' ' + currency);
         $('#SumVat').text(vatTotal.toFixed(2) + ' ' + currency);
         $('#SumGrandTotal').text(grandTotal.toFixed(2) + ' ' + currency);
+    }
+
+    function renderLinePricing($row, quantity, price, taxable) {
+        var quote = $row.data('priceQuote');
+        var $summary = $row.find('.invoice-line-pricing-summary');
+        if (!$summary.length || !quote) return;
+
+        var discountRate = getEffectiveDiscountRate($row);
+        var netUnit = price * (1 - discountRate / 100);
+        if (usePurchaseCosting) {
+            var documentRate = currency === 'TRY' ? 1 : Number($('#InvoiceExchangeRate').val() || 0);
+            var tryUnit = netUnit * documentRate;
+            $summary.removeClass('is-warning is-danger').html(
+                '<span>Net birim: <strong>' + escapeHtml(formatAmount(netUnit, currency)) + '</strong></span>' +
+                (currency === 'TRY' ? '' : '<span>Kur: <strong>' + escapeHtml(compactInputNumber(documentRate, 2)) + '</strong></span>') +
+                '<span>TL birim maliyet: <strong>' + escapeHtml(formatAmount(tryUnit, 'TRY')) + '</strong></span>' +
+                '<span>Toplam maliyet: <strong>' + escapeHtml(formatAmount(tryUnit * quantity, 'TRY')) + '</strong></span>');
+            return;
+        }
+
+        var cost = Number(quote.averageInventoryCostTry || quote.netCostInTry || 0);
+        var profit = cost > 0 ? netUnit - cost : null;
+        var html = '<span>Net satış: <strong>' + escapeHtml(formatAmount(netUnit, 'TRY')) + '</strong></span>';
+        if (canViewCost && profit != null) {
+            var rate = profit / cost * 100;
+            html += '<span>Maliyet: <strong>' + escapeHtml(formatAmount(cost, 'TRY')) + '</strong></span>' +
+                '<span>Birim kâr: <strong>' + escapeHtml(formatAmount(profit, 'TRY')) + ' · %' + escapeHtml(compactInputNumber(rate, 2)) + '</strong></span>';
+        } else if (canViewCost) {
+            html += '<span>Maliyet bilgisi henüz oluşmadı.</span>';
+        }
+        $summary.toggleClass('is-danger', profit != null && profit < 0);
+        if (profit != null && profit < 0) {
+            html += canViewCost
+                ? '<span class="invoice-loss-warning">Bu satışta ürün başına yaklaşık ' + escapeHtml(formatAmount(Math.abs(profit), 'TRY')) + ' zarar oluşacak.</span>'
+                : '<span class="invoice-loss-warning">Girilen net satış fiyatı izin verilen maliyet sınırının altında.</span>';
+        }
+        $summary.html(html);
     }
 
     function getEffectiveDiscountRate($row) {
@@ -476,7 +513,7 @@ $(function () {
             remainingFactor *= 1 - discount / 100;
         });
         var effectiveRate = (1 - remainingFactor) * 100;
-        $row.find('input[name$=".DiscountRate"]').val(compactInputNumber(effectiveRate, 6));
+        $row.find('input[name$=".DiscountRate"]').val(compactInputNumber(effectiveRate, 2));
         return effectiveRate;
     }
 
@@ -495,28 +532,41 @@ $(function () {
                 return;
             }
 
-            var referenceCurrency = quote.referenceCurrencyCode || quote.purchaseCurrency || currency;
-            var referenceRate = referenceCurrency === 'TRY'
-                ? 1
-                : Number(quote.referenceCurrencyExchangeRate || (rates[referenceCurrency] && rates[referenceCurrency].rate) || 0);
             var documentRate = currency === 'TRY'
                 ? 1
                 : Number($('#InvoiceExchangeRate').val() || 0) || Number((rates[currency] && rates[currency].rate) || 0);
+            var quantity = Number($row.find('.quantity-input').val() || 0);
             var netUnitPrice = unitPrice * (1 - getEffectiveDiscountRate($row) / 100);
             var tryCost = netUnitPrice * documentRate;
-            var referenceCost = referenceRate > 0 ? tryCost / referenceRate : null;
-            var preview = referenceCost === null
-                ? 'Kur bulunamadı; referans maliyet hesaplanamadı.'
-                : 'Yeni son alış maliyeti: <strong>' + escapeHtml(formatAmount(referenceCost, referenceCurrency)) + '</strong>';
-            lines.push('<li><strong>' + escapeHtml(productName) + '</strong> · net birim alış: ' + escapeHtml(formatAmount(netUnitPrice, currency)) + ' · ' + preview + '</li>');
+            var currentQuantity = Number(quote.quantity || 0);
+            var currentAverage = Number(quote.averageInventoryCostTry || 0);
+            var averagePreview = '';
+            var automaticPricePreview = '';
+            if (quantity > 0 && (currentQuantity <= 0 || currentAverage > 0)) {
+                var newAverage = currentQuantity <= 0
+                    ? tryCost
+                    : ((currentQuantity * currentAverage) + (quantity * tryCost)) / (currentQuantity + quantity);
+                averagePreview = '<span>Mevcut maliyet: <strong>' + escapeHtml(formatAmount(currentAverage, 'TRY')) + '</strong></span>' +
+                    '<span>Yeni alış maliyeti: <strong>' + escapeHtml(formatAmount(tryCost, 'TRY')) + '</strong></span>' +
+                    '<span>Fatura sonrası tahmini maliyet: <strong>' + escapeHtml(formatAmount(newAverage, 'TRY')) + '</strong></span>';
+                if (Number(quote.pricingMode) === 1) {
+                    automaticPricePreview = '<span>Yeni tahmini satış fiyatı: <strong>' + escapeHtml(formatAmount(newAverage * (1 + Number(quote.profitMarkupPercent || 0) / 100), 'TRY')) + '</strong></span>';
+                }
+            } else if (currentQuantity > 0) {
+                averagePreview = '<span>Mevcut stok maliyeti bilinmediği için yeni ortalama onayda doğrulanacak.</span>';
+            }
+            var formula = currency === 'TRY'
+                ? escapeHtml(formatAmount(netUnitPrice, 'TRY')) + '/adet'
+                : escapeHtml(formatAmount(netUnitPrice, currency)) + ' × ' + escapeHtml(compactInputNumber(documentRate, 2)) + ' = <strong>' + escapeHtml(formatAmount(tryCost, 'TRY')) + '/adet</strong>';
+            lines.push('<li><strong>' + escapeHtml(productName) + '</strong><div class="purchase-impact-grid"><span>' + formula + '</span><span>' + escapeHtml(compactInputNumber(quantity, 2)) + ' birim toplam <strong>' + escapeHtml(formatAmount(tryCost * quantity, 'TRY')) + '</strong></span>' + averagePreview + automaticPricePreview + '</div></li>');
         });
 
         var $impact = $('#PurchaseCostImpact');
         if (!lines.length) {
-            $impact.addClass('hidden').empty();
+            $impact.addClass('hidden').removeAttr('open').find('.purchase-impact-body').empty();
             return;
         }
-        $impact.removeClass('hidden').html('<strong>Onay öncesi maliyet etkisi</strong><p class="mt-1">Taslakta uygulanmaz; onayda bu satırların maliyet snapshotı güncellenir.</p><ul class="mt-2 list-disc space-y-1 pl-5">' + lines.join('') + '</ul>');
+        $impact.removeClass('hidden').find('.purchase-impact-body').html('<p>Taslak kaydı maliyeti değiştirmez. Aşağıdaki tahminler belge onaylandığında uygulanır.</p><ul>' + lines.join('') + '</ul>');
     }
 
     function renderManualOverride($row) {
@@ -536,7 +586,7 @@ $(function () {
         $row.find('.price-source').html(
             '<span class="invoice-price-badge invoice-price-badge-warning">Manuel fiyat uygulandı</span>' +
             '<span class="invoice-price-detail">Önerilen: ' + formatAmount(recommendedPrice, currency) + ' · Manuel: ' + formatAmount(manualPrice, currency) + '</span>' +
-            '<span class="invoice-price-detail">' + differenceText + '. Onayda manuel fiyat snapshot olarak kilitlenir.</span>');
+            '<span class="invoice-price-detail">' + differenceText + '. Manuel fiyat bu belgeye özel olarak korunur.</span>');
     }
 
     function refreshRates() {
@@ -550,12 +600,12 @@ $(function () {
                 var rate = currency === 'TRY' ? 1 : Number(rates[currency] && rates[currency].rate || 0);
                 var $documentRate = $('#InvoiceExchangeRate');
                 if ($documentRate.length && rate > 0 && !$documentRate.data('manual-rate') && Number($documentRate.val() || 0) <= 1) {
-                    $documentRate.val(compactInputNumber(rate, 6));
+                    $documentRate.val(compactInputNumber(rate, 2));
                 }
                 $('#InvoiceRateInfo').text(useProductPricing
-                    ? 'Satış belgesi TRY olarak kaydedilir; ürün referans kuru satır bazında kilitlenir.'
+                    ? 'Satış belgesi TL olarak kaydedilir; kullanılan kur belge satırında korunur.'
                     : rate > 0
-                        ? currency + '/TRY güncel kur: ' + compactInputNumber(rate, 6) + '. Onaylanan belgede kullanılan kur sabitlenir.'
+                        ? currency + '/TRY güncel kur: ' + compactInputNumber(rate, 2) + '. Onaylanan belgede kullanılan kur sabitlenir.'
                         : 'Güncel kur bulunamadı. Sunucu belge kaydında tekrar deneyecek.');
                 renderPurchaseCostImpact();
             })

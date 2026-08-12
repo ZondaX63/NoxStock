@@ -5,22 +5,57 @@
     Layout = null;
 }
 
-<form asp-page="/Shared/PaymentModal">
+<form asp-page="/Shared/PaymentModal" class="finance-modal-form">
     <abp-modal>
         <abp-modal-header title="@(Model.Payment.IsCollection ? "Tahsilat Al" : "Ödeme Yap")"></abp-modal-header>
-        <abp-modal-body>
+        <abp-modal-body class="finance-modal-body">
             <input type="hidden" asp-for="Payment.BusinessPartnerId" />
             <input type="hidden" asp-for="Payment.IsCollection" />
+            <input type="hidden" asp-for="Payment.OperationKey" />
             
             <div class="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <span class="text-xs text-slate-500 uppercase font-semibold">Cari:</span>
                 <span class="font-bold text-slate-800 ml-2">@Model.BusinessPartnerName</span>
+                <span class="text-xs text-slate-500 ml-2">(@Model.Currency)</span>
+                <div class="text-xs text-slate-500 mt-2">
+                    Kullanılabilir @(Model.Payment.IsCollection ? "alacak" : "borç"): <strong>@Model.AvailableAmount.ToString("N2") @Model.Currency</strong>
+                </div>
             </div>
 
-            <abp-select asp-for="Payment.AccountId" asp-items="Model.Accounts" label="Kasa / Banka Hesabı" />
-            <abp-input asp-for="Payment.Amount" label="Tutar" />
-            <abp-input asp-for="Payment.Date" label="Tarih" />
-            <abp-input asp-for="Payment.Description" label="Açıklama" />
+            <div class="mb-3">
+                <label class="form-label" for="Payment_AccountId">@(Model.Payment.IsCollection ? "Paranın gireceği hesap" : "Paranın çıkacağı hesap")</label>
+                <select class="form-select" asp-for="Payment.AccountId">
+                    <option value="">Hesap seçin</option>
+                    @foreach (var account in Model.Accounts)
+                    {
+                        <option value="@account.Id" data-balance="@account.Balance">@account.Name (@account.Balance.ToString("N2") @account.Currency)</option>
+                    }
+                </select>
+                <span asp-validation-for="Payment.AccountId" class="text-danger"></span>
+            </div>
+            @if (!Model.Accounts.Any())
+            {
+                <div class="alert alert-warning py-2 mb-3" role="alert">
+                    Bu cari ile aynı para biriminde aktif kasa veya banka hesabı bulunmuyor.
+                </div>
+            }
+            <div class="finance-form-grid">
+                <abp-input asp-for="Payment.Amount" label="Tutar" type="text" inputmode="decimal" />
+                <abp-input asp-for="Payment.Date" label="Tarih" />
+                <div>
+                    <label class="form-label" asp-for="Payment.PaymentMethod">Ödeme yöntemi</label>
+                    <select class="form-select" asp-for="Payment.PaymentMethod">
+                        <option value="Cash">Nakit</option><option value="Bank">Banka</option><option value="Card">Kart</option><option value="Other">Diğer</option>
+                    </select>
+                </div>
+                <abp-input asp-for="Payment.ReferenceNumber" label="Referans" />
+                <div class="finance-field-wide"><abp-input asp-for="Payment.Description" label="Açıklama" /></div>
+            </div>
+            <div id="PaymentPreview" class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-sm" data-partner-balance="@Model.PartnerBalance" data-collection="@Model.Payment.IsCollection.ToString().ToLowerInvariant()" data-currency="@Model.Currency">
+                <div class="flex justify-between"><span>İşlem sonrası cari</span><strong data-partner-preview>—</strong></div>
+                <div class="flex justify-between mt-1"><span>İşlem sonrası hesap</span><strong data-account-preview>Hesap seçin</strong></div>
+                <div data-payment-warning class="text-red-600 font-semibold mt-2 hidden"></div>
+            </div>
         </abp-modal-body>
         <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
     </abp-modal>

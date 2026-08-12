@@ -8,35 +8,41 @@ $(function () {
     var statementService = noxStock.businessPartners.businessPartnerStatement;
     var documentService = noxStock.documents.document;
     
-    var createPaymentModal = new abp.ModalManager(abp.appPath + 'Payments/CreateModal');
-    var transferModal = new abp.ModalManager(abp.appPath + 'BusinessPartnerTransfers/CreateModal');
+    var paymentModal = new abp.ModalManager({ viewUrl: abp.appPath + 'Shared/PaymentModal', modalClass: 'BusinessPartnerPaymentModal' });
+    var openingModal = new abp.ModalManager({ viewUrl: abp.appPath + 'Shared/BusinessPartnerOpeningBalanceModal', modalClass: 'BusinessPartnerOpeningBalanceModal' });
+    var cancelPaymentModal = new abp.ModalManager(abp.appPath + 'Shared/CancelBusinessPartnerPaymentModal');
+    var cancelOpeningModal = new abp.ModalManager(abp.appPath + 'Shared/CancelBusinessPartnerOpeningModal');
 
-    createPaymentModal.onResult(function () {
+    paymentModal.onResult(function () {
         // reload the datatable and bp details
         $('#BpDocumentsTable').DataTable().ajax.reload();
         loadBpDetails();
         loadPaymentHistory();
     });
+    openingModal.onResult(function () { loadBpDetails(); loadPaymentHistory(); });
+    cancelPaymentModal.onResult(function () { loadBpDetails(); loadPaymentHistory(); });
+    cancelOpeningModal.onResult(function () { loadBpDetails(); loadPaymentHistory(); });
 
-    transferModal.onResult(function () {
-        loadBpDetails();
-        loadPaymentHistory();
-    });
 
     $('#NewCollectionBtn').click(function(e) {
         e.preventDefault();
-        createPaymentModal.open({ type: 'Collection', businessPartnerId: businessPartnerId });
+        paymentModal.open({ businessPartnerId: businessPartnerId, isCollection: true });
     });
 
     $('#NewPaymentBtn').click(function(e) {
         e.preventDefault();
-        createPaymentModal.open({ type: 'Payment', businessPartnerId: businessPartnerId });
+        paymentModal.open({ businessPartnerId: businessPartnerId, isCollection: false });
     });
 
-    $('#CustomerTransferBtn').click(function (e) {
-        e.preventDefault();
-        transferModal.open({ customerId: businessPartnerId });
+    $('#OpeningBalanceBtn').click(function () { openingModal.open({ businessPartnerId: businessPartnerId }); });
+
+    $('#BpPaymentHistoryBody').on('click', '[data-cancel-payment]', function () {
+        cancelPaymentModal.open({ transactionId: $(this).data('cancel-payment') });
     });
+    $('#BpPaymentHistoryBody').on('click', '[data-cancel-opening]', function () {
+        cancelOpeningModal.open({ openingBalanceId: $(this).data('cancel-opening'), businessPartnerId: businessPartnerId });
+    });
+
 
     $('#PrintStatementButton').click(function () {
         window.print();
@@ -66,7 +72,8 @@ $(function () {
     }
 
     function paymentTypeText(item) {
-        if (item.isBusinessPartnerTransfer) return '<span class="bg-violet-100 text-violet-800 text-xs font-medium px-2 py-0.5 rounded">Cari virman</span>';
+        if (item.isBusinessPartnerTransfer) return '<span class="bg-violet-100 text-violet-800 text-xs font-medium px-2 py-0.5 rounded">Eski cari virman</span>';
+        if (item.isOpeningBalance) return '<span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2 py-0.5 rounded">Açılış bakiyesi</span>';
         var type = item.transactionType;
         if (type === 6) return '<span class="bg-emerald-100 text-emerald-800 text-xs font-medium px-2 py-0.5 rounded">Tahsilat</span>';
         if (type === 7) return '<span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded">Ödeme</span>';
@@ -79,7 +86,7 @@ $(function () {
             $body.empty();
 
             if (!items.length) {
-                $body.append('<tr><td colspan="6" class="py-8 px-6 text-center text-slate-400">Faturalara bağlı tahsilat veya ödeme hareketi yok.</td></tr>');
+                $body.append('<tr><td colspan="7" class="py-8 px-6 text-center text-slate-400">Henüz cari hareket bulunmuyor.</td></tr>');
                 return;
             }
 
@@ -89,6 +96,11 @@ $(function () {
                 var accountOrCounterparty = item.isBusinessPartnerTransfer
                     ? 'Karşı cari: ' + escapeHtml(item.counterpartyName || '--')
                     : escapeHtml(item.accountName);
+                var status = item.status === 2 ? '<span class="text-red-600 font-semibold">İptal edildi</span>' : '';
+                var cancel = item.canCancel && item.isOpeningBalance && abp.auth.isGranted('NoxStock.BusinessPartners.CancelOpeningBalance')
+                    ? '<button type="button" class="btn btn-sm btn-outline-danger" data-cancel-opening="' + item.id + '">İptal</button>'
+                    : (item.canCancel && abp.auth.isGranted(item.transactionType === 6 ? 'NoxStock.BusinessPartners.CancelCollection' : 'NoxStock.BusinessPartners.CancelPayment')
+                        ? '<button type="button" class="btn btn-sm btn-outline-danger" data-cancel-payment="' + item.id + '">İptal</button>' : status);
                 $body.append(
                     '<tr>' +
                     '<td class="py-3 px-6 text-slate-600 dark:text-slate-300">' + luxon.DateTime.fromISO(item.transactionDate).toFormat('dd.MM.yyyy') + '</td>' +
@@ -97,6 +109,7 @@ $(function () {
                     '<td class="py-3 px-6">' + paymentTypeText(item) + '</td>' +
                     '<td class="py-3 px-6 text-right font-bold ' + amountClass + '">' + sign + item.amount + ' ' + escapeHtml(item.currency) + '</td>' +
                     '<td class="py-3 px-6 text-slate-500 max-w-xs truncate">' + escapeHtml(item.description) + '</td>' +
+                    '<td class="py-3 px-6">' + cancel + '</td>' +
                     '</tr>'
                 );
             });

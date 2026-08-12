@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -9,10 +11,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NoxStock.MultiTenancy;
+using Volo.Abp.Data;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.Auditing;
+using Volo.Abp.TenantManagement;
 using AbpIdentityUser = Volo.Abp.Identity.IdentityUser;
 
 namespace NoxStock.Web.Pages.Account;
@@ -21,20 +26,26 @@ namespace NoxStock.Web.Pages.Account;
 public class LoginModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
 {
     private readonly SignInManager<AbpIdentityUser> _signInManager;
-    private readonly UserManager<AbpIdentityUser> _userManager;
+    private readonly IRepository<AbpIdentityUser, Guid> _identityUserRepository;
+    private readonly ITenantRepository _tenantRepository;
+    private readonly IDataFilter _dataFilter;
     private readonly ICurrentTenant _currentTenant;
     private readonly ILogger<LoginModel> _logger;
     private readonly IOptionsMonitor<CookieAuthenticationOptions> _cookieOptions;
 
     public LoginModel(
         SignInManager<AbpIdentityUser> signInManager,
-        UserManager<AbpIdentityUser> userManager,
+        IRepository<AbpIdentityUser, Guid> identityUserRepository,
+        ITenantRepository tenantRepository,
+        IDataFilter dataFilter,
         ICurrentTenant currentTenant,
         ILogger<LoginModel> logger,
         IOptionsMonitor<CookieAuthenticationOptions> cookieOptions)
     {
         _signInManager = signInManager;
-        _userManager = userManager;
+        _identityUserRepository = identityUserRepository;
+        _tenantRepository = tenantRepository;
+        _dataFilter = dataFilter;
         _currentTenant = currentTenant;
         _logger = logger;
         _cookieOptions = cookieOptions;
@@ -81,13 +92,53 @@ public class LoginModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        // A login attempt must never keep a prior tenant session alive. This also
+        // prevents a failed/invalid host login from leaving the browser in the
+        // previously selected company workspace.
+        await _signInManager.SignOutAsync();
+
         if (!ModelState.IsValid)
         {
             return Page();
         }
 
-        var user = await _userManager.FindByNameAsync(LoginInput.UserNameOrEmailAddress)
-                   ?? await _userManager.FindByEmailAsync(LoginInput.UserNameOrEmailAddress);
+        var user = default(AbpIdentityUser);
+        Tenant? resolvedTenant = null;
+
+        // The public login page is exclusively for company users. Platform
+        // administrators have a separate /admin/login entry point.
+        var matchingUsers = await FindMatchingUsersAsync(LoginInput.UserNameOrEmailAddress);
+        if (matchingUsers.Any(candidate => !candidate.TenantId.HasValue))
+        {
+            _logger.LogWarning(
+                "A platform administrator identifier was used on the public login page: {LoginIdentifier}.",
+                LoginInput.UserNameOrEmailAddress);
+            ModelState.AddModelError(
+                string.Empty,
+                "Platform yöneticisi hesabı bu ekrandan giriş yapamaz.");
+            return Page();
+        }
+
+        var tenantUsers = matchingUsers
+            .Where(candidate => candidate.TenantId.HasValue)
+            .ToList();
+        if (tenantUsers.Count > 1)
+        {
+            _logger.LogWarning(
+                "Public login requires a tenant choice for {LoginIdentifier}; {TenantUserCount} tenant users matched.",
+                LoginInput.UserNameOrEmailAddress,
+                tenantUsers.Count);
+            ModelState.AddModelError(
+                string.Empty,
+                "Bu kullanıcı adı birden fazla şirkette bulunuyor. Şirket yöneticinizle iletişime geçin.");
+            return Page();
+        }
+
+        if (tenantUsers.Count == 1)
+        {
+            user = tenantUsers[0];
+            resolvedTenant = await _tenantRepository.FindAsync(user.TenantId!.Value);
+        }
 
         if (user is null)
         {
@@ -99,10 +150,13 @@ public class LoginModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
             return Page();
         }
 
-        var result = await _signInManager.CheckPasswordSignInAsync(
-            user,
-            LoginInput.Password,
-            lockoutOnFailure: true);
+        // Password/lockout updates for a user found from the public login page must
+        // still execute within that user's tenant scope.
+        using var tenantScope = resolvedTenant is null
+            ? null
+            : _currentTenant.Change(resolvedTenant.Id, resolvedTenant.Name);
+
+        var result = await _signInManager.CheckPasswordSignInAsync(user, LoginInput.Password, lockoutOnFailure: true);
 
         if (result.Succeeded)
         {
@@ -111,7 +165,7 @@ public class LoginModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
                 : Array.Empty<Claim>();
 
             await _signInManager.SignInWithClaimsAsync(user, LoginInput.RememberMe, tenantClaims);
-            return LocalRedirect(GetSafeReturnUrl());
+            return LocalRedirect(GetSafeReturnUrl(resolvedTenant));
         }
 
         _logger.LogWarning(
@@ -125,17 +179,43 @@ public class LoginModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
             ? "Hesabınız geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin veya bir yöneticiyle iletişime geçin."
             : result.IsNotAllowed
                 ? "Hesap henüz giriş için uygun değil. Yönetici hesabı etkinleştirmesini kontrol edin."
-            : _currentTenant.Id.HasValue
-                ? "Kullanıcı adı veya şifre hatalı. Bu şirket için oluşturulan yönetici hesabını kullanın."
-                : "Kullanıcı adı veya şifre hatalı. Şirket hesabına giriş için size ait şirket bağlantısını kullanın.";
+            : "Kullanıcı adı veya şifre hatalı.";
 
         ModelState.AddModelError(string.Empty, error);
         return Page();
     }
 
-    private string GetSafeReturnUrl()
+    private async Task<List<AbpIdentityUser>> FindMatchingUsersAsync(string loginIdentifier)
     {
-        var fallback = _currentTenant.Id.HasValue ? "/Dashboard" : "/TenantManagement/Tenants";
+        var normalizedIdentifier = loginIdentifier.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(normalizedIdentifier))
+        {
+            return [];
+        }
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var candidates = await _identityUserRepository.GetListAsync(user =>
+                user.NormalizedUserName == normalizedIdentifier ||
+                user.NormalizedEmail == normalizedIdentifier);
+
+            return candidates
+                .GroupBy(user => user.Id)
+                .Select(group => group.First())
+                .ToList();
+        }
+    }
+
+    private string GetSafeReturnUrl(Tenant? resolvedTenant)
+    {
+        if (resolvedTenant is not null)
+        {
+            // A host-login tenant account must always enter its own workspace,
+            // never a host-local return URL such as /admin.
+            return $"/t/{Uri.EscapeDataString(resolvedTenant.Name)}/Dashboard";
+        }
+
+        var fallback = "/";
         var returnUrl = ReturnUrl?.Trim();
 
         if (string.IsNullOrWhiteSpace(returnUrl) || !Url.IsLocalUrl(returnUrl))

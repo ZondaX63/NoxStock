@@ -235,7 +235,13 @@ public class CreateModel : NoxStockPageModel
 
     private void NormalizeInvoiceItemNumbers()
     {
-        if (!Request.HasFormContentType || Invoice.Items is null || Invoice.Items.Count == 0)
+        if (!Request.HasFormContentType)
+        {
+            return;
+        }
+
+        NormalizeDecimalInput("Invoice.ExchangeRate", value => Invoice.ExchangeRate = value);
+        if (Invoice.Items is null || Invoice.Items.Count == 0)
         {
             return;
         }
@@ -280,7 +286,7 @@ public class CreateModel : NoxStockPageModel
 
         if (decimal.TryParse(rawValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
         {
-            assign(value);
+            assign(Math.Round(value, 2, MidpointRounding.AwayFromZero));
             return;
         }
 

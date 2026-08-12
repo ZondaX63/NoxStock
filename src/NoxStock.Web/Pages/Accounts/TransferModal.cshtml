@@ -9,11 +9,17 @@
     <abp-modal>
         <abp-modal-header title="Hesaplar Arası Transfer (Virman)"></abp-modal-header>
         <abp-modal-body class="finance-modal-body">
-            <div class="finance-modal-intro finance-modal-intro-blue"><span class="material-icons-round">swap_horiz</span><div><strong>Hesaplar arası virman</strong><small>Para, kaynak hesaptan düşülür ve hedef hesaba aynı anda aktarılır.</small></div></div>
+            <input type="hidden" asp-for="Transfer.OperationKey" />
+            <div class="finance-modal-intro finance-modal-intro-blue"><span class="material-icons-round">swap_horiz</span><div><strong>Hesaplar arası virman</strong><small>Para, kaynak hesaptan düşülür ve hedef hesaba aynı anda aktarılır. Yalnız aynı para birimindeki hesaplar arasında kullanılabilir.</small></div></div>
             <div class="finance-transfer-flow">
-                <div><span>1</span><abp-select asp-for="Transfer.FromAccountId" asp-items="Model.Accounts" label="Kaynak Hesap" /></div>
+                <div><span>1</span><label asp-for="Transfer.FromAccountId" class="form-label">Kaynak hesap</label><select asp-for="Transfer.FromAccountId" class="form-select account-transfer-select"><option value="">Hesap seçin</option>@foreach (var account in Model.Accounts) { <option value="@account.Id" data-balance="@account.Balance" data-currency="@account.Currency">@account.Name (@account.Balance.ToString("N2") @account.Currency)</option> }</select></div>
                 <i class="material-icons-round" aria-hidden="true">arrow_downward</i>
-                <div><span>2</span><abp-select asp-for="Transfer.ToAccountId" asp-items="Model.Accounts" label="Hedef Hesap" /></div>
+                <div><span>2</span><label asp-for="Transfer.ToAccountId" class="form-label">Hedef hesap</label><select asp-for="Transfer.ToAccountId" class="form-select account-transfer-select"><option value="">Hesap seçin</option>@foreach (var account in Model.Accounts) { <option value="@account.Id" data-balance="@account.Balance" data-currency="@account.Currency">@account.Name (@account.Balance.ToString("N2") @account.Currency)</option> }</select></div>
+            </div>
+            <div id="TransferCurrencyWarning" class="alert alert-warning py-2 mt-3 d-none">Farklı para birimleri arasında transfer henüz desteklenmiyor.</div>
+            <div class="row g-2 mt-2">
+                <div class="col-md-6"><div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><small>Kaynak işlem sonrası</small><strong id="TransferSourcePreview" class="d-block">—</strong></div></div>
+                <div class="col-md-6"><div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><small>Hedef işlem sonrası</small><strong id="TransferTargetPreview" class="d-block">—</strong></div></div>
             </div>
             <div class="finance-form-grid mt-3">
                 <abp-input asp-for="Transfer.Amount" label="Tutar" />

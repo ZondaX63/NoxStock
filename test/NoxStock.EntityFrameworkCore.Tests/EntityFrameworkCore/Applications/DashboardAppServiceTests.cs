@@ -76,6 +76,7 @@ public class DashboardAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         summary.DueDocuments.Select(x => x.DocNumber).ShouldContain("DUE-OVERDUE");
         summary.DueDocuments.Select(x => x.DocNumber).ShouldContain("DUE-SOON");
         summary.DueDocuments.Select(x => x.DocNumber).ShouldNotContain("DUE-PAID");
+        summary.PendingInvoiceCount.ShouldBe(0);
         // Ten dashboard data reads plus the test host's ABP permission/UOW
         // reads. The production baseline previously executed 13 dashboard
         // data commands before the scalar metrics were consolidated.

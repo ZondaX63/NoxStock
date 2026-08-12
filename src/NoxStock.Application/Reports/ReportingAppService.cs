@@ -150,7 +150,7 @@ public class ReportingAppService : ApplicationService, IReportingAppService
             .Select(group => new ProductSummaryRow
             {
                 InventoryCostValue = group.Sum(product => product.Quantity *
-                    (product.LastPurchaseCostTryAmount ??
+                    (product.AverageInventoryCostTry ?? product.LastPurchaseCostTryAmount ??
                      product.PurchasePrice *
                      (product.PurchaseCurrency == "TRY"
                          ? 1m
@@ -344,13 +344,13 @@ public class ReportingAppService : ApplicationService, IReportingAppService
                 Unit = product.Unit,
                 Quantity = product.Quantity,
                 CriticalStockLevel = product.CriticalStockLevel,
-                PurchasePrice = product.LastPurchaseCostTryAmount ??
+                PurchasePrice = product.AverageInventoryCostTry ?? product.LastPurchaseCostTryAmount ??
                     product.PurchasePrice *
                     (product.PurchaseCurrency == "TRY"
                         ? 1m
                         : product.ExchangeRateAtPurchase > 0 ? product.ExchangeRateAtPurchase : 1m),
                 CostValue = product.Quantity *
-                    (product.LastPurchaseCostTryAmount ??
+                    (product.AverageInventoryCostTry ?? product.LastPurchaseCostTryAmount ??
                      product.PurchasePrice *
                      (product.PurchaseCurrency == "TRY"
                          ? 1m

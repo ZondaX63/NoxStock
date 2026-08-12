@@ -9,7 +9,7 @@ namespace NoxStock.Web.Pages.Accounts;
 public class CreateModalModel : NoxStockPageModel
 {
     [BindProperty]
-    public CreateUpdateAccountDto Account { get; set; } = new();
+    public CreateAccountWithOpeningDto Account { get; set; } = new();
 
     public List<SelectListItem> AccountTypes { get; set; } = GetAccountTypes();
 
@@ -22,7 +22,7 @@ public class CreateModalModel : NoxStockPageModel
 
     public void OnGet()
     {
-        Account = new CreateUpdateAccountDto
+        Account = new CreateAccountWithOpeningDto
         {
             Type = AccountType.Cash,
             Currency = "TRY",
@@ -32,7 +32,7 @@ public class CreateModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        await _accountAppService.CreateAsync(Account);
+        await _accountAppService.CreateWithOpeningAsync(Account);
         return NoContent();
     }
 

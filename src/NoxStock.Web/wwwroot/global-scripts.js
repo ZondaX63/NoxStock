@@ -1,5 +1,44 @@
 /* Your Global Scripts */
 
+// Safely patch HTMLInputElement.prototype.select to prevent Firefox / browser InvalidStateError
+// when ABP ModalManager or jQuery calls .select() on <input type="number">, <input type="date">, etc.
+(function () {
+    if (typeof HTMLInputElement !== 'undefined' && HTMLInputElement.prototype) {
+        var originalSelect = HTMLInputElement.prototype.select;
+        HTMLInputElement.prototype.select = function () {
+            try {
+                if (!this.isConnected) return; // Prevent InvalidStateError on detached elements
+                var type = (this.type || '').toLowerCase();
+                // HTML5 spec: select() is only allowed on text, search, url, tel, password
+                if (['number', 'date', 'datetime-local', 'month', 'time', 'week', 'color', 'checkbox', 'radio', 'file', 'range'].indexOf(type) !== -1) {
+                    if (typeof this.focus === 'function') {
+                        try { this.focus(); } catch(e) {}
+                    }
+                    return;
+                }
+                originalSelect.apply(this, arguments);
+            } catch (e) {
+                if (typeof this.focus === 'function' && this.isConnected) {
+                    try { this.focus(); } catch(err) {}
+                }
+            }
+        };
+    }
+
+    if (typeof HTMLElement !== 'undefined' && HTMLElement.prototype) {
+        var originalFocus = HTMLElement.prototype.focus;
+        HTMLElement.prototype.focus = function () {
+            try {
+                if (this.isConnected !== false) {
+                    originalFocus.apply(this, arguments);
+                }
+            } catch (e) {
+                // Ignore InvalidStateError / DOMException on focus
+            }
+        };
+    }
+})();
+
 // Suppress "Could not find localization source: AbpUi" console warnings.
 // AbpUi keys are merged into the NoxStock resource on the backend,
 // but ABP's JS still looks for them under a separate "AbpUi" key.
@@ -142,6 +181,10 @@ $(function () {
     }
 
     window.addEventListener('error', function (event) {
+        var msg = String(event && (event.message || (event.error && event.error.message)) || '');
+        if (msg.indexOf('no longer, usable') !== -1 || msg.indexOf('InvalidStateError') !== -1) {
+            return;
+        }
         reportClientError(event.error || event.message, event.filename || 'window.error');
         showError('Beklenmeyen bir ekran hatası oluştu.');
     });

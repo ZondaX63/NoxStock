@@ -1,4 +1,5 @@
 using System;
+using NoxStock.Products;
 
 namespace NoxStock.Sales;
 
@@ -31,10 +32,12 @@ public class PosProductLookupDto
     public string PurchaseCurrency { get; set; } = "TRY";
     public bool UsesCurrentExchangeRate { get; set; }
     public decimal ProfitMarkupPercent { get; set; }
+    public ProductPricingMode PricingMode { get; set; }
     public decimal ExchangeRate { get; set; } = 1;
     public string? LastPurchaseCostCurrencyCode { get; set; }
     public decimal? LastPurchaseCostCurrencyAmount { get; set; }
     public decimal? LastPurchaseCostTryAmount { get; set; }
+    public decimal? AverageInventoryCostTry { get; set; }
     public string? LastPurchaseSourceCurrencyCode { get; set; }
     public decimal? LastPurchaseSourceNetUnitCost { get; set; }
     public decimal? LastPurchaseSourceExchangeRate { get; set; }

@@ -15,7 +15,7 @@ public class TransferModalModel : NoxStockPageModel
     [BindProperty]
     public TransferDto Transfer { get; set; } = new();
 
-    public List<SelectListItem> Accounts { get; set; } = new();
+    public List<AccountDto> Accounts { get; set; } = new();
 
     public TransferModalModel(IAccountAppService accountAppService)
     {
@@ -25,7 +25,7 @@ public class TransferModalModel : NoxStockPageModel
     public async Task OnGetAsync()
     {
         var accountLookup = await _accountAppService.GetListAsync(new Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
-        Accounts = accountLookup.Items.Select(x => new SelectListItem(x.Name + " (" + x.Currency + " - Bakiye: " + x.Balance + ")", x.Id.ToString())).ToList();
+        Accounts = accountLookup.Items.Where(x => x.IsActive).OrderBy(x => x.Name).ToList();
     }
 
     public async Task<IActionResult> OnPostAsync()

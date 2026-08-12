@@ -32,7 +32,9 @@ public class CreateUpdateProductDto
     [Range(0, 100)] public decimal PurchaseDiscount2 { get; set; }
     [Range(0, 100)] public decimal PurchaseDiscount3 { get; set; }
     [Range(0, 100)] public decimal PurchaseDiscount4 { get; set; }
-    [Range(0, 1000000)] public decimal ExchangeRateAtPurchase { get; set; } = 1m;
+    // TRY is normalized to 1 by the application service. Foreign currencies
+    // start empty so omitted API/form values cannot silently become "1 TL".
+    [Range(0, 1000000)] public decimal ExchangeRateAtPurchase { get; set; }
     public decimal SalePrice { get; set; }
     [Range(0, 100)] public decimal SalesDiscount1 { get; set; }
     [Range(0, 100)] public decimal SalesDiscount2 { get; set; }

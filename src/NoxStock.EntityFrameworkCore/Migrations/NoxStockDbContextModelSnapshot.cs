@@ -114,6 +114,22 @@ namespace NoxStock.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<decimal?>("BalanceAfter")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid?>("BusinessPartnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("CancelledBy")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("CreationTime");
@@ -162,6 +178,25 @@ namespace NoxStock.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("RelatedAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ReversalOfTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("TenantId");
@@ -176,11 +211,25 @@ namespace NoxStock.Migrations
 
                     b.HasIndex("AccountId");
 
+                    b.HasIndex("BusinessPartnerId");
+
                     b.HasIndex("DocumentId");
+
+                    b.HasIndex("RelatedAccountId");
+
+                    b.HasIndex("ReversalOfTransactionId");
+
+                    b.HasIndex("TenantId", "AccountId")
+                        .IsUnique()
+                        .HasFilter("\"Type\" = 1 AND \"Status\" = 1 AND \"OperationKey\" IS NOT NULL AND \"IsDeleted\" = FALSE");
 
                     b.HasIndex("TenantId", "DocumentId", "OperationKey")
                         .IsUnique()
                         .HasFilter("\"OperationKey\" IS NOT NULL AND \"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TenantId", "OperationKey", "Type")
+                        .IsUnique()
+                        .HasFilter("\"OperationKey\" IS NOT NULL AND \"DocumentId\" IS NULL AND \"IsDeleted\" = FALSE");
 
                     b.ToTable("AppAccountTransactions", (string)null);
                 });
@@ -455,6 +504,118 @@ namespace NoxStock.Migrations
                     b.ToTable("AppBusinessPartners", (string)null);
                 });
 
+            modelBuilder.Entity("NoxStock.BusinessPartners.BusinessPartnerOpeningBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("BusinessPartnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("CancelledBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<DateTime>("OpeningDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("ReversalOfOpeningBalanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessPartnerId");
+
+                    b.HasIndex("ReversalOfOpeningBalanceId");
+
+                    b.HasIndex("TenantId", "BusinessPartnerId")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 1 AND \"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TenantId", "OperationKey")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("AppBusinessPartnerOpeningBalances", (string)null);
+                });
+
             modelBuilder.Entity("NoxStock.Categories.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -724,6 +885,9 @@ namespace NoxStock.Migrations
 
                     b.Property<decimal?>("CostTryAmount")
                         .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("TotalCostTryAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp without time zone")
@@ -1511,6 +1675,12 @@ namespace NoxStock.Migrations
                     b.Property<DateTime?>("LastCostUpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<decimal?>("AverageInventoryCostTry")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("InventoryCostUpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<DateTime?>("LastModificationTime")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("LastModificationTime");
@@ -1678,6 +1848,12 @@ namespace NoxStock.Migrations
                     b.Property<int>("ChangeType")
                         .HasColumnType("integer");
 
+                    b.Property<decimal?>("AverageCostAfterTry")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("AverageCostBeforeTry")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("CostDate")
                         .HasColumnType("timestamp without time zone");
 
@@ -1713,6 +1889,15 @@ namespace NoxStock.Migrations
 
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("QuantityAfter")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("QuantityBefore")
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ReferenceCurrencyCode")
                         .IsRequired()
@@ -3867,9 +4052,24 @@ namespace NoxStock.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NoxStock.BusinessPartners.BusinessPartner", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessPartnerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NoxStock.Documents.Document", null)
                         .WithMany()
                         .HasForeignKey("DocumentId");
+
+                    b.HasOne("NoxStock.Accounts.Account", null)
+                        .WithMany()
+                        .HasForeignKey("RelatedAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NoxStock.Accounts.AccountTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("ReversalOfTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("NoxStock.BusinessPartnerTransfers.BusinessPartnerTransfer", b =>
@@ -3885,6 +4085,20 @@ namespace NoxStock.Migrations
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("NoxStock.BusinessPartners.BusinessPartnerOpeningBalance", b =>
+                {
+                    b.HasOne("NoxStock.BusinessPartners.BusinessPartner", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessPartnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NoxStock.BusinessPartners.BusinessPartnerOpeningBalance", null)
+                        .WithMany()
+                        .HasForeignKey("ReversalOfOpeningBalanceId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("NoxStock.Categories.Category", b =>

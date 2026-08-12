@@ -66,125 +66,76 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
         var currentReferenceRate = referenceCurrency == "TRY"
             ? null
             : await GetCurrentRateAsync(referenceCurrency);
-        if (product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup &&
-            referenceCurrency != "TRY" &&
-            (currentReferenceRate is null || currentReferenceRate.Rate <= 0))
-        {
-            throw new BusinessException("NoxStock:CurrentExchangeRateUnavailable")
-                .WithData("Currency", referenceCurrency);
-        }
         var referenceRate = referenceCurrency == "TRY"
             ? 1m
             : currentReferenceRate?.Rate is > 0m
                 ? currentReferenceRate.Rate
                 : product.ExchangeRateAtPurchase > 0m
                     ? product.ExchangeRateAtPurchase
-                    : 0m;
+                    : 1m;
         var referenceRateDate = currentReferenceRate?.RateDate;
-        var markupPercent = product.ProfitMarkupPercent;
-        var hasLastPurchaseCost = product.LastPurchaseCostCurrencyAmount is > 0;
-        var usesCostProfile = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup && hasLastPurchaseCost;
+        var markupPercent = Round(product.ProfitMarkupPercent);
+        var cardPurchaseRate = referenceCurrency == "TRY"
+            ? 1m
+            : product.ExchangeRateAtPurchase > 0m
+                ? product.ExchangeRateAtPurchase
+                : referenceRate;
+        var cardPurchaseListPrice = product.PurchaseListPrice > 0m
+            ? product.PurchaseListPrice
+            : product.PurchasePrice;
+        var manualCardCostTry = ApplyDiscountChain(
+            cardPurchaseListPrice,
+            product.PurchaseDiscount1,
+            product.PurchaseDiscount2,
+            product.PurchaseDiscount3,
+            product.PurchaseDiscount4) * cardPurchaseRate;
 
-        if (product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup && !hasLastPurchaseCost)
+        // Elde stok ve hesaplanmış ortalama varsa satış kararının maliyet
+        // otoritesi odur. Ürün kartındaki maliyet yalnız stok maliyeti henüz
+        // oluşmamışken kullanılabilecek bir fiyatlama girdisidir.
+        var costTry = product.Quantity > 0m && product.AverageInventoryCostTry is > 0m
+            ? product.AverageInventoryCostTry.Value
+            : manualCardCostTry > 0m
+                ? manualCardCostTry
+                : product.AverageInventoryCostTry ?? product.LastPurchaseCostTryAmount ?? 0m;
+        costTry = Round(costTry);
+        var suggestedPriceTry = CalculateSuggestedSalePrice(costTry, markupPercent);
+        var isAutomatic = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup;
+        var activePriceTry = isAutomatic ? suggestedPriceTry : Round(product.SalePrice);
+        var profit = Round(activePriceTry - costTry);
+
+        return new ProductPriceCalculation
         {
-            return new ProductPriceCalculation
-            {
-                IsAvailable = false,
-                UnavailableReason = "NoxStock:ProductApprovedPurchaseCostUnavailable",
-                Currency = "TRY",
-                ExchangeRate = 1m,
-                RateDate = referenceRateDate,
-                UsesCurrentExchangeRate = true,
-                ReferenceCurrencyCode = referenceCurrency,
-                ReferenceCurrencyExchangeRate = referenceRate,
-                ReferenceCurrencyRateDate = referenceRateDate,
-                MarkupPercent = markupPercent
-            };
-        }
-
-        if (!usesCostProfile)
-        {
-            var listPriceInTry = product.SalePrice;
-            var fixedPriceInTry = ApplyDiscountChain(listPriceInTry,
-                product.SalesDiscount1, product.SalesDiscount2, product.SalesDiscount3, product.SalesDiscount4);
-            var cardPurchaseRate = referenceCurrency == "TRY"
-                ? 1m
-                : product.ExchangeRateAtPurchase > 0
-                    ? product.ExchangeRateAtPurchase
-                    : referenceRate;
-            var cardPurchaseListPrice = product.PurchaseListPrice > 0 ? product.PurchaseListPrice : product.PurchasePrice;
-            var cardCostInTry = product.LastPurchaseCostTryAmount is > 0
-                ? product.LastPurchaseCostTryAmount.Value
-                : ApplyDiscountChain(cardPurchaseListPrice,
-                    product.PurchaseDiscount1, product.PurchaseDiscount2, product.PurchaseDiscount3, product.PurchaseDiscount4) * cardPurchaseRate;
-
-            return new ProductPriceCalculation
-            {
-                Currency = "TRY",
-                UnitPrice = Round(fixedPriceInTry),
-                PriceInTry = Round(fixedPriceInTry),
-                ExchangeRate = 1m,
-                RateDate = referenceRateDate,
-                UsesCurrentExchangeRate = false,
-                ReferenceCurrencyCode = referenceCurrency,
-                ReferenceCurrencyExchangeRate = referenceRate,
-                ReferenceCurrencyRateDate = referenceRateDate,
-                LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
-                LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
-                ReferenceSaleUnitPrice = product.LastPurchaseCostCurrencyAmount is > 0
-                    ? Round(product.LastPurchaseCostCurrencyAmount.Value * (1 + markupPercent / 100m))
+            IsAvailable = isAutomatic ? suggestedPriceTry > 0m : activePriceTry > 0m,
+            UnavailableReason = costTry <= 0m
+                ? "NoxStock:ProductCostUnavailable"
+                : !isAutomatic && activePriceTry <= 0m
+                    ? "NoxStock:ManualSalePriceUnavailable"
                     : null,
-                MarkupPercent = markupPercent,
-                ProductCostHistoryId = product.LastPurchaseCostHistoryId,
-                NetCostInTry = Round(cardCostInTry),
-                ListSalePriceInTry = Round(listPriceInTry),
-                SalesDiscountAmountInTry = Round(listPriceInTry - fixedPriceInTry),
-                VatAmountInTry = Round(fixedPriceInTry * product.VatRate / 100m),
-                CustomerFinalPriceInTry = Round(fixedPriceInTry * (1 + product.VatRate / 100m)),
-                EstimatedProfitInTry = Round(fixedPriceInTry - cardCostInTry),
-                EstimatedNetMarginPercent = CalculateMargin(fixedPriceInTry, cardCostInTry),
-                RealizedMarkupPercent = CalculateMarkup(fixedPriceInTry, cardCostInTry),
-                GrossProfitMarginPercent = CalculateMargin(fixedPriceInTry, cardCostInTry)
-            };
-        }
-
-        if (usesCostProfile)
-        {
-            var netCostInTry = product.LastPurchaseCostCurrencyAmount!.Value * referenceRate;
-            var listPriceInTry = netCostInTry *
-                (1 + markupPercent / 100m);
-            var dynamicPriceInTry = ApplyDiscountChain(listPriceInTry,
-                product.SalesDiscount1, product.SalesDiscount2, product.SalesDiscount3, product.SalesDiscount4);
-
-            return new ProductPriceCalculation
-            {
-                Currency = "TRY",
-                UnitPrice = Round(dynamicPriceInTry),
-                PriceInTry = Round(dynamicPriceInTry),
-                ExchangeRate = 1m,
-                RateDate = referenceRateDate,
-                UsesCurrentExchangeRate = true,
-                ReferenceCurrencyCode = referenceCurrency,
-                ReferenceCurrencyExchangeRate = referenceRate,
-                ReferenceCurrencyRateDate = referenceRateDate,
-                LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
-                LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
-                ReferenceSaleUnitPrice = Round(product.LastPurchaseCostCurrencyAmount.Value * (1 + markupPercent / 100m)),
-                MarkupPercent = markupPercent,
-                ProductCostHistoryId = product.LastPurchaseCostHistoryId,
-                NetCostInTry = Round(netCostInTry),
-                ListSalePriceInTry = Round(listPriceInTry),
-                SalesDiscountAmountInTry = Round(listPriceInTry - dynamicPriceInTry),
-                VatAmountInTry = Round(dynamicPriceInTry * product.VatRate / 100m),
-                CustomerFinalPriceInTry = Round(dynamicPriceInTry * (1 + product.VatRate / 100m)),
-                EstimatedProfitInTry = Round(dynamicPriceInTry - netCostInTry),
-                EstimatedNetMarginPercent = CalculateMargin(dynamicPriceInTry, netCostInTry),
-                RealizedMarkupPercent = CalculateMarkup(dynamicPriceInTry, netCostInTry),
-                GrossProfitMarginPercent = CalculateMargin(dynamicPriceInTry, netCostInTry)
-            };
-        }
-
-        throw new InvalidOperationException("Unsupported product pricing state.");
+            Currency = "TRY",
+            UnitPrice = activePriceTry,
+            PriceInTry = activePriceTry,
+            ExchangeRate = 1m,
+            RateDate = null,
+            UsesCurrentExchangeRate = false,
+            ReferenceCurrencyCode = referenceCurrency,
+            ReferenceCurrencyExchangeRate = referenceRate,
+            ReferenceCurrencyRateDate = referenceRateDate,
+            LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
+            LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
+            ReferenceSaleUnitPrice = referenceRate > 0m ? Round(suggestedPriceTry / referenceRate) : null,
+            MarkupPercent = markupPercent,
+            ProductCostHistoryId = product.LastPurchaseCostHistoryId,
+            NetCostInTry = costTry,
+            ListSalePriceInTry = activePriceTry,
+            SalesDiscountAmountInTry = 0m,
+            VatAmountInTry = Round(activePriceTry * product.VatRate / 100m),
+            CustomerFinalPriceInTry = Round(activePriceTry * (1m + product.VatRate / 100m)),
+            EstimatedProfitInTry = profit,
+            EstimatedNetMarginPercent = CalculateMargin(activePriceTry, costTry),
+            RealizedMarkupPercent = CalculateMarkup(activePriceTry, costTry),
+            GrossProfitMarginPercent = CalculateMargin(activePriceTry, costTry)
+        };
     }
 
     public async Task<decimal> GetExchangeRateAsync(string currency)
@@ -251,7 +202,12 @@ public class ProductPriceCalculator : IProductPriceCalculator, ITransientDepende
         return normalized;
     }
 
-    private static decimal Round(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
+    public static decimal RoundMoney(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+    public static decimal CalculateSuggestedSalePrice(decimal costTry, decimal markupPercent) =>
+        RoundMoney(costTry * (1m + markupPercent / 100m));
+
+    private static decimal Round(decimal value) => RoundMoney(value);
 
     public static decimal ApplyDiscountChain(decimal value, params decimal[] discounts)
     {

@@ -10,5 +10,7 @@ public class AccountDto : FullAuditedEntityDto<Guid>
     public string Currency { get; set; } = "TRY";
     public decimal Balance { get; set; }
     public bool IsActive { get; set; }
+    public decimal TodayIncome { get; set; }
+    public decimal TodayExpense { get; set; }
+    public DateTime? LastTransactionDate { get; set; }
 }
-

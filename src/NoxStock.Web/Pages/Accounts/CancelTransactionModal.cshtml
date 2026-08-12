@@ -1,0 +1,22 @@
+@page
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NoxStock.Web.Pages.Accounts.CancelTransactionModalModel
+@{ Layout = null; }
+
+<form asp-page="/Accounts/CancelTransactionModal" class="finance-modal-form">
+    <abp-modal>
+        <abp-modal-header title="Hareketi İptal Et"></abp-modal-header>
+        <abp-modal-body class="finance-modal-body">
+            <input type="hidden" asp-for="TransactionId" />
+            <div class="alert alert-warning">
+                Kayıt silinmeyecek; hesap etkisi ters kayıtla geri alınacaktır.
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 mb-3">
+                <strong>@Model.Transaction.Amount.ToString("N2") @Model.Transaction.Currency</strong>
+                <div class="small text-muted">@Model.Transaction.TransactionDate.ToString("dd.MM.yyyy HH:mm") · @Model.Transaction.Description</div>
+            </div>
+            <abp-input asp-for="Cancellation.Reason" label="İptal nedeni" />
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

@@ -21,19 +21,22 @@ public class BusinessPartnerStatementAppService : ApplicationService, IBusinessP
     private readonly IRepository<Account, Guid> _accountRepository;
     private readonly IRepository<BusinessPartner, Guid> _businessPartnerRepository;
     private readonly IRepository<BusinessPartnerTransfer, Guid> _transferRepository;
+    private readonly IRepository<BusinessPartnerOpeningBalance, Guid> _openingBalanceRepository;
 
     public BusinessPartnerStatementAppService(
         IRepository<Document, Guid> documentRepository,
         IRepository<AccountTransaction, Guid> accountTransactionRepository,
         IRepository<Account, Guid> accountRepository,
         IRepository<BusinessPartner, Guid> businessPartnerRepository,
-        IRepository<BusinessPartnerTransfer, Guid> transferRepository)
+        IRepository<BusinessPartnerTransfer, Guid> transferRepository,
+        IRepository<BusinessPartnerOpeningBalance, Guid> openingBalanceRepository)
     {
         _documentRepository = documentRepository;
         _accountTransactionRepository = accountTransactionRepository;
         _accountRepository = accountRepository;
         _businessPartnerRepository = businessPartnerRepository;
         _transferRepository = transferRepository;
+        _openingBalanceRepository = openingBalanceRepository;
     }
 
     public async Task<List<BusinessPartnerPaymentHistoryDto>> GetPaymentHistoryAsync(Guid businessPartnerId)
@@ -64,16 +67,66 @@ public class BusinessPartnerStatementAppService : ApplicationService, IBusinessP
                 Amount = transaction.Amount,
                 Currency = transaction.Currency,
                 TransactionDate = transaction.TransactionDate,
-                Description = transaction.Description
+                Description = transaction.Description,
+                Status = transaction.Status,
+                CancellationReason = transaction.CancellationReason
             };
 
         var paymentHistory = await AsyncExecuter.ToListAsync(query);
+        var directRows = await AsyncExecuter.ToListAsync(
+            from transaction in transactions
+            join account in accounts on transaction.AccountId equals account.Id
+            where transaction.BusinessPartnerId == businessPartnerId && !transaction.DocumentId.HasValue &&
+                  (transaction.Type == AccountTransactionType.Collection ||
+                   transaction.Type == AccountTransactionType.Payment ||
+                   transaction.Type == AccountTransactionType.Reversal)
+            select new BusinessPartnerPaymentHistoryDto
+            {
+                Id = transaction.Id,
+                DocumentId = Guid.Empty,
+                DocumentNumber = transaction.ReferenceNumber ?? "Doğrudan işlem",
+                AccountName = account.Name,
+                TransactionType = transaction.Type,
+                Amount = transaction.Type == AccountTransactionType.Collection
+                    ? -transaction.Amount
+                    : transaction.Type == AccountTransactionType.Payment ? transaction.Amount : transaction.Amount,
+                Currency = transaction.Currency,
+                TransactionDate = transaction.TransactionDate,
+                Description = transaction.Description,
+                Status = transaction.Status,
+                CancellationReason = transaction.CancellationReason,
+                CanCancel = transaction.Status == AccountTransactionStatus.Active &&
+                            (transaction.Type == AccountTransactionType.Collection || transaction.Type == AccountTransactionType.Payment)
+            });
+        paymentHistory.AddRange(directRows);
+
+        var openings = await _openingBalanceRepository.GetListAsync(x => x.BusinessPartnerId == businessPartnerId);
+        paymentHistory.AddRange(openings.Select(opening => new BusinessPartnerPaymentHistoryDto
+        {
+            Id = opening.Id,
+            DocumentId = Guid.Empty,
+            DocumentNumber = "Açılış bakiyesi",
+            AccountName = "Cari açılış",
+            TransactionType = AccountTransactionType.Opening,
+            Amount = opening.Direction == BusinessPartnerOpeningDirection.ReceivableFromPartner
+                ? opening.Amount
+                : -opening.Amount,
+            Currency = opening.Currency,
+            TransactionDate = opening.OpeningDate,
+            Description = opening.Description,
+            Status = opening.Status == BusinessPartnerOpeningStatus.Cancelled
+                ? AccountTransactionStatus.Cancelled
+                : AccountTransactionStatus.Active,
+            CanCancel = opening.Status == BusinessPartnerOpeningStatus.Active,
+            IsOpeningBalance = true,
+            CancellationReason = opening.CancellationReason
+        }));
         var transfers = await _transferRepository.GetQueryableAsync();
         var relatedTransfers = await AsyncExecuter.ToListAsync(
             transfers.Where(x => x.CustomerId == businessPartnerId || x.SupplierId == businessPartnerId));
 
         if (!relatedTransfers.Any())
-            return paymentHistory;
+            return paymentHistory.OrderByDescending(x => x.TransactionDate).ThenByDescending(x => x.Id).ToList();
 
         var counterpartyIds = relatedTransfers
             .Select(x => x.CustomerId == businessPartnerId ? x.SupplierId : x.CustomerId)

@@ -11,6 +11,9 @@ public interface IAccountAppService :
         PagedAndSortedResultRequestDto,
         CreateUpdateAccountDto>
 {
+    System.Threading.Tasks.Task<AccountDto> CreateWithOpeningAsync(CreateAccountWithOpeningDto input);
+    System.Threading.Tasks.Task<AccountTransactionDto> CreateOpeningBalanceAsync(CreateAccountOpeningBalanceDto input);
+    System.Threading.Tasks.Task CancelTransactionAsync(Guid transactionId, CancelAccountTransactionDto input);
     System.Threading.Tasks.Task<PagedResultDto<AccountLookupDto>> GetLookupListAsync(AccountLookupInput input);
     System.Threading.Tasks.Task TransferAsync(TransferDto input);
     System.Threading.Tasks.Task AddTransactionAsync(AddTransactionDto input);

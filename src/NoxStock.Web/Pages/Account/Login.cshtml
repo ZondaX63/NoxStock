@@ -3,14 +3,12 @@
 @using NoxStock.Localization
 @model NoxStock.Web.Pages.Account.LoginModel
 @inject IHtmlLocalizer<NoxStockResource> L
-@inject Volo.Abp.MultiTenancy.ICurrentTenant CurrentTenant
 @{
     Layout = "_AuthLayout";
     ViewData["Title"] = L["Auth:Login"].Value;
-    var isTenantLogin = CurrentTenant.Id.HasValue;
-    var title = isTenantLogin ? L["Auth:TenantLoginTitle"] : L["Auth:HostLoginTitle"];
-    var description = isTenantLogin ? L["Auth:TenantLoginDescription"] : L["Auth:HostLoginDescription"];
-    var supportText = isTenantLogin ? L["Auth:TenantLoginSupport"] : L["Auth:HostLoginSupport"];
+    var title = L["Auth:TenantLoginTitle"];
+    var description = L["Auth:TenantLoginDescription"];
+    var supportText = L["Auth:TenantLoginSupport"];
 }
 
 <div class="mb-8 text-left">

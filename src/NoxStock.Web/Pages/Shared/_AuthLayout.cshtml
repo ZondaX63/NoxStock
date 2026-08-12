@@ -1,13 +1,12 @@
 @using System.Globalization
 @using NoxStock.Localization
-@using Volo.Abp.MultiTenancy
 @using Microsoft.AspNetCore.Mvc.Localization
-@inject ICurrentTenant CurrentTenant
 @inject IHtmlLocalizer<NoxStockResource> L
 @{
     var currentCulture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
     var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
     var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+    var isPlatformAdmin = string.Equals(ViewData["AuthMode"] as string, "PlatformAdmin", StringComparison.Ordinal);
 }
 <!DOCTYPE html>
 <html lang="@currentCulture">
@@ -40,9 +39,6 @@
         .auth-brand-panel { display: flex; min-width: 0; background: #101827; color: #fff; }
         .auth-brand-inner { display: flex; width: 100%; max-width: 42rem; margin: 0 auto; flex-direction: column; justify-content: space-between; padding: 3rem 4.5rem; }
         .auth-brand-copy { max-width: 34rem; }
-        .auth-tenant-context { display: flex; align-items: center; gap: .5rem; margin-bottom: 1.25rem; color: #c7d2fe; font-size: .875rem; font-weight: 600; }
-        .auth-currency-icon { display: inline-flex; width: 1.25rem; height: 1.25rem; align-items: center; justify-content: center; color: #a5b4fc; font-size: 1.15rem; font-weight: 700; line-height: 1; }
-        .auth-tenant-context strong { color: #fff; font-weight: 700; }
         .auth-eyebrow { color: #a5b4fc; letter-spacing: .08em; }
         .auth-brand-title { max-width: 34rem; color: #fff; font-size: 3rem; line-height: 1.08; }
         .auth-brand-description { max-width: 32rem; color: #c5d0df; }
@@ -54,19 +50,21 @@
         .auth-input { min-height: 2.75rem; }
         .auth-btn { min-height: 3rem; background: #4f46e5; }
         .auth-btn:hover { background: #4338ca; }
+        .auth-shell--admin .auth-brand-panel { background: radial-gradient(circle at 85% 15%, #7c2d12 0, #3f1d0f 38%, #111827 100%); }
+        .auth-shell--admin .auth-brand-rule { background: #f59e0b; }
+        .auth-shell--admin .auth-eyebrow { color: #fde68a; }
         @@media (max-width: 1023px) {
             .auth-layout { display: block; }
             .auth-brand-panel { min-height: 15rem; }
             .auth-brand-inner { padding: 2rem 1.5rem; }
             .auth-brand-copy { display: block; max-width: none; }
             .auth-brand-rule, .auth-eyebrow, .auth-brand-title, .auth-brand-description, .auth-brand-meta { display: none; }
-            .auth-tenant-context { margin: 2rem 0 0; }
             .auth-form-panel { min-height: calc(100vh - 15rem); padding: 5.5rem 1.5rem 3rem; }
             .auth-language { top: 1.5rem; right: 1.5rem; }
         }
     </style>
 </head>
-<body class="auth-shell min-h-screen">
+<body class="auth-shell min-h-screen @(isPlatformAdmin ? "auth-shell--admin" : string.Empty)">
     <main class="auth-layout">
         <section class="auth-brand-panel">
             <div class="auth-brand-inner">
@@ -77,14 +75,6 @@
                     <span class="text-2xl font-bold">NOX<span class="text-indigo-300">STOCK</span></span>
                 </a>
                 <div class="auth-brand-copy">
-                    @if (CurrentTenant.Id.HasValue && !string.IsNullOrWhiteSpace(CurrentTenant.Name))
-                    {
-                        <div class="auth-tenant-context">
-                            <span class="auth-currency-icon" aria-hidden="true">₺</span>
-                            <span>@L["Auth:TenantLoginFor"]:</span>
-                            <strong>@CurrentTenant.Name</strong>
-                        </div>
-                    }
                     <div class="auth-brand-rule mb-6"></div>
                     <p class="auth-eyebrow mb-4 text-xs font-semibold">@L["Auth:BrandEyebrow"]</p>
                     <h1 class="auth-brand-title font-bold">@L["Auth:BrandHeadline"]</h1>

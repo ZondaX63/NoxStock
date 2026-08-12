@@ -11,7 +11,7 @@
     if (!ticker || !usd || !eur || !updated) return;
 
     function format(rate) {
-        return rate === undefined || rate === null ? '--' : new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(rate) + ' TL';
+        return rate === undefined || rate === null ? '--' : new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(rate) + ' TL';
     }
 
     function render(data) {

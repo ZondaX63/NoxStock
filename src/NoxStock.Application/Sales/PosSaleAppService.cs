@@ -153,10 +153,12 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 PurchaseCurrency = product.PurchaseCurrency,
                 UsesCurrentExchangeRate = calculation.UsesCurrentExchangeRate,
                 ProfitMarkupPercent = product.ProfitMarkupPercent,
+                PricingMode = product.PricingMode,
                 ExchangeRate = calculation.ExchangeRate,
                 LastPurchaseCostCurrencyCode = product.LastPurchaseCostCurrencyCode,
                 LastPurchaseCostCurrencyAmount = product.LastPurchaseCostCurrencyAmount,
                 LastPurchaseCostTryAmount = product.LastPurchaseCostTryAmount,
+                AverageInventoryCostTry = product.AverageInventoryCostTry,
                 LastPurchaseSourceCurrencyCode = costHistory?.SourceCurrencyCode,
                 LastPurchaseSourceNetUnitCost = costHistory?.SourceNetUnitCost,
                 LastPurchaseSourceExchangeRate = costHistory?.SourceExchangeRate,
@@ -279,9 +281,13 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             .Select(group => new CreatePosSaleItemDto
             {
                 ProductId = group.Key,
-                Quantity = group.Sum(x => x.Quantity),
-                UnitPrice = group.Last().UnitPrice,
-                VatRate = group.Last().VatRate,
+                Quantity = RoundMoney(group.Sum(x => x.Quantity)),
+                UnitPrice = RoundNullable(group.Last().UnitPrice),
+                VatRate = RoundNullable(group.Last().VatRate),
+                SalesDiscount1 = RoundNullable(group.Last().SalesDiscount1),
+                SalesDiscount2 = RoundNullable(group.Last().SalesDiscount2),
+                SalesDiscount3 = RoundNullable(group.Last().SalesDiscount3),
+                SalesDiscount4 = RoundNullable(group.Last().SalesDiscount4),
                 IsUnitPriceOverridden = group.Any(x => x.IsUnitPriceOverridden)
             })
             .ToList();
@@ -294,6 +300,12 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         if (cartItems.Any(x => x.VatRate is < 0m or > 100m))
         {
             throw new BusinessException("NoxStock:InvalidPosVatRate");
+        }
+
+        if (cartItems.Any(x => new[] { x.SalesDiscount1, x.SalesDiscount2, x.SalesDiscount3, x.SalesDiscount4 }
+            .Any(discount => discount is < 0m or > 100m)))
+        {
+            throw new BusinessException("NoxStock:InvalidPosDiscountRate");
         }
 
         var saleDate = Clock.Now;
@@ -323,11 +335,29 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             var usesManualPrice = cartItem.IsUnitPriceOverridden && cartItem.UnitPrice is > 0;
             var unitPrice = usesManualPrice ? cartItem.UnitPrice!.Value : calculation.ListSalePriceInTry;
             var vatRate = cartItem.VatRate ?? product.VatRate;
-            var effectiveDiscountRate = GetEffectiveSalesDiscountRate(businessPartner);
+            var salesDiscount1 = cartItem.SalesDiscount1 ?? businessPartner.DefaultSalesDiscount1;
+            var salesDiscount2 = cartItem.SalesDiscount2 ?? businessPartner.DefaultSalesDiscount2;
+            var salesDiscount3 = cartItem.SalesDiscount3 ?? businessPartner.DefaultSalesDiscount3;
+            var salesDiscount4 = cartItem.SalesDiscount4 ?? businessPartner.DefaultSalesDiscount4;
+            var effectiveDiscountRate = GetEffectiveSalesDiscountRate(
+                salesDiscount1, salesDiscount2, salesDiscount3, salesDiscount4);
             var lineNet = unitPrice * cartItem.Quantity;
             var discount = lineNet * effectiveDiscountRate / 100m;
             var taxable = lineNet - discount;
             var vat = taxable * vatRate / 100m;
+            var netUnitSale = cartItem.Quantity > 0m ? taxable / cartItem.Quantity : 0m;
+            if (calculation.NetCostInTry > 0m && netUnitSale < calculation.NetCostInTry)
+            {
+                var canOverride = await AuthorizationService.IsGrantedAsync(NoxStockPermissions.Sales.SellBelowCost);
+                if (!input.ConfirmBelowCost || !canOverride)
+                {
+                    throw new BusinessException("NoxStock:SaleBelowInventoryCost")
+                        .WithData("ProductName", product.Name)
+                        .WithData("InventoryCost", calculation.NetCostInTry)
+                        .WithData("NetSalePrice", RoundMoney(netUnitSale))
+                        .WithData("CanOverride", canOverride);
+                }
+            }
             if (product.TrackStock && product.Quantity < cartItem.Quantity)
             {
                 throw new BusinessException("NoxStock:InsufficientStock")
@@ -342,10 +372,10 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 UnitPrice = unitPrice,
                 VatRate = vatRate,
                 DiscountRate = effectiveDiscountRate,
-                SalesDiscount1 = businessPartner.DefaultSalesDiscount1,
-                SalesDiscount2 = businessPartner.DefaultSalesDiscount2,
-                SalesDiscount3 = businessPartner.DefaultSalesDiscount3,
-                SalesDiscount4 = businessPartner.DefaultSalesDiscount4,
+                SalesDiscount1 = salesDiscount1,
+                SalesDiscount2 = salesDiscount2,
+                SalesDiscount3 = salesDiscount3,
+                SalesDiscount4 = salesDiscount4,
                 Total = RoundMoney(taxable + vat),
                 IsUnitPriceOverridden = usesManualPrice,
                 PriceCurrencyCode = calculation.Currency,
@@ -359,6 +389,9 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 CostTryAmount = calculation.NetCostInTry > 0m
                     ? calculation.NetCostInTry
                     : product.LastPurchaseCostTryAmount,
+                TotalCostTryAmount = RoundMoney((calculation.NetCostInTry > 0m
+                    ? calculation.NetCostInTry
+                    : product.LastPurchaseCostTryAmount ?? 0m) * cartItem.Quantity),
                 AppliedMarkupPercent = calculation.MarkupPercent,
                 ReferenceCurrencyCode = calculation.ReferenceCurrencyCode,
                 ReferenceUnitPrice = calculation.ReferenceSaleUnitPrice,
@@ -499,6 +532,68 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         return sales.Take(20).ToList();
     }
 
+    public async Task<PosReceiptDto> GetReceiptAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
+        await _licenseAccessChecker.EnsureFeatureAsync(NoxStock.Licensing.LicenseFeatureNames.Pos);
+
+        var documentQuery = await _documentRepository.WithDetailsAsync(x => x.Items);
+        var document = await AsyncExecuter.FirstOrDefaultAsync(documentQuery.Where(x =>
+            x.Id == id && x.Type == DocumentType.PosSale));
+        if (document is null)
+        {
+            throw new BusinessException("NoxStock:PosSaleNotFound");
+        }
+
+        var partner = await _businessPartnerRepository.GetAsync(document.BusinessPartnerId);
+        var productIds = document.Items.Select(x => x.ProductId).Distinct().ToList();
+        var products = (await _productRepository.GetListAsync(x => productIds.Contains(x.Id)))
+            .ToDictionary(x => x.Id);
+        var paymentMethod = PosPaymentMethod.CustomerCredit;
+        var transaction = await _accountTransactionRepository.FirstOrDefaultAsync(x =>
+            x.DocumentId == document.Id && x.Type == AccountTransactionType.Collection);
+        if (transaction is not null)
+        {
+            var account = await _accountRepository.GetAsync(transaction.AccountId);
+            paymentMethod = account.Type == AccountType.Cash ? PosPaymentMethod.Cash : PosPaymentMethod.Bank;
+        }
+
+        return new PosReceiptDto
+        {
+            Id = document.Id,
+            ReceiptNumber = document.DocNumber,
+            BusinessPartnerName = partner.Name,
+            PaymentMethod = paymentMethod,
+            Date = document.Date,
+            Status = document.Status,
+            Currency = document.Currency,
+            Subtotal = document.Subtotal,
+            DiscountTotal = document.DiscountTotal,
+            VatTotal = document.VatTotal,
+            GrandTotal = document.GrandTotal,
+            Note = document.Description,
+            CompanyName = await _settingProvider.GetOrNullAsync(NoxStockSettings.CompanyName) ?? string.Empty,
+            TaxOffice = await _settingProvider.GetOrNullAsync(NoxStockSettings.TaxOffice) ?? string.Empty,
+            TaxNumber = await _settingProvider.GetOrNullAsync(NoxStockSettings.TaxNumber) ?? string.Empty,
+            Address = await _settingProvider.GetOrNullAsync(NoxStockSettings.Address) ?? string.Empty,
+            Phone = await _settingProvider.GetOrNullAsync(NoxStockSettings.Phone) ?? string.Empty,
+            Items = document.Items.Select(item => new PosReceiptItemDto
+            {
+                ProductName = products.GetValueOrDefault(item.ProductId)?.Name ?? "Ürün",
+                ProductSku = products.GetValueOrDefault(item.ProductId)?.Sku ?? string.Empty,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice,
+                SalesDiscount1 = item.SalesDiscount1,
+                SalesDiscount2 = item.SalesDiscount2,
+                SalesDiscount3 = item.SalesDiscount3,
+                SalesDiscount4 = item.SalesDiscount4,
+                EffectiveDiscountRate = item.DiscountRate,
+                VatRate = item.VatRate,
+                Total = item.Total
+            }).ToList()
+        };
+    }
+
     [Authorize(NoxStockPermissions.Sales.Cancel)]
     [UnitOfWork(true)]
     [NoxStock.Licensing.TenantLicenseWrite]
@@ -590,14 +685,20 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         return normalized;
     }
 
-    private static decimal RoundMoney(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
+    private static decimal RoundMoney(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
-    private static decimal GetEffectiveSalesDiscountRate(BusinessPartner businessPartner)
+    private static decimal? RoundNullable(decimal? value) => value.HasValue ? RoundMoney(value.Value) : null;
+
+    private static decimal GetEffectiveSalesDiscountRate(
+        decimal discount1,
+        decimal discount2,
+        decimal discount3,
+        decimal discount4)
     {
-        var remainingFactor = (1m - businessPartner.DefaultSalesDiscount1 / 100m) *
-            (1m - businessPartner.DefaultSalesDiscount2 / 100m) *
-            (1m - businessPartner.DefaultSalesDiscount3 / 100m) *
-            (1m - businessPartner.DefaultSalesDiscount4 / 100m);
+        var remainingFactor = (1m - discount1 / 100m) *
+            (1m - discount2 / 100m) *
+            (1m - discount3 / 100m) *
+            (1m - discount4 / 100m);
         return RoundMoney((1m - remainingFactor) * 100m);
     }
 

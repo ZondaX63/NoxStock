@@ -36,6 +36,7 @@ public class DocumentItem : FullAuditedEntity<Guid>, IMultiTenant
     public string? CostCurrencyCode { get; set; }
     public decimal? CostCurrencyAmount { get; set; }
     public decimal? CostTryAmount { get; set; }
+    public decimal? TotalCostTryAmount { get; set; }
     public decimal? AppliedMarkupPercent { get; set; }
     public string? ReferenceCurrencyCode { get; set; }
     public decimal? ReferenceUnitPrice { get; set; }

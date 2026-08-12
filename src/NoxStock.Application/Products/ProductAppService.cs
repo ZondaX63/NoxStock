@@ -76,6 +76,7 @@ public class ProductAppService :
         CurrentTenant.RequireTenantId();
         NormalizeBasicConfiguration(input);
         NormalizePricingConfiguration(input);
+        await EnsureReferenceRateAsync(input);
         ValidateFinancialConfiguration(input);
         await EnsurePricingEntitlementsAsync(input);
         await _licenseAccessChecker.EnsureLimitAsync(
@@ -83,9 +84,12 @@ public class ProductAppService :
             await Repository.GetCountAsync());
         await ValidateRelationsAsync(input);
         var result = await base.CreateAsync(input);
+        var createdProduct = await Repository.GetAsync(result.Id);
+        InitializeOpeningInventoryCost(createdProduct);
+        ApplyAutomaticPrice(createdProduct);
+        await Repository.UpdateAsync(createdProduct, autoSave: true);
         await ReplaceOemCodesAsync(result.Id, input.OemCodes);
-        result.OemCodes = NormalizeOemCodes(input.OemCodes);
-        return result;
+        return await GetAsync(result.Id);
     }
 
     [NoxStock.Licensing.TenantLicenseWrite]
@@ -94,29 +98,15 @@ public class ProductAppService :
         CurrentTenant.RequireTenantId();
         NormalizeBasicConfiguration(input);
         NormalizePricingConfiguration(input);
+        await EnsureReferenceRateAsync(input);
         ValidateFinancialConfiguration(input);
         await EnsurePricingEntitlementsAsync(input);
-        var existingProduct = await Repository.GetAsync(id);
-        var referenceCurrencyChanged = !string.Equals(
-            existingProduct.PurchaseCurrency,
-            input.PurchaseCurrency,
-            StringComparison.OrdinalIgnoreCase);
         await ValidateRelationsAsync(input);
         await base.UpdateAsync(id, input);
         var savedProduct = await Repository.GetAsync(id);
         savedProduct.IsIncompleteProfile = false;
+        ApplyAutomaticPrice(savedProduct);
         await Repository.UpdateAsync(savedProduct, autoSave: true);
-
-        // Approved purchase records are immutable.  The product profile is a
-        // derived, current pricing view, though, so it can safely be rebased
-        // to another reference currency using the original document's locked
-        // exchange-rate snapshot.
-        if (referenceCurrencyChanged)
-        {
-            var updatedProduct = await Repository.GetAsync(id);
-            await RebaseCurrentCostProfileAsync(updatedProduct, input.PurchaseCurrency);
-            await Repository.UpdateAsync(updatedProduct, autoSave: true);
-        }
 
         await ReplaceOemCodesAsync(id, input.OemCodes);
         return await GetAsync(id);
@@ -223,12 +213,36 @@ public class ProductAppService :
         CurrentTenant.RequireTenantId();
         var query = await Repository.GetQueryableAsync();
 
+        var stockQuery = query.Where(x => x.TrackStock && x.Quantity > 0);
+        var productsInStock = await AsyncExecuter.ToListAsync(stockQuery);
+        decimal totalInventoryCost = 0m;
+        decimal totalPotentialRevenue = 0m;
+        foreach (var product in productsInStock)
+        {
+            totalInventoryCost += product.Quantity * (product.AverageInventoryCostTry ?? product.LastPurchaseCostTryAmount ?? 0m);
+            try
+            {
+                var price = await _priceCalculator.CalculateAsync(product);
+                if (price.IsAvailable)
+                {
+                    totalPotentialRevenue += product.Quantity * price.ListSalePriceInTry;
+                }
+            }
+            catch (BusinessException)
+            {
+                // Kur veya onaylı maliyet bulunmayan ürünler potansiyel satış
+                // değerini yapay olarak yükseltmemek için toplama alınmaz.
+            }
+        }
+
         return new ProductInventorySummaryDto
         {
             TotalCount = await AsyncExecuter.CountAsync(query),
             DynamicPricingCount = await AsyncExecuter.CountAsync(query.Where(x => x.PricingMode == ProductPricingMode.DynamicCurrencyMarkup)),
-            MissingCostCount = await AsyncExecuter.CountAsync(query.Where(x => !x.LastPurchaseCostCurrencyAmount.HasValue || x.LastPurchaseCostCurrencyAmount <= 0)),
-            AttentionStockCount = await AsyncExecuter.CountAsync(query.Where(x => x.TrackStock && x.Quantity <= x.CriticalStockLevel))
+            MissingCostCount = await AsyncExecuter.CountAsync(query.Where(x => !x.AverageInventoryCostTry.HasValue || x.AverageInventoryCostTry <= 0)),
+            AttentionStockCount = await AsyncExecuter.CountAsync(query.Where(x => x.TrackStock && x.Quantity <= x.CriticalStockLevel)),
+            TotalInventoryCost = Math.Round(totalInventoryCost, 2, MidpointRounding.AwayFromZero),
+            TotalPotentialRevenue = Math.Round(totalPotentialRevenue, 2, MidpointRounding.AwayFromZero)
         };
     }
 
@@ -253,9 +267,9 @@ public class ProductAppService :
             .WhereIf(stockStatus == "untracked", x => !x.TrackStock)
             .WhereIf(pricingMode == "dynamic", x => x.PricingMode == ProductPricingMode.DynamicCurrencyMarkup)
             .WhereIf(pricingMode == "manual", x => x.PricingMode == ProductPricingMode.Manual)
-            .WhereIf(costStatus == "missing", x => !x.LastPurchaseCostCurrencyAmount.HasValue || x.LastPurchaseCostCurrencyAmount <= 0)
-            .WhereIf(costStatus == "available", x => x.LastPurchaseCostCurrencyAmount.HasValue && x.LastPurchaseCostCurrencyAmount > 0)
-            .WhereIf(costStatus == "under-cost", x => x.PricingMode == ProductPricingMode.Manual && x.LastPurchaseCostTryAmount.HasValue && x.LastPurchaseCostTryAmount > 0 && x.SalePrice < x.LastPurchaseCostTryAmount)
+            .WhereIf(costStatus == "missing", x => !x.AverageInventoryCostTry.HasValue || x.AverageInventoryCostTry <= 0)
+            .WhereIf(costStatus == "available", x => x.AverageInventoryCostTry.HasValue && x.AverageInventoryCostTry > 0)
+            .WhereIf(costStatus == "under-cost", x => x.PricingMode == ProductPricingMode.Manual && x.AverageInventoryCostTry.HasValue && x.AverageInventoryCostTry > 0 && x.SalePrice < x.AverageInventoryCostTry)
             .WhereIf(costStatus == "recent", x => x.LastPurchaseDate.HasValue && x.LastPurchaseDate >= recentCostThreshold);
         queryable = queryable.WhereIf(costStatus == "incomplete", x => x.IsIncompleteProfile);
 
@@ -706,8 +720,8 @@ public class ProductAppService :
         if (!string.IsNullOrWhiteSpace(row.ShelfLocation)) product.ShelfLocation = row.ShelfLocation;
         if (brandId.HasValue) product.BrandId = brandId;
         if (categoryId.HasValue) product.CategoryId = categoryId;
-        if (row.Quantity.HasValue) product.Quantity = row.Quantity.Value;
-        if (row.CriticalStockLevel.HasValue) product.CriticalStockLevel = row.CriticalStockLevel.Value;
+        if (row.Quantity.HasValue) product.Quantity = RoundMoney(row.Quantity.Value);
+        if (row.CriticalStockLevel.HasValue) product.CriticalStockLevel = RoundMoney(row.CriticalStockLevel.Value);
         if (isNew)
         {
             product.TrackStock = true;
@@ -849,54 +863,12 @@ public class ProductAppService :
         }
     }
 
-    private async Task RebaseCurrentCostProfileAsync(Product product, string referenceCurrency)
-    {
-        if (!product.LastPurchaseDocumentId.HasValue ||
-            product.LastPurchaseCostTryAmount is not > 0m)
-        {
-            return;
-        }
-
-        var normalizedCurrency = NormalizeCurrency(referenceCurrency);
-        var rateToTry = 1m;
-        if (!string.Equals(normalizedCurrency, "TRY", StringComparison.OrdinalIgnoreCase))
-        {
-            var documents = await _documentRepository.WithDetailsAsync(x => x.ExchangeRateSnapshots);
-            var sourceDocument = await AsyncExecuter.FirstOrDefaultAsync(
-                documents.Where(x => x.Id == product.LastPurchaseDocumentId.Value));
-            var rateSnapshot = sourceDocument?.ExchangeRateSnapshots
-                .OrderByDescending(x => x.RateDate)
-                .FirstOrDefault(x => string.Equals(
-                    x.CurrencyCode,
-                    normalizedCurrency,
-                    StringComparison.OrdinalIgnoreCase));
-
-            if (rateSnapshot?.RateToTry is not > 0m)
-            {
-                throw new BusinessException("NoxStock:DocumentExchangeRateSnapshotUnavailable")
-                    .WithData("Currency", normalizedCurrency)
-                    .WithData("DocumentId", product.LastPurchaseDocumentId.Value);
-            }
-
-            rateToTry = rateSnapshot.RateToTry;
-        }
-
-        product.LastPurchaseCostCurrencyCode = normalizedCurrency;
-        product.LastPurchaseCostCurrencyAmount = RoundMoney(product.LastPurchaseCostTryAmount.Value / rateToTry);
-        product.LastPurchaseExchangeRate = RoundMoney(rateToTry);
-    }
-
     private static decimal RoundMoney(decimal value) =>
-        Math.Round(value, 6, MidpointRounding.AwayFromZero);
+        Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
     private static void NormalizePricingConfiguration(CreateUpdateProductDto input)
     {
         input.PurchaseCurrency = NormalizeCurrency(input.PurchaseCurrency);
-
-        if (input.UseCurrentExchangeRateForSale)
-        {
-            input.PricingMode = ProductPricingMode.DynamicCurrencyMarkup;
-        }
 
         if (input.ProfitMarkupPercent < 0)
         {
@@ -911,13 +883,19 @@ public class ProductAppService :
         {
             input.ExchangeRateAtPurchase = 1m;
         }
-        input.UseCurrentExchangeRateForSale = input.PricingMode == ProductPricingMode.DynamicCurrencyMarkup;
-        if (input.PricingMode == ProductPricingMode.DynamicCurrencyMarkup)
-        {
-            // Dynamic cost is sourced exclusively from the latest approved purchase line.
-            input.PurchasePrice = 0m;
-            input.SalePrice = 0m;
-        }
+        input.PurchaseListPrice = RoundMoney(input.PurchaseListPrice);
+        input.PurchasePrice = RoundMoney(input.PurchaseListPrice);
+        input.PurchaseDiscount1 = RoundMoney(input.PurchaseDiscount1);
+        input.PurchaseDiscount2 = RoundMoney(input.PurchaseDiscount2);
+        input.PurchaseDiscount3 = RoundMoney(input.PurchaseDiscount3);
+        input.PurchaseDiscount4 = RoundMoney(input.PurchaseDiscount4);
+        input.ExchangeRateAtPurchase = RoundMoney(input.ExchangeRateAtPurchase);
+        input.SalePrice = RoundMoney(input.SalePrice);
+        input.ProfitMarkupPercent = RoundMoney(input.ProfitMarkupPercent);
+        input.Quantity = RoundMoney(input.Quantity);
+        input.CriticalStockLevel = RoundMoney(input.CriticalStockLevel);
+        // Eski alan DB uyumluluğu için kalır; canlı kur artık satış fiyatını yönetmez.
+        input.UseCurrentExchangeRateForSale = false;
     }
 
     private static void ValidateFinancialConfiguration(CreateUpdateProductDto input)
@@ -945,6 +923,63 @@ public class ProductAppService :
         {
             throw new BusinessException("NoxStock:InvalidProductPricingValue");
         }
+    }
+
+    private async Task EnsureReferenceRateAsync(CreateUpdateProductDto input)
+    {
+        if (input.ExchangeRateAtPurchase > 0m || input.PurchaseCurrency == "TRY")
+        {
+            return;
+        }
+
+        input.ExchangeRateAtPurchase = RoundMoney(
+            await _priceCalculator.GetExchangeRateAsync(input.PurchaseCurrency));
+    }
+
+    private static void ApplyAutomaticPrice(Product product)
+    {
+        if (product.PricingMode != ProductPricingMode.DynamicCurrencyMarkup) return;
+
+        var cost = product.Quantity > 0m && product.AverageInventoryCostTry is > 0m
+            ? product.AverageInventoryCostTry.Value
+            : ProductPriceCalculator.ApplyDiscountChain(
+                product.PurchaseListPrice > 0m ? product.PurchaseListPrice : product.PurchasePrice,
+                product.PurchaseDiscount1,
+                product.PurchaseDiscount2,
+                product.PurchaseDiscount3,
+                product.PurchaseDiscount4) *
+              (string.Equals(product.PurchaseCurrency, "TRY", StringComparison.OrdinalIgnoreCase)
+                  ? 1m
+                  : product.ExchangeRateAtPurchase);
+        product.SalePrice = ProductPriceCalculator.CalculateSuggestedSalePrice(
+            cost,
+            product.ProfitMarkupPercent);
+    }
+
+    private static void InitializeOpeningInventoryCost(Product product)
+    {
+        if (!product.TrackStock || product.Quantity <= 0m || product.AverageInventoryCostTry is > 0m)
+        {
+            return;
+        }
+
+        var sourceCost = ProductPriceCalculator.ApplyDiscountChain(
+            product.PurchaseListPrice > 0m ? product.PurchaseListPrice : product.PurchasePrice,
+            product.PurchaseDiscount1,
+            product.PurchaseDiscount2,
+            product.PurchaseDiscount3,
+            product.PurchaseDiscount4);
+        var rate = string.Equals(product.PurchaseCurrency, "TRY", StringComparison.OrdinalIgnoreCase)
+            ? 1m
+            : product.ExchangeRateAtPurchase;
+        var openingCostTry = RoundMoney(sourceCost * rate);
+        if (openingCostTry <= 0m)
+        {
+            return;
+        }
+
+        product.AverageInventoryCostTry = openingCostTry;
+        product.InventoryCostUpdatedAt = DateTime.UtcNow;
     }
 
     private static string NormalizeCurrency(string? currency)
@@ -1019,6 +1054,9 @@ public class ProductAppService :
             dto.CurrentReferenceCurrencyRateDate = calculation.ReferenceCurrencyRateDate;
             dto.CurrentNetCostInTry = calculation.NetCostInTry;
             dto.ReferenceSaleUnitPrice = calculation.ReferenceSaleUnitPrice;
+            dto.ActualMarkupPercent = calculation.RealizedMarkupPercent;
+            dto.EstimatedUnitProfitInTry = calculation.EstimatedProfitInTry;
+            dto.IsBelowTargetMarkup = calculation.RealizedMarkupPercent < product.ProfitMarkupPercent;
         }
         catch (BusinessException exception) when (exception.Code == "NoxStock:CurrentExchangeRateUnavailable")
         {

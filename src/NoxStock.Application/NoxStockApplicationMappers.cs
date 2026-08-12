@@ -24,7 +24,13 @@ public partial class NoxStockCreateUpdateBrandDtoToBrandMapper : MapperBase<NoxS
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 public partial class NoxStockAccountToAccountDtoMapper : MapperBase<Account, AccountDto>
 {
+    [MapperIgnoreTarget(nameof(AccountDto.TodayIncome))]
+    [MapperIgnoreTarget(nameof(AccountDto.TodayExpense))]
+    [MapperIgnoreTarget(nameof(AccountDto.LastTransactionDate))]
     public override partial AccountDto Map(Account source);
+    [MapperIgnoreTarget(nameof(AccountDto.TodayIncome))]
+    [MapperIgnoreTarget(nameof(AccountDto.TodayExpense))]
+    [MapperIgnoreTarget(nameof(AccountDto.LastTransactionDate))]
     public override partial void Map(Account source, AccountDto destination);
 }
 
@@ -39,9 +45,21 @@ public partial class NoxStockAccountTransactionToAccountTransactionDtoMapper : M
 public partial class NoxStockStockMovementToStockMovementDtoMapper : MapperBase<StockMovement, StockMovementDto>
 {
     [MapperIgnoreTarget(nameof(StockMovementDto.ProductName))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.DocumentNumber))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseCurrency))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseUnitCost))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseExchangeRate))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseUnitCostTry))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseTotalCostTry))]
     public override partial StockMovementDto Map(StockMovement source);
 
     [MapperIgnoreTarget(nameof(StockMovementDto.ProductName))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.DocumentNumber))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseCurrency))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseUnitCost))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseExchangeRate))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseUnitCostTry))]
+    [MapperIgnoreTarget(nameof(StockMovementDto.PurchaseTotalCostTry))]
     public override partial void Map(StockMovement source, StockMovementDto destination);
 }
 
@@ -80,6 +98,9 @@ public partial class NoxStockProductToProductDtoMapper : MapperBase<NoxStock.Pro
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentReferenceCurrencyRateDate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentNetCostInTry))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.ReferenceSaleUnitPrice))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.ActualMarkupPercent))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.EstimatedUnitProfitInTry))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.IsBelowTargetMarkup))]
     public override partial NoxStock.Products.ProductDto Map(NoxStock.Products.Product source);
     
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.BrandName))]
@@ -100,6 +121,9 @@ public partial class NoxStockProductToProductDtoMapper : MapperBase<NoxStock.Pro
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentReferenceCurrencyRateDate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.CurrentNetCostInTry))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.ReferenceSaleUnitPrice))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.ActualMarkupPercent))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.EstimatedUnitProfitInTry))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.ProductDto.IsBelowTargetMarkup))]
     public override partial void Map(NoxStock.Products.Product source, NoxStock.Products.ProductDto destination);
 }
 
@@ -111,6 +135,8 @@ public partial class NoxStockCreateUpdateProductDtoToProductMapper : MapperBase<
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyCode))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyAmount))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostTryAmount))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.AverageInventoryCostTry))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.InventoryCostUpdatedAt))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseExchangeRate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDocumentId))]
@@ -124,6 +150,8 @@ public partial class NoxStockCreateUpdateProductDtoToProductMapper : MapperBase<
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyCode))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostCurrencyAmount))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseCostTryAmount))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.AverageInventoryCostTry))]
+    [MapperIgnoreTarget(nameof(NoxStock.Products.Product.InventoryCostUpdatedAt))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseExchangeRate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDate))]
     [MapperIgnoreTarget(nameof(NoxStock.Products.Product.LastPurchaseDocumentId))]
@@ -137,7 +165,19 @@ public partial class NoxStockCreateUpdateProductDtoToProductMapper : MapperBase<
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 public partial class NoxStockBusinessPartnerToBusinessPartnerDtoMapper : MapperBase<BusinessPartner, BusinessPartnerDto>
 {
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.OverdueAmount))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.OpenDocumentCount))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.LastSaleDate))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.LastPurchaseDate))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.LastCollectionDate))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.LastPaymentDate))]
     public override partial BusinessPartnerDto Map(BusinessPartner source);
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.OverdueAmount))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.OpenDocumentCount))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.LastSaleDate))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.LastPurchaseDate))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.LastCollectionDate))]
+    [MapperIgnoreTarget(nameof(BusinessPartnerDto.LastPaymentDate))]
     public override partial void Map(BusinessPartner source, BusinessPartnerDto destination);
 }
 
@@ -191,6 +231,7 @@ public partial class NoxStockCreateUpdateDocumentItemDtoToDocumentItemMapper : M
     [MapperIgnoreTarget(nameof(DocumentItem.CostCurrencyCode))]
     [MapperIgnoreTarget(nameof(DocumentItem.CostCurrencyAmount))]
     [MapperIgnoreTarget(nameof(DocumentItem.CostTryAmount))]
+    [MapperIgnoreTarget(nameof(DocumentItem.TotalCostTryAmount))]
     [MapperIgnoreTarget(nameof(DocumentItem.AppliedMarkupPercent))]
     [MapperIgnoreTarget(nameof(DocumentItem.ReferenceCurrencyCode))]
     [MapperIgnoreTarget(nameof(DocumentItem.ReferenceUnitPrice))]
@@ -209,6 +250,7 @@ public partial class NoxStockCreateUpdateDocumentItemDtoToDocumentItemMapper : M
     [MapperIgnoreTarget(nameof(DocumentItem.CostCurrencyCode))]
     [MapperIgnoreTarget(nameof(DocumentItem.CostCurrencyAmount))]
     [MapperIgnoreTarget(nameof(DocumentItem.CostTryAmount))]
+    [MapperIgnoreTarget(nameof(DocumentItem.TotalCostTryAmount))]
     [MapperIgnoreTarget(nameof(DocumentItem.AppliedMarkupPercent))]
     [MapperIgnoreTarget(nameof(DocumentItem.ReferenceCurrencyCode))]
     [MapperIgnoreTarget(nameof(DocumentItem.ReferenceUnitPrice))]

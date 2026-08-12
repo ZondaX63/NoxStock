@@ -1,0 +1,15 @@
+@page
+@using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers.Modal
+@model NoxStock.Web.Pages.Shared.CancelBusinessPartnerPaymentModalModel
+@{ Layout = null; }
+<form asp-page="/Shared/CancelBusinessPartnerPaymentModal" class="finance-modal-form">
+    <abp-modal>
+        <abp-modal-header title="İşlemi İptal Et"></abp-modal-header>
+        <abp-modal-body>
+            <input type="hidden" asp-for="TransactionId" />
+            <div class="alert alert-warning">Tahsilat/ödeme silinmeyecek; cari ve hesap etkileri ters kayıtla geri alınacaktır.</div>
+            <abp-input asp-for="Cancellation.Reason" label="İptal nedeni" />
+        </abp-modal-body>
+        <abp-modal-footer buttons="@(AbpModalButtons.Cancel|AbpModalButtons.Save)"></abp-modal-footer>
+    </abp-modal>
+</form>

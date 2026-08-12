@@ -139,12 +139,26 @@ $(function () {
                                 },
                                 action: function (data) {
                                     var record = recordOf(data);
-                                    documentWorkflowService
-                                        .approve(record.id, { accountId: null, paymentAmount: 0 })
-                                        .then(function () {
-                                            abp.notify.success('Fatura onaylandı.');
-                                            dataTable.ajax.reload();
-                                        });
+                                    var approve = function (confirmBelowCost) {
+                                        return documentWorkflowService
+                                            .approve(record.id, { accountId: null, paymentAmount: 0, confirmBelowCost: confirmBelowCost === true })
+                                            .then(function () {
+                                                abp.notify.success('Fatura onaylandı.');
+                                                dataTable.ajax.reload();
+                                            }, function (error) {
+                                                var code = error && error.error && error.error.code;
+                                                var canOverride = error && error.error && error.error.data &&
+                                                    String(error.error.data.CanOverride || error.error.data.canOverride).toLowerCase() === 'true';
+                                                if (code !== 'NoxStock:SaleBelowInventoryCost' || confirmBelowCost || !canOverride) {
+                                                    return $.Deferred().reject(error).promise();
+                                                }
+                                                return abp.message.confirm(
+                                                    'Bu faturada stok maliyetinin altında kalan satır var. Yetkinizi kullanarak onaylamak istiyor musunuz?',
+                                                    'Zararına satış uyarısı'
+                                                ).then(function (confirmed) { if (confirmed) return approve(true); });
+                                            });
+                                    };
+                                    approve(false);
                                 }
                             },
                             {

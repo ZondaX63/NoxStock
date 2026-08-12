@@ -84,8 +84,7 @@ public class DashboardAppService : ApplicationService, IDashboardAppService
                 PendingInvoiceCount = group.Count(x =>
                     (x.Type == DocumentType.SaleInvoice || x.Type == DocumentType.PurchaseInvoice) &&
                     (x.Status == DocumentStatus.Draft ||
-                     x.Status == DocumentStatus.Sent ||
-                     x.Status == DocumentStatus.Approved))
+                     x.Status == DocumentStatus.Sent))
             })) ?? new DashboardDocumentMetrics();
 
         var totalAccountBalance = await AsyncExecuter.SumAsync(accounts.Select(x => x.Balance));

@@ -43,11 +43,11 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     public async Task Should_Create_And_Cancel_Cash_Pos_Sale_With_Stock_And_Account_Effects()
     {
         var product = await CreateProductAsync("POS-CASH-001", "869000000001", 5, 125);
-        var cashAccount = await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+        var cashAccount = await _accountAppService.CreateWithOpeningAsync(new CreateAccountWithOpeningDto
         {
             Name = "POS Cash",
             Type = AccountType.Cash,
-            Balance = 50,
+            OpeningAmount = 50,
             IsActive = true
         });
 
@@ -146,8 +146,13 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             Name = "POS lookup customer " + suffix,
             TaxNumber = "VKN-" + suffix,
             Type = BusinessPartnerType.Customer,
-            Currency = "TRY",
-            Balance = 125m
+            Currency = "TRY"
+        });
+        await _businessPartnerAppService.CreateOpeningBalanceAsync(new CreateBusinessPartnerOpeningBalanceDto
+        {
+            BusinessPartnerId = customer.Id,
+            Direction = BusinessPartnerOpeningDirection.ReceivableFromPartner,
+            Amount = 125m
         });
         await _businessPartnerAppService.CreateAsync(new CreateUpdateBusinessPartnerDto
         {
@@ -274,7 +279,10 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
             Description = string.Empty,
             Unit = "Adet",
             ShelfLocation = "POS",
-            PurchasePrice = 20,
+            // 0.50 USD × 40 = 20 TRY inventory cost. The 30 TRY manual sale
+            // remains fixed and is above cost, so this test isolates currency
+            // stability rather than exercising the below-cost guard.
+            PurchasePrice = 0.5m,
             SalePrice = 30,
             Quantity = 5,
             CriticalStockLevel = 1,
@@ -364,6 +372,48 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
         });
 
         sale.GrandTotal.ShouldBe(110m);
+    }
+
+    [Fact]
+    public async Task Should_Snapshot_Pos_Discount_Chain_And_Return_Printable_Receipt()
+    {
+        var product = await CreateProductAsync("POS-DISCOUNT-001", "869000000399", 3, 100);
+        var cashAccount = await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+        {
+            Name = "Discount POS Cash",
+            Type = AccountType.Cash,
+            IsActive = true
+        });
+
+        var sale = await _posSaleAppService.CreateAsync(new CreatePosSaleDto
+        {
+            PaymentMethod = PosPaymentMethod.Cash,
+            AccountId = cashAccount.Id,
+            Items =
+            {
+                new CreatePosSaleItemDto
+                {
+                    ProductId = product.Id,
+                    Quantity = 1,
+                    VatRate = 20m,
+                    SalesDiscount1 = 10m,
+                    SalesDiscount2 = 5m,
+                    SalesDiscount3 = 0m,
+                    SalesDiscount4 = 0m
+                }
+            }
+        });
+
+        sale.GrandTotal.ShouldBe(102.6m);
+        var receipt = await _posSaleAppService.GetReceiptAsync(sale.Id);
+        receipt.ReceiptNumber.ShouldBe(sale.ReceiptNumber);
+        receipt.Items.Count.ShouldBe(1);
+        receipt.Items[0].SalesDiscount1.ShouldBe(10m);
+        receipt.Items[0].SalesDiscount2.ShouldBe(5m);
+        receipt.Items[0].EffectiveDiscountRate.ShouldBe(14.5m);
+        receipt.DiscountTotal.ShouldBe(14.5m);
+        receipt.VatTotal.ShouldBe(17.1m);
+        receipt.GrandTotal.ShouldBe(102.6m);
     }
 
     private async Task<ProductDto> CreateProductAsync(string sku, string barcode, decimal quantity, decimal salePrice, string? oemCodes = null)

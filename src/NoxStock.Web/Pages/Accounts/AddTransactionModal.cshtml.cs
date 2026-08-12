@@ -26,7 +26,7 @@ public class AddTransactionModalModel : NoxStockPageModel
     public async Task OnGetAsync(Guid? accountId)
     {
         var accountLookup = await _accountAppService.GetListAsync(new Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto { MaxResultCount = 1000 });
-        Accounts = accountLookup.Items.Select(x => new SelectListItem(x.Name + " (" + x.Currency + ")", x.Id.ToString())).ToList();
+        Accounts = accountLookup.Items.Where(x => x.IsActive).Select(x => new SelectListItem(x.Name + " (" + x.Currency + ")", x.Id.ToString())).ToList();
         
         if (accountId.HasValue)
         {
@@ -35,8 +35,8 @@ public class AddTransactionModalModel : NoxStockPageModel
 
         TransactionTypes = new List<SelectListItem>
         {
-            new SelectListItem("Gelir", ((int)AccountTransactionType.Income).ToString()),
-            new SelectListItem("Gider", ((int)AccountTransactionType.Expense).ToString())
+            new SelectListItem("Para girişi", ((int)AccountTransactionType.Income).ToString()),
+            new SelectListItem("Para çıkışı", ((int)AccountTransactionType.Expense).ToString())
         };
     }
 

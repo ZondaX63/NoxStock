@@ -34,15 +34,27 @@ public class NoxStockPermissionDefinitionProvider : PermissionDefinitionProvider
         var businessPartnersPermission = AddCrudPermissions(myGroup, NoxStockPermissions.BusinessPartners.Default, L("Permission:BusinessPartners"),
             NoxStockPermissions.BusinessPartners.Create, NoxStockPermissions.BusinessPartners.Edit, NoxStockPermissions.BusinessPartners.Delete);
         AddTenantChild(businessPartnersPermission, NoxStockPermissions.BusinessPartners.Transfer, L("Permission:BusinessPartners.Transfer"));
+        AddTenantChild(businessPartnersPermission, NoxStockPermissions.BusinessPartners.OpeningBalance, L("Permission:BusinessPartners.OpeningBalance"));
+        AddTenantChild(businessPartnersPermission, NoxStockPermissions.BusinessPartners.CancelOpeningBalance, L("Permission:BusinessPartners.CancelOpeningBalance"));
+        AddTenantChild(businessPartnersPermission, NoxStockPermissions.BusinessPartners.Collection, L("Permission:BusinessPartners.Collection"));
+        AddTenantChild(businessPartnersPermission, NoxStockPermissions.BusinessPartners.CancelCollection, L("Permission:BusinessPartners.CancelCollection"));
+        AddTenantChild(businessPartnersPermission, NoxStockPermissions.BusinessPartners.Payment, L("Permission:BusinessPartners.Payment"));
+        AddTenantChild(businessPartnersPermission, NoxStockPermissions.BusinessPartners.CancelPayment, L("Permission:BusinessPartners.CancelPayment"));
 
         var accountsPermission = AddCrudPermissions(myGroup, NoxStockPermissions.Accounts.Default, L("Permission:Accounts"),
             NoxStockPermissions.Accounts.Create, NoxStockPermissions.Accounts.Edit, NoxStockPermissions.Accounts.Delete);
         AddTenantChild(accountsPermission, NoxStockPermissions.Accounts.Transfer, L("Permission:Accounts.Transfer"));
+        AddTenantChild(accountsPermission, NoxStockPermissions.Accounts.CancelTransfer, L("Permission:Accounts.CancelTransfer"));
+        AddTenantChild(accountsPermission, NoxStockPermissions.Accounts.OpeningBalance, L("Permission:Accounts.OpeningBalance"));
+        AddTenantChild(accountsPermission, NoxStockPermissions.Accounts.CancelOpeningBalance, L("Permission:Accounts.CancelOpeningBalance"));
+        AddTenantChild(accountsPermission, NoxStockPermissions.Accounts.AddTransaction, L("Permission:Accounts.AddTransaction"));
+        AddTenantChild(accountsPermission, NoxStockPermissions.Accounts.CancelTransaction, L("Permission:Accounts.CancelTransaction"));
 
         var documentsPermission = AddCrudPermissions(myGroup, NoxStockPermissions.Documents.Default, L("Permission:Documents"),
             NoxStockPermissions.Documents.Create, NoxStockPermissions.Documents.Edit, NoxStockPermissions.Documents.Delete);
         AddTenantChild(documentsPermission, NoxStockPermissions.Documents.Approve, L("Permission:Documents.Approve"));
         AddTenantChild(documentsPermission, NoxStockPermissions.Documents.Cancel, L("Permission:Documents.Cancel"));
+        AddTenantChild(documentsPermission, NoxStockPermissions.Documents.SellBelowCost, L("Permission:Documents.SellBelowCost"));
 
         var offersPermission = AddCrudPermissions(myGroup, NoxStockPermissions.Offers.Default, L("Permission:Offers"),
             NoxStockPermissions.Offers.Create, NoxStockPermissions.Offers.Edit, NoxStockPermissions.Offers.Delete);
@@ -55,6 +67,7 @@ public class NoxStockPermissionDefinitionProvider : PermissionDefinitionProvider
         var salesPermission = AddTenantPermission(myGroup, NoxStockPermissions.Sales.Default, L("Permission:Sales"));
         AddTenantChild(salesPermission, NoxStockPermissions.Sales.Create, L("Permission:Sales.Create"));
         AddTenantChild(salesPermission, NoxStockPermissions.Sales.Cancel, L("Permission:Sales.Cancel"));
+        AddTenantChild(salesPermission, NoxStockPermissions.Sales.SellBelowCost, L("Permission:Sales.SellBelowCost"));
 
         var reportsPermission = AddTenantPermission(myGroup, NoxStockPermissions.Reports.Default, L("Permission:Reports"));
         AddTenantChild(reportsPermission, NoxStockPermissions.Reports.Export, L("Permission:Reports.Export"));

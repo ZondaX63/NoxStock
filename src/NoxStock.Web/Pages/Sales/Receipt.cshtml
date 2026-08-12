@@ -1,0 +1,81 @@
+@page
+@using NoxStock.Documents
+@model NoxStock.Web.Pages.Sales.ReceiptModel
+@{
+    Layout = null;
+    ViewData["Title"] = $"Perakende satış fişi {Model.Receipt.ReceiptNumber}";
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #eef2f7; color: #111827; font-family: Arial, sans-serif; }
+        .toolbar { width: 80mm; margin: 16px auto 8px; display: flex; gap: 8px; }
+        .toolbar button, .toolbar a { flex: 1; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; cursor: pointer; font-size: 13px; padding: 9px 10px; text-align: center; text-decoration: none; }
+        .toolbar button { border-color: #4f46e5; background: #4f46e5; color: #fff; }
+        .receipt { width: 80mm; min-height: 120mm; margin: 0 auto 24px; padding: 7mm 5mm; background: #fff; box-shadow: 0 10px 30px rgba(15, 23, 42, .12); }
+        .center { text-align: center; } .company { margin: 0; font-size: 18px; font-weight: 800; } .small { font-size: 10px; line-height: 1.45; } .muted { color: #64748b; }
+        .rule { border: 0; border-top: 1px dashed #64748b; margin: 10px 0; }
+        .meta { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 10px; }
+        .status { margin: 8px 0; border: 1px solid #94a3b8; padding: 5px; font-size: 11px; font-weight: 800; text-align: center; }
+        .status.cancelled { border-color: #dc2626; color: #dc2626; }
+        .item { margin: 9px 0; } .item-name { font-size: 11px; font-weight: 700; } .item-code { margin-top: 2px; color: #64748b; font-size: 9px; }
+        .item-line { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 10px; }
+        .item-discount { margin-top: 3px; color: #475569; font-size: 9px; }
+        .summary-row { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; font-size: 11px; }
+        .summary-row.total { margin-top: 4px; padding-top: 6px; border-top: 1px solid #111827; font-size: 15px; font-weight: 800; }
+        .note { margin-top: 10px; font-size: 9px; white-space: pre-wrap; }
+        .footer { margin-top: 14px; font-size: 9px; text-align: center; }
+        @@media print {
+            body { background: #fff; }
+            .toolbar { display: none; }
+            .receipt { width: 80mm; min-height: 0; margin: 0; padding: 5mm 4mm; box-shadow: none; }
+            @@page { size: 80mm auto; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar"><a href="javascript:window.close()">Kapat</a><button type="button" onclick="window.print()">Fişi yazdır</button></div>
+    <main class="receipt">
+        <header class="center">
+            <h1 class="company">@(string.IsNullOrWhiteSpace(Model.Receipt.CompanyName) ? "NoxStock" : Model.Receipt.CompanyName)</h1>
+            @if (!string.IsNullOrWhiteSpace(Model.Receipt.Address)) { <div class="small muted">@Model.Receipt.Address</div> }
+            @if (!string.IsNullOrWhiteSpace(Model.Receipt.Phone)) { <div class="small muted">Tel: @Model.Receipt.Phone</div> }
+            @if (!string.IsNullOrWhiteSpace(Model.Receipt.TaxNumber)) { <div class="small muted">@Model.Receipt.TaxOffice · VKN @Model.Receipt.TaxNumber</div> }
+            <div class="small" style="margin-top:7px;font-weight:700">PERAKENDE SATIŞ FİŞİ</div>
+        </header>
+        <hr class="rule" />
+        <section class="meta">
+            <span>Fiş no</span><strong>@Model.Receipt.ReceiptNumber</strong>
+            <span>Tarih</span><strong>@Model.Receipt.Date.ToString("dd.MM.yyyy HH:mm")</strong>
+            <span>Müşteri</span><strong>@Model.Receipt.BusinessPartnerName</strong>
+            <span>Ödeme</span><strong>@Model.PaymentMethodText()</strong>
+        </section>
+        <div class="status @(Model.Receipt.Status == DocumentStatus.Cancelled ? "cancelled" : "")">@Model.StatusText()</div>
+        <hr class="rule" />
+        @foreach (var item in Model.Receipt.Items)
+        {
+            <section class="item">
+                <div class="item-name">@item.ProductName</div>
+                @if (!string.IsNullOrWhiteSpace(item.ProductSku)) { <div class="item-code">@item.ProductSku</div> }
+                <div class="item-line"><span>@NoxStock.Web.Pages.Sales.ReceiptModel.Number(item.Quantity) × @NoxStock.Web.Pages.Sales.ReceiptModel.Money(item.UnitPrice)</span><strong>@NoxStock.Web.Pages.Sales.ReceiptModel.Money(item.Total) @Model.Receipt.Currency</strong></div>
+                @if (item.EffectiveDiscountRate > 0) { <div class="item-discount">İskonto: %@NoxStock.Web.Pages.Sales.ReceiptModel.Number(item.EffectiveDiscountRate) · KDV: %@NoxStock.Web.Pages.Sales.ReceiptModel.Number(item.VatRate)</div> }
+                else { <div class="item-discount">KDV: %@NoxStock.Web.Pages.Sales.ReceiptModel.Number(item.VatRate)</div> }
+            </section>
+        }
+        <hr class="rule" />
+        <section>
+            <div class="summary-row"><span>Ara toplam</span><strong>@NoxStock.Web.Pages.Sales.ReceiptModel.Money(Model.Receipt.Subtotal) @Model.Receipt.Currency</strong></div>
+            @if (Model.Receipt.DiscountTotal > 0) { <div class="summary-row"><span>İskonto</span><strong>-@NoxStock.Web.Pages.Sales.ReceiptModel.Money(Model.Receipt.DiscountTotal) @Model.Receipt.Currency</strong></div> }
+            <div class="summary-row"><span>KDV</span><strong>@NoxStock.Web.Pages.Sales.ReceiptModel.Money(Model.Receipt.VatTotal) @Model.Receipt.Currency</strong></div>
+            <div class="summary-row total"><span>TOPLAM</span><span>@NoxStock.Web.Pages.Sales.ReceiptModel.Money(Model.Receipt.GrandTotal) @Model.Receipt.Currency</span></div>
+        </section>
+        @if (!string.IsNullOrWhiteSpace(Model.Receipt.Note)) { <div class="note"><strong>Not:</strong> @Model.Receipt.Note</div> }
+        <footer class="footer muted">Bizi tercih ettiğiniz için teşekkür ederiz.</footer>
+    </main>
+</body>
+</html>

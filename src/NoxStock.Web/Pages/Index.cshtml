@@ -1,2 +1,100 @@
 @page
 @model NoxStock.Web.Pages.IndexModel
+@{
+    Layout = null;
+    ViewData["Title"] = "NoxStock | Stok ve ticari operasyon yönetimi";
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111827" />
+    <link rel="icon" href="~/favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="~/tailwind.css" />
+    <link rel="stylesheet" href="~/libs/fontsource/outfit/400.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/libs/fontsource/outfit/500.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/libs/fontsource/outfit/600.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/libs/fontsource/outfit/700.css" asp-append-version="true" />
+    <title>@ViewData["Title"]</title>
+    <style>
+        :root { color-scheme: light; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f8fafc; color: #172033; font-family: Outfit, Arial, sans-serif; }
+        .site-shell { overflow: hidden; }
+        .site-nav { display: flex; max-width: 72rem; align-items: center; justify-content: space-between; margin: 0 auto; padding: 1.25rem 1.5rem; }
+        .brand { display: inline-flex; align-items: center; gap: .65rem; color: #172033; font-size: 1.25rem; font-weight: 800; letter-spacing: -.04em; text-decoration: none; }
+        .brand-mark { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: .6rem; background: #111827; color: #a5b4fc; font-size: .9rem; }
+        .brand em { color: #4f46e5; font-style: normal; }
+        .nav-login, .hero-primary, .hero-secondary { display: inline-flex; align-items: center; justify-content: center; border-radius: .65rem; font-size: .875rem; font-weight: 700; text-decoration: none; transition: transform .15s ease, background .15s ease; }
+        .nav-login { min-height: 2.6rem; padding: 0 1rem; background: #111827; color: #fff; }
+        .nav-login:hover, .hero-primary:hover { transform: translateY(-1px); background: #312e81; }
+        .hero { position: relative; max-width: 72rem; margin: 0 auto; padding: 5rem 1.5rem 6rem; text-align: center; }
+        .hero::before { position: absolute; z-index: -1; width: 38rem; height: 38rem; top: -15rem; left: 50%; border-radius: 999px; background: radial-gradient(circle, rgb(99 102 241 / .18), transparent 67%); content: ''; transform: translateX(-50%); }
+        .eyebrow { display: inline-flex; border: 1px solid #c7d2fe; border-radius: 999px; padding: .4rem .75rem; background: #eef2ff; color: #4338ca; font-size: .72rem; font-weight: 700; letter-spacing: .08em; }
+        h1 { max-width: 51rem; margin: 1.5rem auto 0; color: #111827; font-size: clamp(2.5rem, 6vw, 4.8rem); line-height: 1.02; letter-spacing: -.055em; }
+        .hero-copy { max-width: 40rem; margin: 1.35rem auto 0; color: #64748b; font-size: 1.05rem; line-height: 1.7; }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; margin-top: 2rem; }
+        .hero-primary { min-height: 3.2rem; padding: 0 1.35rem; background: #4f46e5; color: #fff; }
+        .hero-secondary { min-height: 3.2rem; padding: 0 1.35rem; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+        .hero-secondary:hover { border-color: #818cf8; color: #4338ca; }
+        .workspace-note { margin-top: 1rem; color: #94a3b8; font-size: .75rem; }
+        .preview { display: grid; grid-template-columns: 13rem minmax(0, 1fr); max-width: 61rem; overflow: hidden; margin: 0 auto; border: 1px solid #dbe3ef; border-radius: 1rem; background: #fff; box-shadow: 0 28px 70px rgb(15 23 42 / .13); text-align: left; }
+        .preview-side { padding: 1.5rem; background: #111827; color: #cbd5e1; }
+        .preview-logo { color: #fff; font-size: .9rem; font-weight: 800; }
+        .preview-menu { display: grid; gap: .9rem; margin-top: 2.25rem; font-size: .74rem; }
+        .preview-menu span:first-child { color: #fff; font-weight: 700; }
+        .preview-main { padding: 1.6rem; background: #f8fafc; }
+        .preview-title { color: #172033; font-size: 1.05rem; font-weight: 800; }
+        .preview-subtitle { margin-top: .25rem; color: #64748b; font-size: .75rem; }
+        .preview-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: 1.25rem; }
+        .preview-stat { min-height: 5rem; padding: .85rem; border: 1px solid #e2e8f0; border-radius: .6rem; background: #fff; }
+        .preview-stat span { color: #64748b; font-size: .65rem; font-weight: 600; }
+        .preview-stat strong { display: block; margin-top: .45rem; color: #1e1b4b; font-size: 1.2rem; }
+        .preview-table { display: grid; gap: .7rem; margin-top: .8rem; padding: 1rem; border: 1px solid #e2e8f0; border-radius: .6rem; background: #fff; }
+        .preview-row { display: grid; grid-template-columns: 1.4fr .7fr .7fr; gap: .75rem; }
+        .preview-row i { display: block; height: .5rem; border-radius: 99px; background: #e2e8f0; }
+        .preview-row i:first-child { background: #c7d2fe; }
+        .feature-section { max-width: 72rem; margin: 0 auto; padding: 6rem 1.5rem; }
+        .section-heading { max-width: 36rem; }
+        .section-heading h2 { margin: .7rem 0 0; color: #111827; font-size: clamp(1.8rem, 3vw, 2.6rem); line-height: 1.12; letter-spacing: -.04em; }
+        .section-heading p { margin-top: .85rem; color: #64748b; line-height: 1.65; }
+        .features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 2rem; }
+        .feature { min-height: 12rem; padding: 1.35rem; border: 1px solid #e2e8f0; border-radius: .85rem; background: #fff; }
+        .feature-icon { display: grid; width: 2.4rem; height: 2.4rem; place-items: center; border-radius: .65rem; background: #eef2ff; color: #4338ca; font-size: .85rem; font-weight: 800; }
+        .feature h3 { margin: 1.15rem 0 .45rem; color: #1e293b; font-size: 1rem; }
+        .feature p { margin: 0; color: #64748b; font-size: .86rem; line-height: 1.6; }
+        footer { display: flex; max-width: 72rem; justify-content: space-between; gap: 1rem; margin: 0 auto; padding: 1.5rem; border-top: 1px solid #e2e8f0; color: #64748b; font-size: .78rem; }
+        @@media (max-width: 720px) { .site-nav { padding: 1rem; } .hero { padding: 3.5rem 1rem 4rem; } .preview { grid-template-columns: 1fr; } .preview-side { display: none; } .preview-main { padding: 1rem; } .preview-stats, .features { grid-template-columns: 1fr; } .feature-section { padding: 4rem 1rem; } footer { padding: 1.25rem 1rem; flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="site-shell">
+        <nav class="site-nav" aria-label="Ana menü">
+            <a href="~/" class="brand"><span class="brand-mark">N</span><span>NOX<em>STOCK</em></span></a>
+            <a class="nav-login" href="~/Account/Login">Giriş yap</a>
+        </nav>
+        <main>
+            <section class="hero">
+                <span class="eyebrow">STOK · SATIŞ · CARİ YÖNETİMİ</span>
+                <h1>İşletmenizin günlük akışını tek ekranda yönetin.</h1>
+                <p class="hero-copy">NoxStock; stok, perakende satış, fatura, cari ve kasa/banka hareketlerini işinizin ritmine uygun, sade bir çalışma alanında bir araya getirir.</p>
+                <div class="hero-actions">
+                    <a class="hero-primary" href="~/Account/Login">Giriş yap</a>
+                    <a class="hero-secondary" href="#ozellikler">Neler yapabilirsiniz?</a>
+                </div>
+                <p class="workspace-note">Şirket kullanıcıları kendi çalışma alanı bağlantıları üzerinden giriş yapar.</p>
+            </section>
+            <section class="preview" aria-label="NoxStock uygulama önizlemesi">
+                <aside class="preview-side"><div class="preview-logo">NOXSTOCK</div><div class="preview-menu"><span>Genel görünüm</span><span>Ticari işlemler</span><span>Stok yönetimi</span><span>Cari hesaplar</span><span>Finans</span></div></aside>
+                <div class="preview-main"><div class="preview-title">İşletme özeti</div><div class="preview-subtitle">Günlük operasyonlarınızı anlık görün.</div><div class="preview-stats"><div class="preview-stat"><span>Bugünkü satış</span><strong>₺ —</strong></div><div class="preview-stat"><span>Açık alacak</span><strong>₺ —</strong></div><div class="preview-stat"><span>Kritik stok</span><strong>— ürün</strong></div></div><div class="preview-table"><div class="preview-row"><i></i><i></i><i></i></div><div class="preview-row"><i></i><i></i><i></i></div><div class="preview-row"><i></i><i></i><i></i></div></div></div>
+            </section>
+            <section id="ozellikler" class="feature-section">
+                <div class="section-heading"><span class="eyebrow">OPERASYON ODAKLI</span><h2>İhtiyacınız olan temel ticari akışlar birlikte çalışır.</h2><p>Veri tekrarını azaltan ve saha kullanımını hızlandıran araçlarla günlük operasyonlarınız daha görünür hâle gelir.</p></div>
+                <div class="features"><article class="feature"><div class="feature-icon">ST</div><h3>Stok kontrolü</h3><p>Ürün, raf, sayım ve kritik stok takibini aynı çalışma alanından yönetin.</p></article><article class="feature"><div class="feature-icon">PS</div><h3>Satış ve fatura</h3><p>POS, satış faturası ve teklif süreçlerinde fiyat, KDV ve iskonto akışını koruyun.</p></article><article class="feature"><div class="feature-icon">CR</div><h3>Cari ve finans</h3><p>Müşteri, tedarikçi, tahsilat, ödeme ve kasa/banka hareketlerini izleyin.</p></article></div>
+            </section>
+        </main>
+        <footer><span>© @DateTime.UtcNow.Year NoxStock</span><span>Stok ve ticari operasyon yönetimi</span></footer>
+    </div>
+</body>
+</html>

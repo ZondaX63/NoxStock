@@ -32,6 +32,8 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     public string? LastPurchaseCostCurrencyCode { get; set; }
     public decimal? LastPurchaseCostCurrencyAmount { get; set; }
     public decimal? LastPurchaseCostTryAmount { get; set; }
+    public decimal? AverageInventoryCostTry { get; set; }
+    public DateTime? InventoryCostUpdatedAt { get; set; }
     public string? LastPurchaseSourceCurrencyCode { get; set; }
     public decimal? LastPurchaseSourceNetUnitCost { get; set; }
     public decimal? LastPurchaseSourceExchangeRate { get; set; }
@@ -66,4 +68,7 @@ public class ProductDto : FullAuditedEntityDto<Guid>
     public DateTime? CurrentReferenceCurrencyRateDate { get; set; }
     public decimal? CurrentNetCostInTry { get; set; }
     public decimal? ReferenceSaleUnitPrice { get; set; }
+    public decimal? ActualMarkupPercent { get; set; }
+    public decimal? EstimatedUnitProfitInTry { get; set; }
+    public bool IsBelowTargetMarkup { get; set; }
 }

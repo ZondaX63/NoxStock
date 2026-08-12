@@ -38,6 +38,12 @@ public class Product : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public string? LastPurchaseCostCurrencyCode { get; set; }
     public decimal? LastPurchaseCostCurrencyAmount { get; set; }
     public decimal? LastPurchaseCostTryAmount { get; set; }
+    /// <summary>
+    /// Onaylı stok girişleriyle oluşan, eldeki stok için hareketli ağırlıklı
+    /// ortalama birim maliyet. Satış fiyatlandırmasının tek maliyet otoritesidir.
+    /// </summary>
+    public decimal? AverageInventoryCostTry { get; set; }
+    public DateTime? InventoryCostUpdatedAt { get; set; }
     public decimal? LastPurchaseExchangeRate { get; set; }
     public DateTime? LastPurchaseDate { get; set; }
     public Guid? LastPurchaseDocumentId { get; set; }

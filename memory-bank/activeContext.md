@@ -255,3 +255,32 @@ The active target remains **Private Beta Prototype Release**. The frontend-first
 2. Add tenant-scoped backend/database uniqueness for SKU and non-empty barcode, define the intended OEM uniqueness boundary, and handle concurrent conflicts with stable business errors.
 3. Remove direct operational quantity editing from the product form; keep `Product.Quantity` as the documented compatibility balance until the separately approved WarehouseStock backfill phase.
 4. Continue invoice/browser regression and private-beta production safeguards without opening broad Warehouse/CRM/e-Invoice scope.
+
+## Pricing Architecture Completed — 2026-08-13
+
+- The pricing authority is now the product's weighted-average TRY inventory cost. `LastPurchaseCost*` remains a separate latest-purchase snapshot and is not reused as the average-cost field.
+- Purchase approval records source currency/rate, net TRY unit cost and TRY total cost on document lines and cost history, then updates stock average, last purchase and automatic sale price inside the existing unit of work.
+- Automatic mode uses `AverageInventoryCostTry × (1 + ProfitMarkupPercent / 100)`; manual mode preserves the entered TRY sale price and reports actual markup/below-target state.
+- Product-card cost entry is a manual fallback/reference only. Editing it never rewrites approved historical inventory cost. Existing stock continues to show its real weighted-average cost separately.
+- The former `UseCurrentExchangeRateForSale` flag and product-level sales discounts are compatibility data only and no longer drive the active price calculator. Customer defaults/document-line discounts remain the sales-discount authority.
+- POS and sales-invoice approval compare the net KDV-exclusive selling price with the inventory cost snapshot. Continuing below cost requires the corresponding ABP permission and explicit confirmation.
+- Product, invoice, POS, import and inventory-count numeric paths normalize user-entered money/quantity/rate values to two decimals. Active Razor/JS displays no longer emit padded four-decimal zero values.
+- Added migration `20260813010000_AddWeightedAverageInventoryPricing`; it preserves historical data, backfills averages only from reliable last-purchase TRY values, and does not guess missing costs.
+- Focused integration verification passes 31/31 for product pricing, cost history and POS flows. Application and Web builds pass with zero errors; existing nullable/Mapperly warnings remain unrelated technical debt.
+
+## Pricing Deployment Step
+
+- Run the production DbMigrator before the new Web image. After migration, assign `Documents.SellBelowCost` / `Sales.SellBelowCost` only to roles allowed to override the warning, then smoke-test one purchase approval and one manual/automatic sale.
+
+## Pricing UI Production Pass — 2026-08-13
+
+- Product create/edit now presents user-facing “Maliyet ve fiyatlandırma” flows. Edit shows stock, current cost, active sale, unit profit, actual profit rate and the latest purchase calculation before the tabs.
+- Automatic mode keeps the sale amount calculated from current cost and target profit rate; manual mode unlocks the sale amount and shows a live below-target warning without blocking the save.
+- The product list is reduced to product, stock, sale, cost, profit and status. Latest purchase source details remain available as a cost-cell tooltip instead of occupying permanent columns.
+- Purchase invoice rows show document-currency net unit price, rate, TRY unit cost and TRY total; a collapsed “Fiyat etkisini göster” panel previews the post-approval inventory cost and automatic sale impact.
+- Sales invoice and POS profitability details use the existing product-edit permission. Cost/profit details remain hidden without permission, while below-cost risk is still communicated in user language.
+- Product cost history is exposed as “Fiyat geçmişi”; stock movements enrich purchase-origin rows with source currency, rate, TRY unit cost and TRY total.
+- Active pricing inputs and displays use the two-decimal standard; metric cards collapse to two columns on tablet and one column on narrow phones.
+- Focused pricing/cost/POS integration tests pass 31/31 and the Web project compiles with zero errors using a clean temporary output directory.
+- POS now includes a dedicated quick-customer modal with only name required; a successful creation refreshes customer search and selects the new customer for the current sale.
+- POS product cards now show the shelf/location value when present, keeping the warehouse lookup visible without adding a separate product-detail step.

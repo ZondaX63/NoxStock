@@ -22,7 +22,7 @@
     function compactInputNumber(value, digits) {
         var number = Number(value || 0);
         if (!Number.isFinite(number)) return '0';
-        return number.toFixed(digits || 6).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '').replace(/\.$/, '');
+        return number.toFixed(digits == null ? 2 : digits).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '').replace(/\.$/, '');
     }
 
     function currentRate(currency) {
@@ -58,26 +58,26 @@
         $rate.prop('readonly', true);
         var rate = currentRate(currency);
         if (forceCurrentRate && rate > 0) {
-            $rate.val(compactInputNumber(rate, 6));
+            $rate.val(compactInputNumber(rate, 2));
         }
     }
 
     function syncPricingMode($form) {
         var dynamic = String($form.find('#Product_PricingMode').val() || '0') === '1';
         var $sale = $form.find('#Product_SalePrice');
-        $sale.prop('disabled', dynamic).attr('aria-disabled', dynamic ? 'true' : 'false');
+        $sale.prop('readonly', dynamic).attr('aria-readonly', dynamic ? 'true' : 'false');
         $form.find('[data-manual-sale-field]').toggleClass('is-automatic', dynamic);
-        $form.find('[data-sale-price-label]').text(dynamic ? 'Otomatik satış fiyatı (KDV\'siz)' : 'Manuel satış fiyatı (KDV\'siz, TL)');
-        $form.find('[data-markup-label]').text(dynamic ? 'Hedef kâr ekleme oranı (%)' : 'Hedef / hesaplanan kâr ekleme oranı (%)');
+        $form.find('[data-sale-price-label]').text(dynamic ? 'Aktif otomatik satış fiyatı (KDV\'siz)' : 'Aktif manuel satış fiyatı (KDV\'siz, TL)');
+        $form.find('[data-markup-label]').text('Hedef kâr oranı (%)');
         $form.find('[data-sale-price-hint]').text(dynamic
             ? 'Maliyet ve hedef oran üzerinden otomatik hesaplanır.'
-            : 'Fiyatı veya oranı değiştirebilirsiniz; diğeri maliyete göre anında eşitlenir.');
+            : 'Bu fiyat siz değiştirene kadar korunur; gerçek kâr oranı özet kartında ayrıca gösterilir.');
         $form.find('[data-markup-hint]').text(dynamic
-            ? 'Dinamik fiyatın ana girdisidir.'
-            : 'Fiyat veya oran değiştiğinde karşılığı anında hesaplanır.');
+            ? 'Otomatik fiyatın ana girdisidir.'
+            : 'Manuel modda öneri üretir; aktif fiyatı kendiliğinden değiştirmez.');
         $form.find('[data-pricing-mode-explainer]').text(dynamic
-            ? 'Satış fiyatı güncel kur, net döviz maliyeti ve hedef markup ile hesaplanır.'
-            : 'Sabit satış fiyatı TL olarak korunur ve kur değişiminden etkilenmez.');
+            ? 'Stok maliyeti değiştiğinde aktif satış fiyatı hedef kâr oranına göre otomatik güncellenir.'
+            : 'Aktif satış fiyatı TL olarak korunur; maliyet değişirse gerçek kârlılık yeniden hesaplanır.');
         return dynamic;
     }
 
@@ -89,56 +89,58 @@
         var netPurchase = chainDiscount($form, purchaseList, 'PurchaseDiscount');
         var transactionRate = currency === 'TRY' ? 1 : numberValue($form.find('[data-purchase-rate]'));
         var netCost = transactionRate > 0 ? netPurchase * transactionRate : null;
-        var dynamic = syncPricingMode($form);
+        var automatic = syncPricingMode($form);
         var markup = Math.max(0, numberValue($form.find('#Product_ProfitMarkupPercent')));
-        var liveRate = currentRate(currency);
-        var dynamicCost = liveRate > 0 ? netPurchase * liveRate : null;
-        var source = $form.data('pricingSource');
+        var averageCost = Number($form.attr('data-average-inventory-cost')) || 0;
+        var $quantity = $form.find('#Product_Quantity');
+        var currentQuantity = $quantity.length
+            ? Math.max(0, numberValue($quantity))
+            : Number($form.attr('data-current-quantity')) || 0;
+        var hasInventoryAverage = currentQuantity > 0 && averageCost > 0;
+        var costBasis = hasInventoryAverage ? averageCost : netCost;
         var manualSale = Math.max(0, numberValue($form.find('#Product_SalePrice')));
-        if (!source) source = manualSale <= 0 && markup > 0 ? 'markup' : 'sale';
-
-        var listSale = dynamic
-            ? (dynamicCost == null ? null : dynamicCost * (1 + markup / 100))
-            : source === 'markup' && netCost != null
-                ? netCost * (1 + markup / 100)
-                : manualSale;
-
-        if (dynamic || source === 'markup') {
-            if (listSale != null) $form.find('#Product_SalePrice').val(compactInputNumber(listSale, 6));
-        } else if (netCost != null && netCost > 0) {
-            $form.find('#Product_ProfitMarkupPercent').val(compactInputNumber(Math.max(0, (manualSale / netCost - 1) * 100), 6));
-            markup = numberValue($form.find('#Product_ProfitMarkupPercent'));
+        var suggestedSale = costBasis == null ? null : costBasis * (1 + markup / 100);
+        var listSale = automatic ? suggestedSale : manualSale;
+        if (automatic && listSale != null) {
+            $form.find('#Product_SalePrice').val(compactInputNumber(listSale, 2));
         }
 
-        var netSale = listSale == null ? null : chainDiscount($form, listSale, 'SalesDiscount');
-        var salesDiscount = listSale == null || netSale == null ? null : Math.max(0, listSale - netSale);
+        var netSale = listSale;
         var vatRate = Math.min(100, Math.max(0, numberValue($form.find('#Product_VatRate'))));
         var vatAmount = netSale == null ? null : netSale * vatRate / 100;
         var finalPrice = netSale == null ? null : netSale + vatAmount;
-        var displayedCost = dynamic ? dynamicCost : netCost;
-        var saleMissing = !dynamic && (!listSale || listSale <= 0);
+        var displayedCost = costBasis;
+        var saleMissing = !listSale || listSale <= 0;
         var profit = displayedCost == null || netSale == null || saleMissing ? null : netSale - displayedCost;
         var margin = netSale > 0 && profit != null ? profit / netSale * 100 : null;
         var realizedMarkup = displayedCost > 0 && profit != null ? profit / displayedCost * 100 : null;
         var effectivePurchaseDiscount = purchaseList > 0 ? (1 - netPurchase / purchaseList) * 100 : 0;
-        var displayedRate = dynamic ? liveRate : transactionRate;
+        var displayedRate = transactionRate;
         var text = function (value) { return value == null ? 'Kur bekleniyor' : formatMoney(value); };
 
-        $form.find('[data-dialog-value="net-purchase-currency"]').text(formatDecimal(netPurchase, 4) + ' ' + currency);
+        $form.find('[data-dialog-value="net-purchase-currency"]').text(formatDecimal(netPurchase, 2) + ' ' + currency);
+        $form.find('[data-dialog-value="reference-cost-try"]').text(netCost == null ? 'Kur bekleniyor' : formatMoney(netCost));
         $form.find('[data-dialog-value="cost"]').text(text(displayedCost));
+        $form.find('[data-dialog-value="suggested"]').text(text(suggestedSale));
         $form.find('[data-dialog-value="list"]').text(text(listSale));
-        $form.find('[data-dialog-value="sales-discount"]').text(salesDiscount == null ? '—' : '-' + formatMoney(salesDiscount));
         $form.find('[data-dialog-value="net-sale"]').text(text(netSale));
         $form.find('[data-dialog-value="vat-label"]').text('KDV (%' + formatDecimal(vatRate, 0) + ')');
         $form.find('[data-dialog-value="vat-amount"]').text(text(vatAmount));
         $form.find('[data-dialog-value="final"]').text(text(finalPrice));
         $form.find('[data-dialog-value="profit"]').text(saleMissing ? '—' : (profit == null ? 'Hesaplanamadı' : formatMoney(profit)));
-        $form.find('[data-dialog-value="realized-markup"]').text(saleMissing ? 'Satış fiyatı giriniz' : (realizedMarkup == null ? 'Gerçekleşen markup hesaplanamadı' : 'Gerçekleşen markup: %' + formatDecimal(realizedMarkup, 2)));
-        $form.find('[data-dialog-value="margin"]').text(saleMissing ? 'Satış fiyatı giriniz' : (margin == null ? 'Brüt kâr marjı hesaplanamadı' : 'Brüt kâr marjı: %' + formatDecimal(margin, 2)));
-        $form.find('[data-dialog-value="meta"]').text(displayedRate > 0
-            ? '%' + formatDecimal(effectivePurchaseDiscount, 2) + ' bileşik alış iskontosu · kur ' + formatDecimal(displayedRate, 4)
+        $form.find('[data-dialog-value="realized-markup"]').text(saleMissing ? 'Satış fiyatı giriniz' : (realizedMarkup == null ? 'Kâr oranı hesaplanamadı' : 'Gerçek kâr oranı: %' + formatDecimal(realizedMarkup, 2)));
+        $form.find('[data-dialog-value="margin"]').text(saleMissing ? 'Satış fiyatı giriniz' : (margin == null ? 'Satıştan kalan oran hesaplanamadı' : 'Satıştan kalan oran: %' + formatDecimal(margin, 2)));
+        $form.find('[data-dialog-value="meta"]').text(hasInventoryAverage
+            ? 'Onaylı alışlardan hesaplanan güncel maliyet'
+            : displayedRate > 0
+            ? 'Ürün kartı maliyeti · %' + formatDecimal(effectivePurchaseDiscount, 2) + ' iskonto · kur ' + formatDecimal(displayedRate, 2)
             : currency + '/TRY işlem kuru gerekli.');
+        $form.find('.product-finance-profit').toggleClass('is-below-target', realizedMarkup != null && realizedMarkup < markup);
         $form.find('.product-finance-profit').attr('data-profit-state', saleMissing ? 'placeholder' : (profit == null || profit === 0 ? 'neutral' : (profit < 0 ? 'loss' : 'profit')));
+        var belowTarget = !automatic && !saleMissing && realizedMarkup != null && realizedMarkup < markup;
+        $form.find('[data-dialog-value="target-warning"]')
+            .prop('hidden', !belowTarget)
+            .text(belowTarget ? 'Bu fiyat hedeflediğiniz %' + formatDecimal(markup, 2) + ' kâr oranının altında.' : '');
     }
 
     function loadRates($form, forceCurrentRate) {
@@ -165,6 +167,10 @@
         var $form = $(target).is('.product-create-dialog-form') ? $(target) : $(target).find('.product-create-dialog-form').first();
         if (!$form.length || $form.data('invoice-product-card-ready')) return;
         $form.data('invoice-product-card-ready', true);
+        $form.find('input[type="number"]').each(function () {
+            if (this.value !== '') this.value = compactInputNumber(this.value, 2);
+            if (!this.step || this.step === 'any' || Number(this.step) < 0.01) this.step = '0.01';
+        });
 
         $form.on('click.productCardModal', '[data-dialog-tab]', function () {
             var section = String($(this).data('dialog-tab'));
@@ -174,10 +180,10 @@
             $form.find('[data-dialog-section="' + section + '"]').removeAttr('hidden');
         });
         $form.on('click.productCardModal', '[data-dialog-generate-sku]', function () { generateSku($form); });
-        $form.on('input.productCardModal change.productCardModal', '#Product_SalePrice, #Product_ProfitMarkupPercent', function () {
-            $form.data('pricingSource', this.id === 'Product_ProfitMarkupPercent' ? 'markup' : 'sale');
-        });
         $form.on('input.productCardModal change.productCardModal', 'input, select', function () { refresh($form); });
+        $form.on('blur.productCardModal', 'input[type="number"]', function () {
+            if (this.value !== '') this.value = compactInputNumber(this.value, 2);
+        });
         $form.on('change.productCardModal', '#Product_PurchaseCurrency', function () { loadRates($form, true); });
         $form.on('change.productCardModal', '[data-rate-override]', function () { syncRate($form, !this.checked); refresh($form); });
         $form.on('click.productCardModal', '[data-rate-refresh]', function (event) {

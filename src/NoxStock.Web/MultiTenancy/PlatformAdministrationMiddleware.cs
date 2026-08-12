@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Volo.Abp.MultiTenancy;
 
 namespace NoxStock.Web.MultiTenancy;
@@ -12,6 +14,7 @@ public sealed class PlatformAdministrationMiddleware
         "/AuditLogs",
         "/Identity",
         "/TenantManagement",
+        "/admin",
         "/LicenseManagement",
         "/host",
         "/api/identity",
@@ -37,9 +40,29 @@ public sealed class PlatformAdministrationMiddleware
             out var tenantRelativePath);
         var requestedRoute = tenantRouteRequested ? tenantRelativePath : context.Request.Path;
 
+        if (currentTenant.Id.HasValue && IsAdminLoginRoute(requestedRoute))
+        {
+            // Authentication uses one application cookie. Visiting the platform
+            // login while a tenant user is signed in must first clear that tenant
+            // session; otherwise the current-user tenant resolver would keep the
+            // admin login request inside the tenant context.
+            await context.SignOutAsync(IdentityConstants.ApplicationScheme);
+            context.Response.Redirect("/admin/login");
+            return;
+        }
+
         if ((tenantRouteRequested || currentTenant.Id.HasValue) && IsHostOnlyRoute(requestedRoute))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return;
+        }
+
+        if (IsHostOnlyRoute(requestedRoute) &&
+            !IsAdminLoginRoute(requestedRoute) &&
+            !(context.User.Identity?.IsAuthenticated ?? false))
+        {
+            var returnUrl = Uri.EscapeDataString($"{fullPath}{context.Request.QueryString}");
+            context.Response.Redirect($"/admin/login?returnUrl={returnUrl}");
             return;
         }
 
@@ -51,5 +74,10 @@ public sealed class PlatformAdministrationMiddleware
         return Array.Exists(
             HostOnlyPrefixes,
             prefix => path.StartsWithSegments(new PathString(prefix), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsAdminLoginRoute(PathString path)
+    {
+        return path.Equals("/admin/login", StringComparison.OrdinalIgnoreCase);
     }
 }

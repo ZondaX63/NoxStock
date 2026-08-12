@@ -9,12 +9,14 @@
     <abp-modal>
         <abp-modal-header title="Yeni Hesap Ekle"></abp-modal-header>
         <abp-modal-body class="finance-modal-body">
-            <div class="finance-modal-intro finance-modal-intro-indigo"><span class="material-icons-round">account_balance_wallet</span><div><strong>Finansal hesabı tanımlayın</strong><small>Kasa, banka veya kart hesabını başlangıç bakiyesiyle oluşturun.</small></div></div>
+            <div class="finance-modal-intro finance-modal-intro-indigo"><span class="material-icons-round">account_balance_wallet</span><div><strong>Finansal hesabı tanımlayın</strong><small>Açılış tutarı, hesabı oluştururken izlenebilir bir açılış hareketi olarak kaydedilir.</small></div></div>
             <div class="finance-form-grid">
                 <div class="finance-field-wide"><abp-input asp-for="Account.Name" label="Hesap Adı" /></div>
                 <abp-select asp-for="Account.Type" asp-items="Model.AccountTypes" label="Hesap Türü" />
                 <abp-input asp-for="Account.Currency" label="Para Birimi" />
-                <div class="finance-field-wide"><abp-input asp-for="Account.Balance" label="Açılış Bakiyesi" /></div>
+                <abp-input asp-for="Account.OpeningAmount" label="Açılış Bakiyesi (opsiyonel)" />
+                <abp-input asp-for="Account.OpeningDate" label="Açılış Tarihi" />
+                <div class="finance-field-wide"><abp-input asp-for="Account.OpeningDescription" label="Açılış Açıklaması (opsiyonel)" /></div>
             </div>
             <div class="finance-modal-toggle"><abp-input asp-for="Account.IsActive" label="Hesap kullanımına açık" /></div>
         </abp-modal-body>

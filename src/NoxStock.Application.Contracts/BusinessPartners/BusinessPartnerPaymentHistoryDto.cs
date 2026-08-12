@@ -18,4 +18,8 @@ public class BusinessPartnerPaymentHistoryDto
     public string? Description { get; set; }
     public bool IsBusinessPartnerTransfer { get; set; }
     public string? CounterpartyName { get; set; }
+    public AccountTransactionStatus Status { get; set; }
+    public bool CanCancel { get; set; }
+    public bool IsOpeningBalance { get; set; }
+    public string? CancellationReason { get; set; }
 }

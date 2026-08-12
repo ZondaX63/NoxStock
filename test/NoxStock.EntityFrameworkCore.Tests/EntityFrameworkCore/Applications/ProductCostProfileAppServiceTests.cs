@@ -51,6 +51,8 @@ public class ProductCostProfileAppServiceTests : NoxStockEntityFrameworkCoreTest
         savedProduct.LastPurchaseCostCurrencyAmount.ShouldBe(22.5m);
         savedProduct.LastPurchaseCostTryAmount.ShouldBe(900m);
         savedProduct.LastPurchaseExchangeRate.ShouldBe(40m);
+        savedProduct.AverageInventoryCostTry.ShouldBe(900m);
+        savedProduct.SalePrice.ShouldBe(1170m);
         history.SourceNetUnitCost.ShouldBe(900m);
         history.TryEquivalentNetUnitCost.ShouldBe(900m);
         history.ReferenceCurrencyEquivalentCost.ShouldBe(22.5m);
@@ -182,7 +184,7 @@ public class ProductCostProfileAppServiceTests : NoxStockEntityFrameworkCoreTest
     }
 
     [Fact]
-    public async Task Should_Use_Live_Pricing_Currency_Rate_While_Keeping_Historical_Cost()
+    public async Task Should_Keep_Weighted_Try_Cost_And_Automatic_Price_When_Currency_Rate_Changes()
     {
         await SeedRatesAsync(usd: 40m, eur: 50m);
         var product = await CreateDynamicProductAsync("COST-LIVE-001", "USD", markup: 30m);
@@ -200,7 +202,7 @@ public class ProductCostProfileAppServiceTests : NoxStockEntityFrameworkCoreTest
         var afterRateChange = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto { ProductId = product.Id });
 
         beforeRateChange.UnitPrice.ShouldBe(1300m);
-        afterRateChange.UnitPrice.ShouldBe(1365m);
+        afterRateChange.UnitPrice.ShouldBe(1300m);
         afterRateChange.LastPurchaseCostCurrencyAmount.ShouldBe(25m);
         afterRateChange.ProductCostHistoryId.ShouldNotBeNull();
     }
@@ -231,10 +233,10 @@ public class ProductCostProfileAppServiceTests : NoxStockEntityFrameworkCoreTest
         var tryQuote = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto { ProductId = product.Id });
         var eurQuote = await _productPricingAppService.GetQuoteAsync(new ProductPriceQuoteInputDto { ProductId = product.Id });
 
-        usdQuote.ReferenceSaleUnitPrice.ShouldBe(30m);
-        usdQuote.UnitPrice.ShouldBe(1230m);
-        tryQuote.UnitPrice.ShouldBe(1230m);
-        eurQuote.UnitPrice.ShouldBe(1230m);
+        usdQuote.ReferenceSaleUnitPrice.ShouldBe(29.27m);
+        usdQuote.UnitPrice.ShouldBe(1200m);
+        tryQuote.UnitPrice.ShouldBe(1200m);
+        eurQuote.UnitPrice.ShouldBe(1200m);
         tryQuote.LastPurchaseCostTryAmount.ShouldBe(1000m);
         tryQuote.LastPurchaseCostCurrencyAmount.ShouldBe(25m);
     }
@@ -291,20 +293,20 @@ public class ProductCostProfileAppServiceTests : NoxStockEntityFrameworkCoreTest
 
         var approved = await _documentWorkflowAppService.ApproveAsync(sale.Id, new ApproveDocumentInputDto());
         var approvedItem = approved.Items.Single();
-        approvedItem.UnitPrice.ShouldBe(1365m);
-        approvedItem.UnitPriceTry.ShouldBe(1365m);
+        approvedItem.UnitPrice.ShouldBe(1300m);
+        approvedItem.UnitPriceTry.ShouldBe(1300m);
         approvedItem.CostCurrencyCode.ShouldBe("USD");
         approvedItem.CostCurrencyAmount.ShouldBe(25m);
-        approvedItem.CostTryAmount.ShouldBe(1050m);
+        approvedItem.CostTryAmount.ShouldBe(1000m);
         approvedItem.AppliedMarkupPercent.ShouldBe(30m);
         approvedItem.ReferenceCurrencyCode.ShouldBe("USD");
-        approvedItem.ReferenceUnitPrice.ShouldBe(32.5m);
+        approvedItem.ReferenceUnitPrice.ShouldBe(30.95m);
         approvedItem.ReferenceExchangeRate.ShouldBe(42m);
         approvedItem.PricingSnapshotDate.ShouldNotBeNull();
     }
 
     [Fact]
-    public async Task Should_Not_Use_Manually_Entered_Purchase_Fallback_When_Dynamic_Cost_Is_Missing()
+    public async Task Should_Use_Manual_Card_Cost_Until_Approved_Inventory_Cost_Exists()
     {
         await SeedRatesAsync(usd: 40m, eur: 50m);
         var product = await CreateDynamicProductAsync("COST-MISSING-001", "USD", markup: 20m);
@@ -314,9 +316,52 @@ public class ProductCostProfileAppServiceTests : NoxStockEntityFrameworkCoreTest
             ProductId = product.Id
         });
 
-        quote.IsAvailable.ShouldBeFalse();
-        quote.UnitPrice.ShouldBe(0m);
-        quote.UnavailableReason.ShouldBe("NoxStock:ProductApprovedPurchaseCostUnavailable");
+        quote.IsAvailable.ShouldBeTrue();
+        quote.UnitPrice.ShouldBe(48m);
+        quote.AverageInventoryCostTry.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Should_Recalculate_Weighted_Average_Inventory_Cost_And_Automatic_Price()
+    {
+        await SeedRatesAsync(usd: 40m, eur: 50m);
+        var productDto = await CreateDynamicProductAsync("WEIGHTED-COST-001", "TRY", markup: 30m);
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var product = await _productRepository.GetAsync(productDto.Id);
+            product.Quantity = 5m;
+            product.AverageInventoryCostTry = 800m;
+            await _productRepository.UpdateAsync(product);
+        });
+        var supplier = await CreateSupplierAsync();
+        var purchase = await _documentAppService.CreateAsync(new CreateUpdateDocumentDto
+        {
+            BusinessPartnerId = supplier.Id,
+            DocNumber = "WEIGHTED-COST-INV-001",
+            Type = DocumentType.PurchaseInvoice,
+            Currency = "TRY",
+            Date = DateTime.UtcNow,
+            Items =
+            {
+                new CreateUpdateDocumentItemDto
+                {
+                    ProductId = productDto.Id,
+                    Quantity = 10m,
+                    UnitPrice = 890m,
+                    VatRate = 20m
+                }
+            }
+        });
+
+        var approved = await _documentWorkflowAppService.ApproveAsync(purchase.Id, new ApproveDocumentInputDto());
+        var saved = await _productRepository.GetAsync(productDto.Id);
+
+        saved.Quantity.ShouldBe(15m);
+        saved.AverageInventoryCostTry.ShouldBe(860m);
+        saved.LastPurchaseCostTryAmount.ShouldBe(890m);
+        saved.SalePrice.ShouldBe(1118m);
+        approved.Items.Single().CostTryAmount.ShouldBe(890m);
+        approved.Items.Single().TotalCostTryAmount.ShouldBe(8900m);
     }
 
     private async Task SeedRatesAsync(decimal usd, decimal eur)
@@ -337,11 +382,12 @@ public class ProductCostProfileAppServiceTests : NoxStockEntityFrameworkCoreTest
             ShelfLocation = "C-01",
             PurchasePrice = 1m,
             PurchaseCurrency = pricingCurrency,
+            ExchangeRateAtPurchase = pricingCurrency == "USD" ? 40m : pricingCurrency == "EUR" ? 50m : 1m,
             SalePrice = 1m,
             PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
             ProfitMarkupPercent = markup,
             UseCurrentExchangeRateForSale = true,
-            Quantity = 100m,
+            Quantity = 0m,
             CriticalStockLevel = 1m,
             TrackStock = true
         });
