@@ -327,12 +327,14 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         {
             var product = await _productRepository.GetAsync(cartItem.ProductId);
             var calculation = await _priceCalculator.CalculateAsync(product);
-            if (!calculation.IsAvailable)
+            var usesManualPrice = cartItem.IsUnitPriceOverridden && cartItem.UnitPrice is > 0;
+            // A missing product-card price/cost must not make stocked goods
+            // unsellable. The cashier can supply a TRY unit price on the line.
+            if (!calculation.IsAvailable && !usesManualPrice)
             {
                 throw new BusinessException(calculation.UnavailableReason ?? "NoxStock:ProductApprovedPurchaseCostUnavailable")
                     .WithData("ProductName", product.Name);
             }
-            var usesManualPrice = cartItem.IsUnitPriceOverridden && cartItem.UnitPrice is > 0;
             var unitPrice = usesManualPrice ? cartItem.UnitPrice!.Value : calculation.ListSalePriceInTry;
             var vatRate = cartItem.VatRate ?? product.VatRate;
             var salesDiscount1 = cartItem.SalesDiscount1 ?? businessPartner.DefaultSalesDiscount1;

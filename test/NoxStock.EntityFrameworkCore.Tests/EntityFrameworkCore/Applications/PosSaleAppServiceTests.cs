@@ -346,6 +346,50 @@ public class PosSaleAppServiceTests : NoxStockEntityFrameworkCoreTestBase
     }
 
     [Fact]
+    public async Task Should_Allow_Manual_Pos_Sale_When_Product_Has_No_Automatic_Price()
+    {
+        var product = await _productAppService.CreateAsync(new CreateUpdateProductDto
+        {
+            Name = "Fiyatsız stoklu ürün",
+            Sku = "POS-NO-PRICE-001",
+            Barcode = "869000000288",
+            Unit = "Adet",
+            PurchaseCurrency = "TRY",
+            ExchangeRateAtPurchase = 1m,
+            PurchaseListPrice = 0m,
+            SalePrice = 0m,
+            PricingMode = ProductPricingMode.DynamicCurrencyMarkup,
+            Quantity = 2m,
+            TrackStock = true
+        });
+        var cashAccount = await _accountAppService.CreateAsync(new CreateUpdateAccountDto
+        {
+            Name = "No Price POS Cash",
+            Type = AccountType.Cash,
+            IsActive = true
+        });
+
+        var sale = await _posSaleAppService.CreateAsync(new CreatePosSaleDto
+        {
+            PaymentMethod = PosPaymentMethod.Cash,
+            AccountId = cashAccount.Id,
+            Items =
+            {
+                new CreatePosSaleItemDto
+                {
+                    ProductId = product.Id,
+                    Quantity = 1m,
+                    UnitPrice = 80m,
+                    IsUnitPriceOverridden = true,
+                    VatRate = 20m
+                }
+            }
+        });
+
+        sale.GrandTotal.ShouldBe(96m);
+    }
+
+    [Fact]
     public async Task Should_Use_The_Vat_Rate_Selected_On_The_Pos_Line()
     {
         var product = await CreateProductAsync("POS-VAT-001", "869000000299", 3, 100);

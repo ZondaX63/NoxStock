@@ -278,7 +278,9 @@ public class DocumentWorkflowAppService : ApplicationService, IDocumentWorkflowA
             firstCalculation ??= calculation;
 
             var usesDynamicPricing = product.PricingMode == ProductPricingMode.DynamicCurrencyMarkup;
-            if (usesDynamicPricing && !calculation.IsAvailable)
+            // The draft may carry a manually entered TRY price for a product
+            // whose automatic price cannot yet be calculated.
+            if (usesDynamicPricing && !calculation.IsAvailable && !item.IsUnitPriceOverridden)
             {
                 throw new BusinessException(calculation.UnavailableReason ?? "NoxStock:ProductApprovedPurchaseCostUnavailable")
                     .WithData("ProductName", product.Name);

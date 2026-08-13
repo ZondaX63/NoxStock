@@ -336,7 +336,9 @@ public class DocumentAppService :
                     priceCalculation = await _priceCalculator.CalculateAsync(product);
                     priceCalculationsByProductId[product.Id] = priceCalculation;
                 }
-                if (usesDynamicPricing && !priceCalculation.IsAvailable)
+                // Dynamic price can be unavailable when the card lacks a cost/rate.
+                // A manually entered TRY price is still a valid commercial sale.
+                if (usesDynamicPricing && !priceCalculation.IsAvailable && !inputItem.IsUnitPriceOverridden)
                 {
                     throw new BusinessException(priceCalculation.UnavailableReason ?? "NoxStock:ProductApprovedPurchaseCostUnavailable")
                         .WithData("ProductName", product.Name);

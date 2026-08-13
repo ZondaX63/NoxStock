@@ -164,19 +164,19 @@ $(function () {
         products.forEach(function (product) {
             var stockText = product.trackStock ? product.quantity + ' ' + escapeHtml(product.unit) : 'Stok takibi yok';
             var stockClass = product.trackStock && product.quantity <= 0 ? 'text-rose-600' : 'text-slate-500';
-            var cannotSell = product.isPriceAvailable === false || (product.trackStock && product.quantity <= 0);
+            var cannotSell = product.trackStock && product.quantity <= 0;
             var disabled = cannotSell ? 'disabled opacity-50 cursor-not-allowed' : '';
             var isAutomatic = Number(product.pricingMode) === 1;
             var pricingText = isAutomatic
                 ? 'Otomatik satış fiyatı'
                 : 'Manuel kart fiyatı';
             var cardPriceText = product.isPriceAvailable === false
-                ? 'Onaylı alış maliyeti bekleniyor'
+                ? 'Fiyat bilgisi yok · sepette elle girin'
                 : 'Müşteri bitiş fiyatı: ' + formatMoney(product.customerFinalUnitPrice, product.currency);
             $grid.append('<button type="button" data-product-id="' + product.id + '" class="pos-product-card text-left border border-slate-200 dark:border-slate-700 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 rounded-lg p-4 transition-colors ' + disabled + '" ' + (disabled ? 'disabled' : '') + '>' +
                 '<div class="pos-product-card-heading"><p class="pos-product-card-name">' + escapeHtml(product.name) + '</p><p class="pos-product-card-code">' + escapeHtml(product.sku) + (product.barcode ? ' · ' + escapeHtml(product.barcode) : '') + '</p><p class="pos-product-card-oem">' + (product.oemCodes ? 'OEM: ' + escapeHtml(product.oemCodes) : '&nbsp;') + '</p>' + (product.shelfLocation ? '<p class="pos-product-card-shelf">Raf: ' + escapeHtml(product.shelfLocation) + '</p>' : '') + '</div>' +
                 '<div class="pos-product-card-details"><p class="pos-product-card-policy">' + pricingText + '</p><p>' + cardPriceText + '</p></div>' +
-                '<div class="pos-product-card-footer"><span>' + (product.isPriceAvailable === false ? 'Fiyat hesaplanamadı' : formatMoney(product.customerFinalUnitPrice, product.currency)) + '</span><span class="' + stockClass + '">' + stockText + '</span></div></button>');
+                '<div class="pos-product-card-footer"><span>' + (product.isPriceAvailable === false ? 'Elle fiyat girin' : formatMoney(product.customerFinalUnitPrice, product.currency)) + '</span><span class="' + stockClass + '">' + stockText + '</span></div></button>');
         });
     }
 
