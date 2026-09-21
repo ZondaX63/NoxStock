@@ -118,6 +118,31 @@ public class TenantIsolationTests : NoxStockEntityFrameworkCoreTestBase, IAsyncL
     }
 
     [Fact]
+    public async Task Tenant_A_Cannot_Approve_Tenant_B_Sale_Invoice_Or_Change_Its_Stock()
+    {
+        ProductDto tenantBProduct;
+        DocumentDto tenantBDocument;
+        using (_tenants.ChangeToTenantB())
+        {
+            tenantBProduct = await CreateProductAsync("B-APPROVAL-PRODUCT", quantity: 1);
+            var partner = await CreatePartnerAsync("B-APPROVAL-CUSTOMER", 0);
+            tenantBDocument = await CreateDocumentAsync(partner.Id, tenantBProduct.Id, "B-APPROVAL-001");
+        }
+
+        using (_tenants.ChangeToTenantA())
+        {
+            await Should.ThrowAsync<EntityNotFoundException>(() =>
+                _documentWorkflowAppService.ApproveAsync(tenantBDocument.Id, new ApproveDocumentInputDto()));
+        }
+
+        using (_tenants.ChangeToTenantB())
+        {
+            (await _productRepository.GetAsync(tenantBProduct.Id)).Quantity.ShouldBe(1);
+            (await _documentAppService.GetAsync(tenantBDocument.Id)).Status.ShouldBe(DocumentStatus.Draft);
+        }
+    }
+
+    [Fact]
     public async Task Tenant_A_Cannot_Record_Payment_For_Tenant_B_Invoice()
     {
         DocumentDto tenantBDocument;

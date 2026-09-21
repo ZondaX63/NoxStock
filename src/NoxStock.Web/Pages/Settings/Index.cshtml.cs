@@ -60,6 +60,7 @@ public class IndexModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Settings.DefaultVatRate", value => Settings.DefaultVatRate = value);
         if (!ModelState.IsValid)
         {
             await LoadAccountsAsync();

@@ -182,7 +182,7 @@ public class CreateModalModel : NoxStockPageModel
     private static bool TryParsePostedDecimal(string raw, out decimal value)
     {
         if (raw.Contains(",", StringComparison.Ordinal) && !raw.Contains(".", StringComparison.Ordinal) &&
-            decimal.TryParse(raw, NumberStyles.Number, CultureInfo.CurrentCulture, out value))
+            decimal.TryParse(raw, NumberStyles.Number, CultureInfo.GetCultureInfo("tr-TR"), out value))
         {
             return true;
         }

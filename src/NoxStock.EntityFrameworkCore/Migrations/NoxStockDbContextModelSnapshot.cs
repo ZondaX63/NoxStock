@@ -682,13 +682,152 @@ namespace NoxStock.Migrations
                     b.ToTable("AppCategories", (string)null);
                 });
 
+            modelBuilder.Entity("NoxStock.Documents.CommercialCommand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<Guid?>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ExecutionToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<DateTime?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("ProcessingStartedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.HasIndex("TenantId", "Status", "LeaseExpiresAt");
+
+                    b.HasIndex("TenantId", "Type", "OperationKey")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("AppCommercialCommands", (string)null);
+                });
+
             modelBuilder.Entity("NoxStock.Documents.Document", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BusinessPartnerAddressSnapshot")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<Guid>("BusinessPartnerId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BusinessPartnerNameSnapshot")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("BusinessPartnerTaxNumberSnapshot")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("BusinessPartnerTaxOfficeSnapshot")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("CompanyAddressSnapshot")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("CompanyEmailSnapshot")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("CompanyNameSnapshot")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("CompanyPhoneSnapshot")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("CompanyTaxNumberSnapshot")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("CompanyTaxOfficeSnapshot")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -762,12 +901,18 @@ namespace NoxStock.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<decimal?>("LegacyPaidAmountBaseline")
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<string>("OperationKey")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.Property<decimal>("PaidAmount")
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime?>("PrintSnapshotCapturedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("SourceDocumentId")
                         .HasColumnType("uuid");
@@ -886,9 +1031,6 @@ namespace NoxStock.Migrations
                     b.Property<decimal?>("CostTryAmount")
                         .HasColumnType("decimal(18,6)");
 
-                    b.Property<decimal?>("TotalCostTryAmount")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("CreationTime");
@@ -950,6 +1092,18 @@ namespace NoxStock.Migrations
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ProductNameSnapshot")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ProductSkuSnapshot")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ProductUnitSnapshot")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<decimal>("PurchaseDiscount1")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(9,4)")
@@ -1003,12 +1157,18 @@ namespace NoxStock.Migrations
                         .HasColumnType("decimal(9,4)")
                         .HasDefaultValue(0m);
 
+                    b.Property<Guid?>("SourceDocumentItemId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("TenantId");
 
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("TotalCostTryAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,4)");
@@ -1027,7 +1187,177 @@ namespace NoxStock.Migrations
 
                     b.HasIndex("ProductId");
 
+                    b.HasIndex("SourceDocumentItemId");
+
+                    b.HasIndex("TenantId", "SourceDocumentItemId");
+
                     b.ToTable("AppDocumentItems", (string)null);
+                });
+
+            modelBuilder.Entity("NoxStock.Documents.DocumentNumberSequence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<int>("DocumentType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<int>("LastNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "DocumentType", "Year", "Prefix")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.ToTable("AppDocumentNumberSequences", (string)null);
+                });
+
+            modelBuilder.Entity("NoxStock.Documents.PaymentAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AllocationDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("BusinessPartnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<DateTime?>("ReversedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ReversedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountTransactionId");
+
+                    b.HasIndex("BusinessPartnerId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("TenantId", "AccountTransactionId", "DocumentId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = FALSE AND \"Status\" = 1");
+
+                    b.HasIndex("TenantId", "AccountTransactionId", "Status");
+
+                    b.HasIndex("TenantId", "DocumentId", "Status", "AllocationDate");
+
+                    b.ToTable("AppPaymentAllocations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AppPaymentAllocations_Amount_Positive", "\"Amount\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("NoxStock.ExchangeRates.ExchangeRate", b =>
@@ -1610,6 +1940,9 @@ namespace NoxStock.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("AverageInventoryCostTry")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1661,6 +1994,9 @@ namespace NoxStock.Migrations
                         .HasColumnType("text")
                         .HasColumnName("ExtraProperties");
 
+                    b.Property<DateTime?>("InventoryCostUpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -1673,12 +2009,6 @@ namespace NoxStock.Migrations
                         .HasDefaultValue(false);
 
                     b.Property<DateTime?>("LastCostUpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<decimal?>("AverageInventoryCostTry")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("InventoryCostUpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("LastModificationTime")
@@ -1845,14 +2175,14 @@ namespace NoxStock.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ChangeType")
-                        .HasColumnType("integer");
-
                     b.Property<decimal?>("AverageCostAfterTry")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("AverageCostBeforeTry")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ChangeType")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CostDate")
                         .HasColumnType("timestamp without time zone");
@@ -4146,6 +4476,32 @@ namespace NoxStock.Migrations
                         .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoxStock.Documents.DocumentItem", null)
+                        .WithMany()
+                        .HasForeignKey("SourceDocumentItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("NoxStock.Documents.PaymentAllocation", b =>
+                {
+                    b.HasOne("NoxStock.Accounts.AccountTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("AccountTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NoxStock.BusinessPartners.BusinessPartner", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessPartnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NoxStock.Documents.Document", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

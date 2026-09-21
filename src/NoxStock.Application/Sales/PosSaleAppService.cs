@@ -37,6 +37,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
     private readonly ISettingProvider _settingProvider;
     private readonly IProductPriceCalculator _priceCalculator;
     private readonly NoxStock.Licensing.ITenantLicenseAccessChecker _licenseAccessChecker;
+    private readonly CommercialCommandCoordinator _commandCoordinator;
 
     public PosSaleAppService(
         IRepository<Document, Guid> documentRepository,
@@ -49,7 +50,8 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         IRepository<ProductCostHistory, Guid> costHistoryRepository,
         ISettingProvider settingProvider,
         IProductPriceCalculator priceCalculator,
-        NoxStock.Licensing.ITenantLicenseAccessChecker licenseAccessChecker)
+        NoxStock.Licensing.ITenantLicenseAccessChecker licenseAccessChecker,
+        CommercialCommandCoordinator commandCoordinator)
     {
         _documentRepository = documentRepository;
         _productRepository = productRepository;
@@ -62,6 +64,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         _settingProvider = settingProvider;
         _priceCalculator = priceCalculator;
         _licenseAccessChecker = licenseAccessChecker;
+        _commandCoordinator = commandCoordinator;
     }
 
     public async Task<List<PosProductLookupDto>> GetProductsAsync(PosProductLookupInputDto input)
@@ -254,17 +257,18 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         await _licenseAccessChecker.EnsureFeatureAsync(
             NoxStock.Licensing.LicenseFeatureNames.Pos);
         var operationKey = NormalizeOperationKey(input.OperationKey);
-        if (operationKey is not null)
-        {
-            var existingQuery = await _documentRepository.WithDetailsAsync(x => x.Items);
-            var existingSale = await AsyncExecuter.FirstOrDefaultAsync(existingQuery.Where(x =>
-                x.Type == DocumentType.PosSale && x.OperationKey == operationKey));
-            if (existingSale is not null)
-            {
-                var existingPartner = await _businessPartnerRepository.GetAsync(existingSale.BusinessPartnerId);
-                return await MapSaleAsync(existingSale, existingPartner.Name, input.PaymentMethod);
-            }
-        }
+        return await _commandCoordinator.ExecuteAsync(
+            CurrentTenant.Id,
+            CommercialCommandType.PosSale,
+            operationKey,
+            null,
+            () => CreateInternalAsync(input, operationKey),
+            async documentId => await GetReplaySaleAsync(documentId, input.PaymentMethod),
+            sale => sale.Id);
+    }
+
+    private async Task<PosSaleDto> CreateInternalAsync(CreatePosSaleDto input, string? operationKey)
+    {
 
         if (input.Items.Count == 0)
         {
@@ -322,6 +326,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         };
         var businessPartner = await ResolveBusinessPartnerAsync(input.BusinessPartnerId, input.PaymentMethod, document.Currency);
         document.BusinessPartnerId = businessPartner.Id;
+        await CapturePosPrintSnapshotAsync(document, businessPartner);
 
         foreach (var cartItem in cartItems)
         {
@@ -367,7 +372,7 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                     .WithData("AvailableQuantity", product.Quantity);
             }
 
-            document.Items.Add(new DocumentItem(GuidGenerator.Create(), CurrentTenant.Id)
+            var documentItem = new DocumentItem(GuidGenerator.Create(), CurrentTenant.Id)
             {
                 ProductId = product.Id,
                 Quantity = cartItem.Quantity,
@@ -399,7 +404,9 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
                 ReferenceUnitPrice = calculation.ReferenceSaleUnitPrice,
                 ReferenceExchangeRate = calculation.ReferenceCurrencyExchangeRate,
                 PricingSnapshotDate = saleDate
-            });
+            };
+            documentItem.CaptureProductSnapshot(product.Name, product.Sku, product.Unit);
+            document.Items.Add(documentItem);
         }
 
         document.Subtotal = RoundMoney(document.Items.Sum(x => x.Quantity * x.UnitPrice));
@@ -547,10 +554,12 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             throw new BusinessException("NoxStock:PosSaleNotFound");
         }
 
-        var partner = await _businessPartnerRepository.GetAsync(document.BusinessPartnerId);
-        var productIds = document.Items.Select(x => x.ProductId).Distinct().ToList();
-        var products = (await _productRepository.GetListAsync(x => productIds.Contains(x.Id)))
-            .ToDictionary(x => x.Id);
+        var usesSnapshot = document.PrintSnapshotCapturedAt.HasValue;
+        var partner = usesSnapshot ? null : await _businessPartnerRepository.GetAsync(document.BusinessPartnerId);
+        var products = usesSnapshot
+            ? new Dictionary<Guid, Product>()
+            : (await _productRepository.GetListAsync(x => document.Items.Select(item => item.ProductId).Contains(x.Id)))
+                .ToDictionary(x => x.Id);
         var paymentMethod = PosPaymentMethod.CustomerCredit;
         var transaction = await _accountTransactionRepository.FirstOrDefaultAsync(x =>
             x.DocumentId == document.Id && x.Type == AccountTransactionType.Collection);
@@ -564,7 +573,9 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         {
             Id = document.Id,
             ReceiptNumber = document.DocNumber,
-            BusinessPartnerName = partner.Name,
+            BusinessPartnerName = usesSnapshot
+                ? document.BusinessPartnerNameSnapshot ?? string.Empty
+                : partner!.Name,
             PaymentMethod = paymentMethod,
             Date = document.Date,
             Status = document.Status,
@@ -574,15 +585,15 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
             VatTotal = document.VatTotal,
             GrandTotal = document.GrandTotal,
             Note = document.Description,
-            CompanyName = await _settingProvider.GetOrNullAsync(NoxStockSettings.CompanyName) ?? string.Empty,
-            TaxOffice = await _settingProvider.GetOrNullAsync(NoxStockSettings.TaxOffice) ?? string.Empty,
-            TaxNumber = await _settingProvider.GetOrNullAsync(NoxStockSettings.TaxNumber) ?? string.Empty,
-            Address = await _settingProvider.GetOrNullAsync(NoxStockSettings.Address) ?? string.Empty,
-            Phone = await _settingProvider.GetOrNullAsync(NoxStockSettings.Phone) ?? string.Empty,
+            CompanyName = usesSnapshot ? document.CompanyNameSnapshot ?? string.Empty : await GetSettingAsync(NoxStockSettings.CompanyName),
+            TaxOffice = usesSnapshot ? document.CompanyTaxOfficeSnapshot ?? string.Empty : await GetSettingAsync(NoxStockSettings.TaxOffice),
+            TaxNumber = usesSnapshot ? document.CompanyTaxNumberSnapshot ?? string.Empty : await GetSettingAsync(NoxStockSettings.TaxNumber),
+            Address = usesSnapshot ? document.CompanyAddressSnapshot ?? string.Empty : await GetSettingAsync(NoxStockSettings.Address),
+            Phone = usesSnapshot ? document.CompanyPhoneSnapshot ?? string.Empty : await GetSettingAsync(NoxStockSettings.Phone),
             Items = document.Items.Select(item => new PosReceiptItemDto
             {
-                ProductName = products.GetValueOrDefault(item.ProductId)?.Name ?? "Ürün",
-                ProductSku = products.GetValueOrDefault(item.ProductId)?.Sku ?? string.Empty,
+                ProductName = usesSnapshot ? item.ProductNameSnapshot ?? "Ürün" : products.GetValueOrDefault(item.ProductId)?.Name ?? "Ürün",
+                ProductSku = usesSnapshot ? item.ProductSkuSnapshot ?? string.Empty : products.GetValueOrDefault(item.ProductId)?.Sku ?? string.Empty,
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice,
                 SalesDiscount1 = item.SalesDiscount1,
@@ -596,14 +607,48 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         };
     }
 
+    private async Task CapturePosPrintSnapshotAsync(Document document, BusinessPartner businessPartner)
+    {
+        document.CapturePrintSnapshot(
+            Clock.Now,
+            await GetSettingAsync(NoxStockSettings.CompanyName),
+            await GetSettingAsync(NoxStockSettings.Address),
+            await GetSettingAsync(NoxStockSettings.Phone),
+            await GetSettingAsync(NoxStockSettings.Email),
+            await GetSettingAsync(NoxStockSettings.TaxOffice),
+            await GetSettingAsync(NoxStockSettings.TaxNumber),
+            businessPartner.Name,
+            businessPartner.Address,
+            businessPartner.TaxOffice,
+            businessPartner.TaxNumber);
+    }
+
+    private async Task<string> GetSettingAsync(string name)
+    {
+        return await _settingProvider.GetOrNullAsync(name) ?? string.Empty;
+    }
+
     [Authorize(NoxStockPermissions.Sales.Cancel)]
     [UnitOfWork(true)]
     [NoxStock.Licensing.TenantLicenseWrite]
-    public async Task<PosSaleDto> CancelAsync(Guid id)
+    public async Task<PosSaleDto> CancelAsync(Guid id, PosCancelInputDto? input = null)
     {
         CurrentTenant.RequireTenantId();
         await _licenseAccessChecker.EnsureFeatureAsync(
             NoxStock.Licensing.LicenseFeatureNames.Pos);
+        var operationKey = NormalizeOperationKey(input?.OperationKey);
+        return await _commandCoordinator.ExecuteAsync(
+            CurrentTenant.Id,
+            CommercialCommandType.PosCancellation,
+            operationKey,
+            id,
+            () => CancelInternalAsync(id),
+            async documentId => await GetReplaySaleAsync(documentId, PosPaymentMethod.CustomerCredit));
+    }
+
+    private async Task<PosSaleDto> CancelInternalAsync(Guid id)
+    {
+        CurrentTenant.RequireTenantId();
         var queryable = await _documentRepository.WithDetailsAsync(x => x.Items);
         var document = await AsyncExecuter.FirstOrDefaultAsync(queryable.Where(x => x.Id == id));
         if (document is null || document.Type != DocumentType.PosSale)
@@ -669,6 +714,20 @@ public class PosSaleAppService : ApplicationService, IPosSaleAppService
         return await MapSaleAsync(document, businessPartner.Name, document.PaidAmount > 0
             ? PosPaymentMethod.Cash
             : PosPaymentMethod.CustomerCredit);
+    }
+
+    private async Task<PosSaleDto> GetReplaySaleAsync(Guid id, PosPaymentMethod paymentMethod)
+    {
+        var queryable = await _documentRepository.WithDetailsAsync(x => x.Items);
+        var document = await AsyncExecuter.FirstOrDefaultAsync(queryable.Where(x =>
+            x.Id == id && x.Type == DocumentType.PosSale));
+        if (document is null)
+        {
+            throw new BusinessException("NoxStock:PosSaleNotFound");
+        }
+
+        var partner = await _businessPartnerRepository.GetAsync(document.BusinessPartnerId);
+        return await MapSaleAsync(document, partner.Name, paymentMethod);
     }
 
     private static string? NormalizeOperationKey(string? operationKey)

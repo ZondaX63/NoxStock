@@ -171,7 +171,14 @@ $(function () {
             stack: error && error.stack ? String(error.stack) : null
         };
 
-        window.fetch('/api/diagnostics/client-errors', {
+        // Tenant workspace URLs are routed through /t/{tenant}. Calling the
+        // host-level endpoint first causes TenantActivationMiddleware to issue
+        // a 302; fetch may follow that redirect as GET, producing a misleading
+        // 405 because the diagnostics action intentionally accepts POST only.
+        var tenantPrefixMatch = (window.location.pathname || '').match(/^\/t\/[^/]+/i);
+        var diagnosticsUrl = (tenantPrefixMatch ? tenantPrefixMatch[0] : '') + '/api/diagnostics/client-errors';
+
+        window.fetch(diagnosticsUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',

@@ -124,15 +124,9 @@ public class NoxStockMenuContributor : IMenuContributor
                 ).RequirePermissions(NoxStockPermissions.Accounts.Default)
             ).AddItem(
                 new ApplicationMenuItem(
-                    "Finance.Customers",
-                    l["Menu:Customers"],
-                    url: "/Customers"
-                ).RequirePermissions(NoxStockPermissions.BusinessPartners.Default)
-            ).AddItem(
-                new ApplicationMenuItem(
-                    "Finance.Suppliers",
-                    l["Menu:Suppliers"],
-                    url: "/Suppliers"
+                    "Finance.BusinessPartners",
+                    "Cari Hesaplar",
+                    url: "/BusinessPartners"
                 ).RequirePermissions(NoxStockPermissions.BusinessPartners.Default)
             )
         );

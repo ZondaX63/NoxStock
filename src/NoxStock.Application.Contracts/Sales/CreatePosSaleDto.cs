@@ -14,6 +14,11 @@ public class CreatePosSaleDto
     public List<CreatePosSaleItemDto> Items { get; set; } = new();
 }
 
+public class PosCancelInputDto
+{
+    public string? OperationKey { get; set; }
+}
+
 public class CreatePosSaleItemDto
 {
     public Guid ProductId { get; set; }

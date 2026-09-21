@@ -42,6 +42,13 @@ public class AddTransactionModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Transaction.Amount", value => Transaction.Amount = value);
+        if (!ModelState.IsValid)
+        {
+            await OnGetAsync(Transaction.AccountId);
+            return Page();
+        }
+
         await _accountAppService.AddTransactionAsync(Transaction);
         return NoContent();
     }

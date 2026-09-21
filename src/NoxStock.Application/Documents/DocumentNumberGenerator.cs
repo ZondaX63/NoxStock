@@ -5,46 +5,47 @@ using System.Linq;
 using System.Threading.Tasks;
 using NoxStock.Settings;
 using Volo.Abp;
-using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Settings;
+using Volo.Abp.MultiTenancy;
+using NoxStock.MultiTenancy;
 
 namespace NoxStock.Documents;
 
 public class DocumentNumberGenerator : IDocumentNumberGenerator, ITransientDependency
 {
-    private readonly IRepository<Document, Guid> _documentRepository;
     private readonly ISettingProvider _settingProvider;
-    private readonly IDataFilter _dataFilter;
+    private readonly IRepository<DocumentNumberSequence, Guid> _sequenceRepository;
+    private readonly IDocumentNumberSequenceStore _sequenceStore;
+    private readonly ICurrentTenant _currentTenant;
 
     public DocumentNumberGenerator(
-        IRepository<Document, Guid> documentRepository,
         ISettingProvider settingProvider,
-        IDataFilter dataFilter)
+        IRepository<DocumentNumberSequence, Guid> sequenceRepository,
+        IDocumentNumberSequenceStore sequenceStore,
+        ICurrentTenant currentTenant)
     {
-        _documentRepository = documentRepository;
         _settingProvider = settingProvider;
-        _dataFilter = dataFilter;
+        _sequenceRepository = sequenceRepository;
+        _sequenceStore = sequenceStore;
+        _currentTenant = currentTenant;
     }
 
     public async Task<string> GetNextAsync(DocumentType type)
     {
         var prefix = await GetPrefixAsync(type);
-        var documentPrefix = $"{prefix}-{DateTime.UtcNow:yyyy}-";
-        List<Document> documents;
-        using (_dataFilter.Disable<ISoftDelete>())
+        var year = DateTime.UtcNow.Year;
+        var tenantId = _currentTenant.RequireTenantId();
+        var sequence = await _sequenceStore.TryAllocateAsync(tenantId, type, year, prefix);
+        if (!sequence.HasValue)
         {
-            documents = await _documentRepository.GetListAsync(x =>
-                x.Type == type && x.DocNumber.StartsWith(documentPrefix));
+            var row = await _sequenceRepository.FirstOrDefaultAsync(x => x.DocumentType == type && x.Year == year && x.Prefix == prefix);
+            if (row is null) { row = new DocumentNumberSequence(Guid.NewGuid(), tenantId, type, year, prefix, 1); await _sequenceRepository.InsertAsync(row, autoSave: true); }
+            else { row.LastNumber++; await _sequenceRepository.UpdateAsync(row, autoSave: true); }
+            sequence = row.LastNumber;
         }
-
-        var lastSequence = documents
-            .Select(x => TryGetSequence(x.DocNumber, documentPrefix))
-            .DefaultIfEmpty(0)
-            .Max();
-
-        return $"{documentPrefix}{lastSequence + 1:D6}";
+        return $"{prefix}-{year}-{sequence.Value:D6}";
     }
 
     private async Task<string> GetPrefixAsync(DocumentType type)

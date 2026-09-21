@@ -50,7 +50,9 @@ Status: Planned
 - Product variants, attributes, kits/bundles, and composite products.
 - Unit conversion: piece, box, pallet, kilogram, liter, and custom units.
 - Product images, documents, technical specifications, and multiple barcodes.
-- Weighted-average and FIFO inventory costing; historical cost must replace the current product-price profitability estimate.
+- FIFO inventory costing and warehouse valuation. Weighted-average TRY inventory
+  cost and historical cost snapshots are implemented for current pricing; do
+  not treat that as a complete accounting valuation/reporting model.
 - Stock valuation by warehouse, currency, product, category, and valuation method.
 - Reorder point, safety stock, lead time, supplier preference, and purchase suggestion engine.
 

@@ -51,6 +51,9 @@ public class NoxStockDbContext :
     public DbSet<Document> Documents { get; set; }
     public DbSet<DocumentItem> DocumentItems { get; set; }
     public DbSet<DocumentExchangeRateSnapshot> DocumentExchangeRateSnapshots { get; set; }
+    public DbSet<PaymentAllocation> PaymentAllocations { get; set; }
+    public DbSet<DocumentNumberSequence> DocumentNumberSequences { get; set; }
+    public DbSet<CommercialCommand> CommercialCommands { get; set; }
     public DbSet<Account> Accounts { get; set; }
     public DbSet<AccountTransaction> AccountTransactions { get; set; }
     public DbSet<StockMovement> StockMovements { get; set; }
@@ -266,9 +269,20 @@ public class NoxStockDbContext :
             b.Property(x => x.DiscountTotal).HasColumnType("decimal(18,4)");
             b.Property(x => x.GrandTotal).HasColumnType("decimal(18,4)");
             b.Property(x => x.PaidAmount).HasColumnType("decimal(18,4)");
+            b.Property(x => x.LegacyPaidAmountBaseline).HasColumnType("decimal(18,4)");
             b.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("TRY");
             b.Property(x => x.ExchangeRate).HasColumnType("decimal(18,4)");
             b.Property(x => x.OperationKey).HasMaxLength(100);
+            b.Property(x => x.CompanyNameSnapshot).HasMaxLength(128);
+            b.Property(x => x.CompanyAddressSnapshot).HasMaxLength(512);
+            b.Property(x => x.CompanyPhoneSnapshot).HasMaxLength(32);
+            b.Property(x => x.CompanyEmailSnapshot).HasMaxLength(256);
+            b.Property(x => x.CompanyTaxOfficeSnapshot).HasMaxLength(128);
+            b.Property(x => x.CompanyTaxNumberSnapshot).HasMaxLength(32);
+            b.Property(x => x.BusinessPartnerNameSnapshot).HasMaxLength(256);
+            b.Property(x => x.BusinessPartnerAddressSnapshot).HasMaxLength(512);
+            b.Property(x => x.BusinessPartnerTaxOfficeSnapshot).HasMaxLength(128);
+            b.Property(x => x.BusinessPartnerTaxNumberSnapshot).HasMaxLength(32);
             b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.BusinessPartnerId).IsRequired();
             b.HasOne<Document>().WithMany().HasForeignKey(x => x.SourceDocumentId).IsRequired(false);
             b.HasIndex(x => x.SourceDocumentId);
@@ -276,6 +290,28 @@ public class NoxStockDbContext :
             b.HasIndex(x => new { x.TenantId, x.Type, x.OperationKey })
                 .IsUnique()
                 .HasFilter("\"OperationKey\" IS NOT NULL AND \"IsDeleted\" = FALSE");
+        });
+
+        builder.Entity<DocumentNumberSequence>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "DocumentNumberSequences", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Prefix).IsRequired().HasMaxLength(32);
+            b.HasIndex(x => new { x.TenantId, x.DocumentType, x.Year, x.Prefix }).IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+        });
+
+        builder.Entity<CommercialCommand>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "CommercialCommands", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.OperationKey).IsRequired().HasMaxLength(100);
+            b.Property(x => x.FailureCode).HasMaxLength(128);
+            b.HasIndex(x => new { x.TenantId, x.Type, x.OperationKey }).IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE");
+            b.HasIndex(x => new { x.TenantId, x.Status });
+            b.HasIndex(x => new { x.TenantId, x.Status, x.LeaseExpiresAt });
+            b.HasIndex(x => x.DocumentId);
         });
 
         builder.Entity<DocumentExchangeRateSnapshot>(b =>
@@ -318,9 +354,35 @@ public class NoxStockDbContext :
             b.Property(x => x.ReferenceCurrencyCode).HasMaxLength(3);
             b.Property(x => x.ReferenceUnitPrice).HasColumnType("decimal(18,6)");
             b.Property(x => x.ReferenceExchangeRate).HasColumnType("decimal(18,6)");
+            b.Property(x => x.ProductNameSnapshot).HasMaxLength(256);
+            b.Property(x => x.ProductSkuSnapshot).HasMaxLength(128);
+            b.Property(x => x.ProductUnitSnapshot).HasMaxLength(64);
             b.HasOne<Document>().WithMany(d => d.Items).HasForeignKey(x => x.DocumentId).IsRequired();
+            b.HasOne<DocumentItem>().WithMany().HasForeignKey(x => x.SourceDocumentItemId).IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.TenantId, x.SourceDocumentItemId });
             b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).IsRequired();
             b.HasOne<ProductCostHistory>().WithMany().HasForeignKey(x => x.ProductCostHistoryId).IsRequired(false);
+        });
+
+        builder.Entity<PaymentAllocation>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "PaymentAllocations", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Amount).HasColumnType("decimal(18,4)");
+            b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            b.Property(x => x.Status).HasDefaultValue(PaymentAllocationStatus.Active);
+            b.HasCheckConstraint("CK_AppPaymentAllocations_Amount_Positive", "\"Amount\" > 0");
+            b.HasOne<AccountTransaction>().WithMany().HasForeignKey(x => x.AccountTransactionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<Document>().WithMany().HasForeignKey(x => x.DocumentId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<BusinessPartner>().WithMany().HasForeignKey(x => x.BusinessPartnerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => new { x.TenantId, x.AccountTransactionId, x.DocumentId }).IsUnique()
+                .HasFilter("\"IsDeleted\" = FALSE AND \"Status\" = 1");
+            b.HasIndex(x => new { x.TenantId, x.DocumentId, x.Status, x.AllocationDate });
+            b.HasIndex(x => new { x.TenantId, x.AccountTransactionId, x.Status });
         });
 
         builder.Entity<ExchangeRate>(b =>

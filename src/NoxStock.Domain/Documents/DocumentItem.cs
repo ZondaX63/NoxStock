@@ -10,6 +10,7 @@ public class DocumentItem : FullAuditedEntity<Guid>, IMultiTenant
     public Guid? TenantId { get; protected set; }
     
     public Guid DocumentId { get; set; }
+    public Guid? SourceDocumentItemId { get; set; }
     public Guid ProductId { get; set; }
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
@@ -42,6 +43,9 @@ public class DocumentItem : FullAuditedEntity<Guid>, IMultiTenant
     public decimal? ReferenceUnitPrice { get; set; }
     public decimal? ReferenceExchangeRate { get; set; }
     public DateTime? PricingSnapshotDate { get; set; }
+    public string? ProductNameSnapshot { get; protected set; }
+    public string? ProductSkuSnapshot { get; protected set; }
+    public string? ProductUnitSnapshot { get; protected set; }
 
     public DocumentItem()
     {
@@ -51,5 +55,23 @@ public class DocumentItem : FullAuditedEntity<Guid>, IMultiTenant
         : base(id)
     {
         TenantId = tenantId;
+    }
+
+    public void CaptureProductSnapshot(string productName, string productSku, string productUnit)
+    {
+        if (ProductNameSnapshot is not null || ProductSkuSnapshot is not null || ProductUnitSnapshot is not null)
+        {
+            throw new InvalidOperationException("The document item print snapshot has already been captured.");
+        }
+
+        ProductNameSnapshot = productName;
+        ProductSkuSnapshot = productSku;
+        ProductUnitSnapshot = productUnit;
+    }
+
+    public void CopyProductSnapshotFrom(DocumentItem source)
+    {
+        CaptureProductSnapshot(source.ProductNameSnapshot ?? string.Empty, source.ProductSkuSnapshot ?? string.Empty,
+            source.ProductUnitSnapshot ?? string.Empty);
     }
 }

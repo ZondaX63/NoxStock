@@ -32,6 +32,12 @@ public class CreateModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Account.OpeningAmount", value => Account.OpeningAmount = value);
+        if (!ModelState.IsValid)
+        {
+            return Page();
+        }
+
         await _accountAppService.CreateWithOpeningAsync(Account);
         return NoContent();
     }

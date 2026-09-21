@@ -139,9 +139,17 @@ $(function () {
                                 },
                                 action: function (data) {
                                     var record = recordOf(data);
+                                    var operationKey = window.crypto && window.crypto.randomUUID
+                                        ? window.crypto.randomUUID()
+                                        : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
                                     var approve = function (confirmBelowCost) {
                                         return documentWorkflowService
-                                            .approve(record.id, { accountId: null, paymentAmount: 0, confirmBelowCost: confirmBelowCost === true })
+                                            .approve(record.id, {
+                                                operationKey: operationKey,
+                                                accountId: null,
+                                                paymentAmount: 0,
+                                                confirmBelowCost: confirmBelowCost === true
+                                            })
                                             .then(function () {
                                                 abp.notify.success('Fatura onaylandı.');
                                                 dataTable.ajax.reload();

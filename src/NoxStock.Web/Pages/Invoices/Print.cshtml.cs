@@ -13,6 +13,8 @@ public class PrintModel : NoxStockPageModel
 
     public DocumentDto Document { get; private set; } = new();
     public CompanySettingsDto Company { get; private set; } = new();
+    public bool UsesImmutableSnapshot { get; private set; }
+    public bool UsesLegacyFinalizedFallback { get; private set; }
 
     public PrintModel(
         IDocumentAppService documentAppService,
@@ -36,7 +38,22 @@ public class PrintModel : NoxStockPageModel
             return NotFound();
         }
 
-        Company = await _companySettingsAppService.GetAsync();
+        UsesImmutableSnapshot = Document.PrintSnapshotCapturedAt.HasValue && Document.Status is
+            DocumentStatus.Approved or DocumentStatus.PartiallyPaid or DocumentStatus.Paid or DocumentStatus.Cancelled;
+        UsesLegacyFinalizedFallback = !UsesImmutableSnapshot && Document.Status is
+            DocumentStatus.Approved or DocumentStatus.PartiallyPaid or DocumentStatus.Paid or DocumentStatus.Cancelled;
+
+        Company = UsesImmutableSnapshot
+            ? new CompanySettingsDto
+            {
+                CompanyName = Document.CompanyNameSnapshot ?? string.Empty,
+                Address = Document.CompanyAddressSnapshot ?? string.Empty,
+                Phone = Document.CompanyPhoneSnapshot ?? string.Empty,
+                Email = Document.CompanyEmailSnapshot ?? string.Empty,
+                TaxOffice = Document.CompanyTaxOfficeSnapshot ?? string.Empty,
+                TaxNumber = Document.CompanyTaxNumberSnapshot ?? string.Empty
+            }
+            : await _companySettingsAppService.GetAsync();
         return Page();
     }
 

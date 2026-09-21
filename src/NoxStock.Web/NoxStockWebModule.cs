@@ -231,6 +231,7 @@ public class NoxStockWebModule : AbpModule
             options.Conventions.AuthorizePage("/PrintLabels/Index", NoxStockPermissions.PrintLabels.Default);
             options.Conventions.AuthorizeFolder("/Customers", NoxStockPermissions.BusinessPartners.Default);
             options.Conventions.AuthorizeFolder("/Suppliers", NoxStockPermissions.BusinessPartners.Default);
+            options.Conventions.AuthorizePage("/BusinessPartners/Index", NoxStockPermissions.BusinessPartners.Default);
             options.Conventions.AuthorizePage("/CustomerDetail/Index", NoxStockPermissions.BusinessPartners.Default);
             options.Conventions.AuthorizePage("/Customers/SalesHistory", NoxStockPermissions.BusinessPartners.Default);
             options.Conventions.AuthorizePage("/Accounts/Index", NoxStockPermissions.Accounts.Default);

@@ -281,16 +281,7 @@ public class CreateModel : NoxStockPageModel
 
     private void NormalizeDecimalInput(string key, Action<decimal> assign)
     {
-        var rawValue = Request.Form[key].ToString();
-        ModelState.Remove(key);
-
-        if (decimal.TryParse(rawValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
-        {
-            assign(Math.Round(value, 2, MidpointRounding.AwayFromZero));
-            return;
-        }
-
-        ModelState.AddModelError(key, "Lütfen geçerli bir sayısal değer girin.");
+        TryNormalizePostedDecimal(key, assign);
     }
 
     private void NormalizeOptionalDecimalInput(string key, Action<decimal> assign)

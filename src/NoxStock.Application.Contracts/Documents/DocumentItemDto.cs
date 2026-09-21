@@ -7,6 +7,7 @@ namespace NoxStock.Documents;
 public class DocumentItemDto : FullAuditedEntityDto<Guid>
 {
     public Guid DocumentId { get; set; }
+    public Guid? SourceDocumentItemId { get; set; }
     public Guid ProductId { get; set; }
     public string? ProductName { get; set; } // We will map this manually
     public decimal Quantity { get; set; }
@@ -38,4 +39,7 @@ public class DocumentItemDto : FullAuditedEntityDto<Guid>
     public decimal? ReferenceUnitPrice { get; set; }
     public decimal? ReferenceExchangeRate { get; set; }
     public DateTime? PricingSnapshotDate { get; set; }
+    public string? ProductNameSnapshot { get; set; }
+    public string? ProductSkuSnapshot { get; set; }
+    public string? ProductUnitSnapshot { get; set; }
 }

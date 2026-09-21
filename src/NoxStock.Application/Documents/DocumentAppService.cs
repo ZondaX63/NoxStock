@@ -36,6 +36,7 @@ public class DocumentAppService :
     private readonly IRepository<DocumentExchangeRateSnapshot, Guid> _exchangeRateSnapshotRepository;
     private readonly IRepository<ExchangeRate, Guid> _exchangeRateRepository;
     private readonly NoxStock.Licensing.ITenantLicenseAccessChecker _licenseAccessChecker;
+    private readonly IRepository<PaymentAllocation, Guid> _paymentAllocationRepository;
 
     public DocumentAppService(
         IRepository<Document, Guid> repository,
@@ -47,7 +48,8 @@ public class DocumentAppService :
         IDataFilter dataFilter,
         IRepository<DocumentExchangeRateSnapshot, Guid> exchangeRateSnapshotRepository,
         IRepository<ExchangeRate, Guid> exchangeRateRepository,
-        NoxStock.Licensing.ITenantLicenseAccessChecker licenseAccessChecker)
+        NoxStock.Licensing.ITenantLicenseAccessChecker licenseAccessChecker,
+        IRepository<PaymentAllocation, Guid> paymentAllocationRepository)
         : base(repository)
     {
         _businessPartnerRepository = businessPartnerRepository;
@@ -59,6 +61,7 @@ public class DocumentAppService :
         _exchangeRateSnapshotRepository = exchangeRateSnapshotRepository;
         _exchangeRateRepository = exchangeRateRepository;
         _licenseAccessChecker = licenseAccessChecker;
+        _paymentAllocationRepository = paymentAllocationRepository;
 
         GetPolicyName = NoxStockPermissions.Documents.Default;
         GetListPolicyName = NoxStockPermissions.Documents.Default;
@@ -139,27 +142,63 @@ public class DocumentAppService :
 
         var documentDto = ObjectMapper.Map<Document, DocumentDto>(document);
 
-        // Fetch BusinessPartnerName
-        var businessPartner = await _businessPartnerRepository.FindAsync(document.BusinessPartnerId);
-        if (businessPartner != null)
+        if (UsesImmutablePrintSnapshot(document))
         {
-            documentDto.BusinessPartnerName = businessPartner.Name;
-        }
-
-        // Fetch ProductNames for Items
-        var productIds = document.Items.Select(x => x.ProductId).Distinct().ToList();
-        var products = await _productRepository.GetListAsync(x => productIds.Contains(x.Id));
-        var productDictionary = products.ToDictionary(x => x.Id, x => x.Name);
-
-        foreach (var item in documentDto.Items)
-        {
-            if (productDictionary.TryGetValue(item.ProductId, out var productName))
+            documentDto.BusinessPartnerName = document.BusinessPartnerNameSnapshot;
+            foreach (var item in documentDto.Items)
             {
-                item.ProductName = productName;
+                item.ProductName = item.ProductNameSnapshot;
+            }
+        }
+        else
+        {
+            // Draft documents and legacy finalized documents without a snapshot
+            // retain the historic live-data rendering fallback.
+            var businessPartner = await _businessPartnerRepository.FindAsync(document.BusinessPartnerId);
+            if (businessPartner != null)
+            {
+                documentDto.BusinessPartnerName = businessPartner.Name;
+            }
+
+            var productIds = document.Items.Select(x => x.ProductId).Distinct().ToList();
+            var products = await _productRepository.GetListAsync(x => productIds.Contains(x.Id));
+            var productDictionary = products.ToDictionary(x => x.Id, x => x.Name);
+
+            foreach (var item in documentDto.Items)
+            {
+                if (productDictionary.TryGetValue(item.ProductId, out var productName))
+                {
+                    item.ProductName = productName;
+                }
             }
         }
 
+        documentDto.PaymentAllocations = (await _paymentAllocationRepository.GetListAsync(x => x.DocumentId == document.Id))
+            .OrderByDescending(x => x.AllocationDate)
+            .Select(x => new PaymentAllocationDto
+            {
+                Id = x.Id,
+                AccountTransactionId = x.AccountTransactionId,
+                DocumentId = x.DocumentId,
+                BusinessPartnerId = x.BusinessPartnerId,
+                Amount = x.Amount,
+                Currency = x.Currency,
+                AllocationDate = x.AllocationDate,
+                Status = x.Status,
+                ReversedAt = x.ReversedAt,
+                CreationTime = x.CreationTime,
+                CreatorId = x.CreatorId,
+                LastModificationTime = x.LastModificationTime,
+                LastModifierId = x.LastModifierId
+            }).ToList();
+
         return documentDto;
+    }
+
+    private static bool UsesImmutablePrintSnapshot(Document document)
+    {
+        return document.PrintSnapshotCapturedAt.HasValue && document.Status is
+            DocumentStatus.Approved or DocumentStatus.PartiallyPaid or DocumentStatus.Paid or DocumentStatus.Cancelled;
     }
 
     public override async Task<PagedResultDto<DocumentDto>> GetListAsync(DocumentGetListInput input)

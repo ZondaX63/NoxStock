@@ -23,17 +23,31 @@ public class BusinessPartnerOpeningBalanceModalModel : NoxStockPageModel
         Partner = await _service.GetAsync(businessPartnerId);
         Opening.BusinessPartnerId = businessPartnerId;
         Opening.OpeningDate = Clock.Now;
-        if (Partner.Type is BusinessPartnerType.Customer or BusinessPartnerType.Both)
-            Directions.Add(new SelectListItem("Bizim alacağımız", ((int)BusinessPartnerOpeningDirection.ReceivableFromPartner).ToString()));
-        if (Partner.Type is BusinessPartnerType.Supplier or BusinessPartnerType.Both)
-            Directions.Add(new SelectListItem("Bizim borcumuz", ((int)BusinessPartnerOpeningDirection.PayableToPartner).ToString()));
+        ConfigureDirections();
         Opening.Direction = Partner.Type == BusinessPartnerType.Supplier
             ? BusinessPartnerOpeningDirection.PayableToPartner
             : BusinessPartnerOpeningDirection.ReceivableFromPartner;
     }
 
+    private void ConfigureDirections()
+    {
+        Directions.Clear();
+        if (Partner.Type is BusinessPartnerType.Customer or BusinessPartnerType.Both)
+            Directions.Add(new SelectListItem("Bizim alacağımız", ((int)BusinessPartnerOpeningDirection.ReceivableFromPartner).ToString()));
+        if (Partner.Type is BusinessPartnerType.Supplier or BusinessPartnerType.Both)
+            Directions.Add(new SelectListItem("Bizim borcumuz", ((int)BusinessPartnerOpeningDirection.PayableToPartner).ToString()));
+    }
+
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Opening.Amount", value => Opening.Amount = value);
+        if (!ModelState.IsValid)
+        {
+            Partner = await _service.GetAsync(Opening.BusinessPartnerId);
+            ConfigureDirections();
+            return Page();
+        }
+
         await _service.CreateOpeningBalanceAsync(Opening);
         return NoContent();
     }

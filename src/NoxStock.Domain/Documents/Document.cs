@@ -20,12 +20,27 @@ public class Document : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public decimal DiscountTotal { get; set; }
     public decimal GrandTotal { get; set; }
     public decimal PaidAmount { get; set; }
+    public decimal? LegacyPaidAmountBaseline { get; protected set; }
     public string Currency { get; set; }
     public decimal ExchangeRate { get; set; }
     public DateTime Date { get; set; }
     public DateTime? DueDate { get; set; }
     public string? Description { get; set; }
     public string? OperationKey { get; set; }
+
+    // Identity data used to render a finalized commercial document. These values
+    // are deliberately separate from the mutable company and partner records.
+    public DateTime? PrintSnapshotCapturedAt { get; protected set; }
+    public string? CompanyNameSnapshot { get; protected set; }
+    public string? CompanyAddressSnapshot { get; protected set; }
+    public string? CompanyPhoneSnapshot { get; protected set; }
+    public string? CompanyEmailSnapshot { get; protected set; }
+    public string? CompanyTaxOfficeSnapshot { get; protected set; }
+    public string? CompanyTaxNumberSnapshot { get; protected set; }
+    public string? BusinessPartnerNameSnapshot { get; protected set; }
+    public string? BusinessPartnerAddressSnapshot { get; protected set; }
+    public string? BusinessPartnerTaxOfficeSnapshot { get; protected set; }
+    public string? BusinessPartnerTaxNumberSnapshot { get; protected set; }
 
     public ICollection<DocumentItem> Items { get; set; }
     public ICollection<DocumentExchangeRateSnapshot> ExchangeRateSnapshots { get; set; }
@@ -81,5 +96,79 @@ public class Document : FullAuditedAggregateRoot<Guid>, IMultiTenant
         }
 
         Status = targetStatus;
+    }
+
+    public void CapturePrintSnapshot(
+        DateTime capturedAt,
+        string companyName,
+        string companyAddress,
+        string companyPhone,
+        string companyEmail,
+        string companyTaxOffice,
+        string companyTaxNumber,
+        string businessPartnerName,
+        string? businessPartnerAddress,
+        string? businessPartnerTaxOffice,
+        string? businessPartnerTaxNumber)
+    {
+        if (PrintSnapshotCapturedAt.HasValue)
+        {
+            throw new BusinessException("NoxStock:DocumentPrintSnapshotAlreadyCaptured");
+        }
+
+        PrintSnapshotCapturedAt = capturedAt;
+        CompanyNameSnapshot = companyName;
+        CompanyAddressSnapshot = companyAddress;
+        CompanyPhoneSnapshot = companyPhone;
+        CompanyEmailSnapshot = companyEmail;
+        CompanyTaxOfficeSnapshot = companyTaxOffice;
+        CompanyTaxNumberSnapshot = companyTaxNumber;
+        BusinessPartnerNameSnapshot = businessPartnerName;
+        BusinessPartnerAddressSnapshot = businessPartnerAddress;
+        BusinessPartnerTaxOfficeSnapshot = businessPartnerTaxOffice;
+        BusinessPartnerTaxNumberSnapshot = businessPartnerTaxNumber;
+    }
+
+    public void SetPaidAmountFromAllocations(decimal paidAmount)
+    {
+        if (Type is not (DocumentType.SaleInvoice or DocumentType.PurchaseInvoice))
+        {
+            throw new BusinessException("NoxStock:DocumentTypeDoesNotSupportPayment");
+        }
+
+        if (paidAmount < 0m || paidAmount > GrandTotal)
+        {
+            throw new BusinessException("NoxStock:InvalidAllocatedAmount");
+        }
+
+        PaidAmount = paidAmount;
+        if (Status == DocumentStatus.Cancelled)
+        {
+            return;
+        }
+
+        Status = paidAmount >= GrandTotal && paidAmount > 0m
+            ? DocumentStatus.Paid
+            : paidAmount > 0m
+                ? DocumentStatus.PartiallyPaid
+                : DocumentStatus.Approved;
+    }
+
+    public void CaptureLegacyPaidAmountBaseline()
+    {
+        if (!LegacyPaidAmountBaseline.HasValue && PaidAmount > 0m)
+        {
+            LegacyPaidAmountBaseline = PaidAmount;
+        }
+    }
+
+    public void CopyPrintSnapshotFrom(Document source)
+    {
+        CapturePrintSnapshot(source.PrintSnapshotCapturedAt ?? DateTime.UtcNow,
+            source.CompanyNameSnapshot ?? string.Empty, source.CompanyAddressSnapshot ?? string.Empty,
+            source.CompanyPhoneSnapshot ?? string.Empty, source.CompanyEmailSnapshot ?? string.Empty,
+            source.CompanyTaxOfficeSnapshot ?? string.Empty, source.CompanyTaxNumberSnapshot ?? string.Empty,
+            source.BusinessPartnerNameSnapshot ?? string.Empty, source.BusinessPartnerAddressSnapshot,
+            source.BusinessPartnerTaxOfficeSnapshot, source.BusinessPartnerTaxNumberSnapshot);
     }
 }

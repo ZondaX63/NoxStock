@@ -28,6 +28,13 @@ public class OpeningBalanceModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Opening.Amount", value => Opening.Amount = value);
+        if (!ModelState.IsValid)
+        {
+            Account = await _accountAppService.GetAsync(Opening.AccountId);
+            return Page();
+        }
+
         await _accountAppService.CreateOpeningBalanceAsync(Opening);
         return NoContent();
     }

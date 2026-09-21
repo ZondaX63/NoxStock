@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: noxstock_concurrency_test
+      POSTGRES_USER: noxstock_test
+      POSTGRES_PASSWORD: noxstock_test
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noxstock_test -d noxstock_concurrency_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20

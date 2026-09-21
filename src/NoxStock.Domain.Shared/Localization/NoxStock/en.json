@@ -3,6 +3,8 @@
   "Texts": {
     "AppName": "NoxStock",
     "NoxStock:CreditLimitExceeded": "This transaction would exceed the limit for {PartnerName}. Limit: {CreditLimit}; projected outstanding balance: {ProjectedExposure}.",
+    "NoxStock:InsufficientStock": "Insufficient stock. {InsufficientProducts}",
+    "NoxStock:StockChanged": "Stock or the document was changed by another operation. Refresh the current state and try again.",
     "NoxStock:AccountOpeningAmountMustBePositive": "Opening balance must be greater than zero.",
     "NoxStock:AccountOpeningInactiveAccount": "An opening balance can only be entered for an active account.",
     "NoxStock:AccountOpeningAlreadyExists": "An active opening balance has already been recorded for this account.",
@@ -507,6 +509,19 @@
     "NoxStock:SaleBelowInventoryCost": "The net sale price for {ProductName} ({NetSalePrice} TRY) is below current inventory cost ({InventoryCost} TRY).",
     "NoxStock:ProductCostUnavailable": "The product has no reliable cost available for pricing.",
     "NoxStock:ManualSalePriceUnavailable": "An active VAT-exclusive sale price is required for a manually priced product.",
-    "NoxStock:ExistingInventoryCostUnavailable": "A weighted average cannot be calculated because {ProductName} has existing stock without a reliable cost."
+    "NoxStock:ExistingInventoryCostUnavailable": "A weighted average cannot be calculated because {ProductName} has existing stock without a reliable cost.",
+    "NoxStock:CommandInProgress": "This request is still being processed. Wait briefly, then retry using the same operation key.",
+    "NoxStock:CommandFailed": "The previous request with this operation key did not complete. Correct the issue and retry with a new operation key.",
+    "NoxStock:OperationKeyAlreadyUsed": "This operation key has already been used for a different document.",
+    "NoxStock:CommandExpired": "This request expired before it completed. Start a new operation to try again.",
+    "NoxStock:PaymentAllocationRequired": "Select at least one invoice to allocate.",
+    "NoxStock:PaymentAllocationAmountMustBePositive": "Allocation amount must be greater than zero.",
+    "NoxStock:PaymentAllocationExceedsSourceAmount": "The allocation exceeds the available payment amount.",
+    "NoxStock:PaymentAllocationExceedsDocumentBalance": "The allocation exceeds the invoice balance.",
+    "NoxStock:DuplicatePaymentAllocation": "This payment is already allocated to the invoice.",
+    "NoxStock:PaymentAllocationCurrencyMismatch": "Payment and invoice currencies must match.",
+    "NoxStock:PaymentAllocationBusinessPartnerMismatch": "Payment and invoice must belong to the same business partner.",
+    "NoxStock:PaymentAllocationSourceNotActive": "A cancelled payment cannot be allocated.",
+    "NoxStock:DocumentDoesNotAcceptAllocation": "This invoice cannot accept a payment allocation."
   }
 }

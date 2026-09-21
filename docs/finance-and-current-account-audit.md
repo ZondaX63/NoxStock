@@ -24,7 +24,7 @@ Kapsam: Domain, Application, Contracts, EF Core, Razor Pages, izinler, migration
 
 ## Mevcut Mimari
 
-- **Backend:** .NET 10, ASP.NET Core ve ABP Framework 10.4.1 katmanlı monolit. Katmanlar `src/NoxStock.Domain`, `Application.Contracts`, `Application`, `EntityFrameworkCore`, `HttpApi`, `Web` ve `DbMigrator` altındadır. `memory-bank/systemPatterns.md`.
+- **Backend:** .NET 10, ASP.NET Core ve ABP Framework 10.4.1 katmanlı monolit. Katmanlar `src/NoxStock.Domain`, `Application.Contracts`, `Application`, `EntityFrameworkCore`, `HttpApi`, `Web` ve `DbMigrator` altındadır. Güncel katman ve işlem sınırları için `docs/architecture/` kullanılır.
 - **Frontend:** ABP Razor Pages, jQuery, ABP ModalManager ve DataTables. Ortak layout/sidebar/topbar `src/NoxStock.Web/Pages/Shared`, `Components/AppSidebar` ve `Components/AppTopbar` altındadır. Sayfa durumunun kalıcı merkezi bir client-store'u yoktur; DataTable state'i tarayıcı tarafında saklanır.
 - **Veri erişimi:** EF Core PostgreSQL sağlayıcısı ve ABP repository/UoW. Model yapılandırması `src/NoxStock.EntityFrameworkCore/EntityFrameworkCore/NoxStockDbContext.cs`; migrationlar `src/NoxStock.EntityFrameworkCore/Migrations` altındadır.
 - **API:** `src/NoxStock.Web/NoxStockWebModule.cs` içindeki ABP conventional controller yapılandırması, `NoxStock.Application` app service'lerini HTTP API olarak açar. Repository'de finans için elle yazılmış ayrı controller yoktur; web sayfaları generated JavaScript proxy'lerini (`noxStock.accounts.account`, `noxStock.businessPartners.businessPartner`, vb.) çağırır.

@@ -253,6 +253,9 @@ public class BusinessPartnerAppService :
         if (transaction.Status == AccountTransactionStatus.Cancelled)
             return;
 
+        await LazyServiceProvider.LazyGetRequiredService<PaymentAllocationManager>()
+            .ReverseForTransactionAsync(transaction.Id, CurrentUser.Id);
+
         var partner = await Repository.GetAsync(transaction.BusinessPartnerId.Value);
         var accountRepository = LazyServiceProvider.LazyGetRequiredService<IRepository<Account, Guid>>();
         var account = await accountRepository.GetAsync(transaction.AccountId);

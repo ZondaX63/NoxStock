@@ -14,5 +14,5 @@ public interface IPosSaleAppService : IApplicationService
     Task<PosSaleDto> CreateAsync(CreatePosSaleDto input);
     Task<List<PosSaleDto>> GetRecentAsync();
     Task<PosReceiptDto> GetReceiptAsync(Guid id);
-    Task<PosSaleDto> CancelAsync(Guid id);
+    Task<PosSaleDto> CancelAsync(Guid id, PosCancelInputDto? input = null);
 }

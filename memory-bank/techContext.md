@@ -1,79 +1,46 @@
 # Technical Context
 
-Last updated: 2026-07-10
+Last reviewed: 2026-09-10
 
 ## Stack
 
-- ASP.NET Core / Razor Pages
-- ABP Framework 10.4.1
-- .NET 10.0
-- Entity Framework Core with PostgreSQL provider
-- PostgreSQL
-- Mapperly via `Volo.Abp.Mapperly`
-- ABP Identity, Permission Management, Audit Logging, Feature Management, Setting Management, Tenant Management, OpenIddict
-- Frontend assets managed through ABP web libs and `abp install-libs`
+- .NET 10, ASP.NET Core, Razor Pages, ABP 10.4.1
+- EF Core with PostgreSQL in production; SQLite is used by the EF test harness
+- OpenIddict, ABP Identity/Tenant Management/Permissions/Audit/Settings/Features
+- Docker Compose for development, production, release validation, restore and
+  isolated performance environments
 
-## Solution Location
-
-Main solution root:
-
-```text
-.
-```
-
-Legacy reference implementation:
-
-```text
-../A
-```
-
-## Common Commands
-
-Build Web:
+## Verified commands
 
 ```bash
-dotnet build src/NoxStock.Web/NoxStock.Web.csproj --no-restore -v:minimal -m:1
-```
-
-Build DbMigrator:
-
-```bash
-dotnet build src/NoxStock.DbMigrator/NoxStock.DbMigrator.csproj --no-restore -v:minimal -m:1
-```
-
-Run tests:
-
-```bash
-dotnet test NoxStock.slnx --no-build -m:1
-```
-
-List migrations:
-
-```bash
+dotnet restore NoxStock.slnx --disable-parallel
+dotnet build NoxStock.slnx -c Release -m:1 --no-restore
+dotnet test NoxStock.slnx -c Release -m:1 --no-build --no-restore
 dotnet ef migrations list --project src/NoxStock.EntityFrameworkCore/NoxStock.EntityFrameworkCore.csproj --startup-project src/NoxStock.DbMigrator/NoxStock.DbMigrator.csproj --no-build
 ```
 
-Add migration:
+Focused unit/domain and SQLite integration commands use the same options with
+their project paths:
 
 ```bash
-dotnet ef migrations add Migration_Name --project src/NoxStock.EntityFrameworkCore/NoxStock.EntityFrameworkCore.csproj --startup-project src/NoxStock.DbMigrator/NoxStock.DbMigrator.csproj
+dotnet test test/NoxStock.Domain.Tests/NoxStock.Domain.Tests.csproj -c Release -m:1 --no-build --no-restore
+dotnet test test/NoxStock.EntityFrameworkCore.Tests/NoxStock.EntityFrameworkCore.Tests.csproj -c Release -m:1 --no-build --no-restore
+(cd test/NoxStock.BrowserTests && npm test)
+etc/performance/perf.sh baseline
 ```
 
-## Environment Notes
+For browser tests, use the scripts in `test/NoxStock.BrowserTests/package.json`;
+they require runtime E2E credentials. For isolated PostgreSQL performance
+validation, use the documented `etc/performance/perf.sh` commands. Do not infer
+production credentials or host ports from historical files.
 
-- In this workspace, plain parallel MSBuild can fail silently with `Build FAILED. 0 Error(s)`. Use `-m:1`.
-- VSTest needs local socket access. In sandboxed execution it can fail with `System.Net.Sockets.SocketException (13): Permission denied`.
-- EF migration list may show database access permission errors if PostgreSQL on `localhost:5433` is not accessible, but it can still list known migrations.
-- Local Web and DbMigrator settings expect PostgreSQL at `localhost:5433` with database `NoxStock`, user `postgres`, password `1121`.
-- On 2026-07-10, `pg_isready -h localhost -p 5433` returned `no response`; web server was not started because the app needs the database for a usable prototype.
-- No local `docker-compose.yml` was found. Existing container files are `src/NoxStock.Web/Dockerfile` and `src/NoxStock.DbMigrator/Dockerfile`.
-- Network access is restricted in the coding environment.
+## Infrastructure map
 
-## Technical Constraints
+- `docker-compose.yml`: local development.
+- `docker-compose.production.yml`: production-oriented deployment.
+- `docker-compose.release-validation.yml`: isolated release validation.
+- `docker-compose.restore-test.yml`: restore rehearsal.
+- `docker-compose.performance.yml`: isolated target-volume profiling.
 
-- Do not use runtime SQL table creation endpoints.
-- Do not introduce raw SQL for ordinary persistence when EF repositories/migrations can handle it.
-- Do not reintroduce BookStore tutorial modules.
-- Preserve ABP conventions for modules, permissions, localization, and application services.
-- Keep tenant-aware entities implementing `IMultiTenant` where business data is company-scoped.
-- Prefer focused tests around business operations instead of broad brittle UI tests.
+Use `-m:1` for predictable local builds. VSTest may require local socket access
+that sandboxed environments deny.

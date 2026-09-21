@@ -38,6 +38,14 @@ public class CreateModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Transfer.Amount", value => Transfer.Amount = value);
+        if (!ModelState.IsValid)
+        {
+            CustomerId = Transfer.CustomerId;
+            await LoadAsync();
+            return Page();
+        }
+
         await _businessPartnerAppService.TransferCustomerReceivableAsync(Transfer);
         return NoContent();
     }

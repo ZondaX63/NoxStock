@@ -17,9 +17,17 @@ $(function () {
     }
 
     function compact(value) {
-        var number = Number(value || 0);
+        var number = decimalValue(value);
         if (!Number.isFinite(number)) return '0';
         return number.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    }
+
+    function decimalValue(value) {
+        if (typeof value === 'string') {
+            value = value.trim();
+            if (value.indexOf(',') >= 0 && value.indexOf('.') < 0) value = value.replace(',', '.');
+        }
+        return Number(value || 0);
     }
 
     function escapeHtml(value) {
@@ -252,7 +260,7 @@ $(function () {
             abp.notify.warn(text('InventoryCount:UntrackedProduct', 'Stok takibi kapalı ürünler sayıma eklenemez.'));
             return;
         }
-        var quantity = Number(amount);
+        var quantity = decimalValue(amount);
         if (!Number.isFinite(quantity) || quantity < 0) {
             abp.notify.warn(text('InventoryCount:InvalidQuantity', 'Geçerli bir miktar girin.'));
             return;
@@ -363,7 +371,7 @@ $(function () {
         var productId = $row.data('product-id');
         var item = items.find(function (row) { return row.productId === productId; });
         if (!item) return;
-        item.countedQuantity = Math.max(0, Number(this.value || 0));
+        item.countedQuantity = Math.max(0, decimalValue(this.value));
         refreshRenderedRow(item);
         setDirty(true);
         updateSummary();
@@ -490,8 +498,8 @@ $(function () {
         var input = {
             barcode: $('#InventoryQuickBarcode').val().trim() || null,
             name: $('#InventoryQuickName').val().trim(),
-            countedQuantity: Number($('#InventoryQuickQuantity').val() || 0),
-            salePrice: $('#InventoryQuickSalePrice').val() === '' ? null : Number($('#InventoryQuickSalePrice').val()),
+            countedQuantity: decimalValue($('#InventoryQuickQuantity').val()),
+            salePrice: $('#InventoryQuickSalePrice').val() === '' ? null : decimalValue($('#InventoryQuickSalePrice').val()),
             note: $('#InventoryQuickNote').val().trim() || null
         };
         var $button = $('#InventoryQuickSave').prop('disabled', true);

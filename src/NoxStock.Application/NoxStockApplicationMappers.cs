@@ -182,6 +182,13 @@ public partial class NoxStockBusinessPartnerToBusinessPartnerDtoMapper : MapperB
 }
 
 [Mapper]
+public partial class NoxStockBusinessPartnerDtoToCreateUpdateBusinessPartnerDtoMapper : MapperBase<BusinessPartnerDto, CreateUpdateBusinessPartnerDto>
+{
+    public override partial CreateUpdateBusinessPartnerDto Map(BusinessPartnerDto source);
+    public override partial void Map(BusinessPartnerDto source, CreateUpdateBusinessPartnerDto destination);
+}
+
+[Mapper]
 public partial class NoxStockCreateUpdateBusinessPartnerDtoToBusinessPartnerMapper : MapperBase<CreateUpdateBusinessPartnerDto, BusinessPartner>
 {
     public override partial BusinessPartner Map(CreateUpdateBusinessPartnerDto source);
@@ -192,8 +199,10 @@ public partial class NoxStockCreateUpdateBusinessPartnerDtoToBusinessPartnerMapp
 public partial class NoxStockDocumentToDocumentDtoMapper : MapperBase<Document, DocumentDto>
 {
     [MapperIgnoreTarget(nameof(DocumentDto.BusinessPartnerName))]
+    [MapperIgnoreTarget(nameof(DocumentDto.PaymentAllocations))]
     public override partial DocumentDto Map(Document source);
     [MapperIgnoreTarget(nameof(DocumentDto.BusinessPartnerName))]
+    [MapperIgnoreTarget(nameof(DocumentDto.PaymentAllocations))]
     public override partial void Map(Document source, DocumentDto destination);
 }
 

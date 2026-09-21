@@ -30,6 +30,13 @@ public class TransferModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Transfer.Amount", value => Transfer.Amount = value);
+        if (!ModelState.IsValid)
+        {
+            await OnGetAsync();
+            return Page();
+        }
+
         await _accountAppService.TransferAsync(Transfer);
         return NoContent();
     }

@@ -58,6 +58,7 @@ public class CreateModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Payment.Amount", value => Payment.Amount = value);
         if (!ModelState.IsValid)
         {
             await LoadLookupsAsync();

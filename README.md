@@ -6,7 +6,7 @@ This is a layered startup solution based on [Domain Driven Design (DDD)](https:/
 
 ## Private Beta Prototype
 
-Current beta: `1.0.0-beta.1`
+Current beta: `1.0.0-beta.2`
 
 NoxStock is currently prepared for a controlled private beta, not unrestricted production scale. The pilot target is 5-10 active tenants, limited users, and 5,000-10,000 products per tenant.
 
@@ -76,5 +76,18 @@ Deploying an ABP application follows the same process as deploying any .NET or A
 
 You can see the following resources to learn more about your solution and the ABP Framework:
 
-* [Web Application Development Tutorial](https://abp.io/docs/latest/tutorials/book-store/part-1)
 * [Application Startup Template](https://abp.io/docs/latest/startup-templates/application/index)
+
+
+
+# 1. authorized_keys dosyasına yeni anahtarı ekle
+# (Tırnakların arasına biraz önce kopyaladığın ssh-ed25519 ile başlayan metni yapıştır)
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINESAAvgkgtD29QlK+fvam11qdBRc+U57QmPuhJvOHkV oracle-stockapp-key" | sudo tee -a /mnt/recovery/home/ubuntu/.ssh/authorized_keys
+
+# 2. Dosya izinlerini ve dosya sahipliğini Ubuntu standartlarına göre sabitle
+sudo chmod 600 /mnt/recovery/home/ubuntu/.ssh/authorized_keys
+sudo chmod 700 /mnt/recovery/home/ubuntu/.ssh
+sudo chown -R 1001:1001 /mnt/recovery/home/ubuntu/.ssh
+
+# 3. Anahtarın dosyanın sonuna doğru eklendiğini teyit et
+sudo tail -n 1 /mnt/recovery/home/ubuntu/.ssh/authorized_keys

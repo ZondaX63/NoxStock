@@ -65,6 +65,7 @@ public class RecordPaymentModalModel : NoxStockPageModel
     public async Task<IActionResult> OnPostAsync()
     {
         await LoadDocumentAsync();
+        TryNormalizePostedDecimal("Payment.Amount", value => Payment.Amount = value);
         if (!ModelState.IsValid)
         {
             await LoadSelectedAccountAsync();

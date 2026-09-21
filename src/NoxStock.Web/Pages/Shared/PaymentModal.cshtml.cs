@@ -47,6 +47,13 @@ public class PaymentModalModel : NoxStockPageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        TryNormalizePostedDecimal("Payment.Amount", value => Payment.Amount = value);
+        if (!ModelState.IsValid)
+        {
+            await OnGetAsync(Payment.BusinessPartnerId, Payment.IsCollection);
+            return Page();
+        }
+
         await _businessPartnerAppService.ProcessPaymentAsync(Payment);
         return NoContent();
     }

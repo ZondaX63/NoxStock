@@ -1,5 +1,6 @@
 @page
 @model NoxStock.Web.Pages.Invoices.PrintModel
+@using NoxStock.Documents
 @{
     Layout = null;
     ViewData["Title"] = $"{Model.GetDocumentTitle()} {Model.Document.DocNumber}";
@@ -28,12 +29,18 @@
         table { border-collapse: collapse; margin-top: 28px; width: 100%; } th { background: #312e81; color: #fff; font-size: 11px; font-weight: 700; padding: 10px 8px; text-align: left; text-transform: uppercase; } td { border-bottom: 1px solid #e2e8f0; font-size: 13px; padding: 11px 8px; vertical-align: top; } .right { text-align: right; }
         .summary { justify-content: flex-end; margin-top: 22px; } .summary-table { width: 260px; } .summary-row { display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; font-size: 13px; padding: 7px 0; } .summary-row.total { border-bottom: 0; color: #312e81; font-size: 17px; font-weight: 700; padding-top: 12px; }
         .notes { border-top: 1px solid #e2e8f0; color: #475569; font-size: 12px; line-height: 1.55; margin-top: 44px; padding-top: 14px; }
+        .watermark { color: #dc2626; font-size: 42px; font-weight: 800; left: 50%; opacity: .16; position: fixed; top: 48%; transform: translate(-50%, -50%) rotate(-28deg); white-space: nowrap; z-index: 2; }
+        thead { display: table-header-group; } tr { break-inside: avoid; } .page-number:after { content: counter(page); }
+        .footer { color: #64748b; font-size: 11px; margin-top: 28px; text-align: right; }
+        .legacy-note { background: #fef3c7; border: 1px solid #f59e0b; color: #78350f; font-size: 11px; margin: 14px 0; padding: 8px 10px; }
         @@media print { body { background: #fff; } .toolbar { display: none; } .invoice { box-shadow: none; margin: 0; } @@page { margin: 0; size: A4; } }
     </style>
 </head>
 <body>
     <div class="toolbar"><button type="button" onclick="window.print()">Yazdır</button></div>
+    @if (Model.Document.Status == DocumentStatus.Cancelled) { <div class="watermark">İPTAL EDİLMİŞTİR</div> }
     <main class="invoice">
+        @if (Model.UsesLegacyFinalizedFallback) { <div class="legacy-note">Bu eski onaylı belge için kalıcı yazdırma snapshot’ı bulunmuyor; geçici olarak güncel firma, cari ve ürün bilgileri kullanılıyor.</div> }
         <header class="header">
             <section class="brand">
                 <h1 class="company-name">@(string.IsNullOrWhiteSpace(Model.Company.CompanyName) ? "NoxStock" : Model.Company.CompanyName)</h1>
@@ -52,6 +59,8 @@ Vergi Dairesi: @Model.Company.TaxOffice | Vergi No: @Model.Company.TaxNumber</di
             <div class="party">
                 <div class="section-label">@Model.GetPartnerLabel()</div>
                 <div class="party-name">@Model.Document.BusinessPartnerName</div>
+                @if (Model.UsesImmutableSnapshot) { <div class="muted">@Model.Document.BusinessPartnerAddressSnapshot
+Vergi Dairesi: @Model.Document.BusinessPartnerTaxOfficeSnapshot | Vergi No: @Model.Document.BusinessPartnerTaxNumberSnapshot</div> }
             </div>
             <div class="party">
                 <div class="section-label">Para Birimi</div>
@@ -64,12 +73,13 @@ Vergi Dairesi: @Model.Company.TaxOffice | Vergi No: @Model.Company.TaxNumber</di
             <tbody>
             @foreach (var item in Model.Document.Items)
             {
-                <tr><td>@item.ProductName</td><td class="right">@item.Quantity.ToString("N2")</td><td class="right">@item.UnitPrice.ToString("N2") @Model.Document.Currency</td><td class="right">%@item.DiscountRate.ToString("N2")</td><td class="right">%@item.VatRate.ToString("N2")</td><td class="right">@item.Total.ToString("N2") @Model.Document.Currency</td></tr>
+                <tr><td>@item.ProductName@if (Model.UsesImmutableSnapshot && !string.IsNullOrWhiteSpace(item.ProductSkuSnapshot)) { <div class="muted">@item.ProductSkuSnapshot@if (!string.IsNullOrWhiteSpace(item.ProductUnitSnapshot)) { <text> · @item.ProductUnitSnapshot</text> }</div> }</td><td class="right">@item.Quantity.ToString("N2")</td><td class="right">@item.UnitPrice.ToString("N2") @Model.Document.Currency</td><td class="right">%@item.DiscountRate.ToString("N2")</td><td class="right">%@item.VatRate.ToString("N2")</td><td class="right">@item.Total.ToString("N2") @Model.Document.Currency</td></tr>
             }
             </tbody>
         </table>
-        <section class="summary"><div class="summary-table"><div class="summary-row"><span>Ara Toplam</span><strong>@Model.Document.Subtotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row"><span>İskonto</span><strong>@Model.Document.DiscountTotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row"><span>KDV</span><strong>@Model.Document.VatTotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row total"><span>Genel Toplam</span><span>@Model.Document.GrandTotal.ToString("N2") @Model.Document.Currency</span></div></div></section>
+        <section class="summary"><div class="summary-table"><div class="summary-row"><span>Ara Toplam</span><strong>@Model.Document.Subtotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row"><span>İskonto</span><strong>@Model.Document.DiscountTotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row"><span>KDV</span><strong>@Model.Document.VatTotal.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row"><span>Ödenen</span><strong>@Model.Document.PaidAmount.ToString("N2") @Model.Document.Currency</strong></div><div class="summary-row"><span>Kalan</span><strong>@((Model.Document.GrandTotal - Model.Document.PaidAmount).ToString("N2")) @Model.Document.Currency</strong></div><div class="summary-row total"><span>Genel Toplam</span><span>@Model.Document.GrandTotal.ToString("N2") @Model.Document.Currency</span></div></div></section>
         @if (!string.IsNullOrWhiteSpace(Model.Document.Description)) { <section class="notes"><strong>Açıklama</strong><br />@Model.Document.Description</section> }
+        <div class="footer">Sayfa <span class="page-number"></span></div>
     </main>
 </body>
 </html>

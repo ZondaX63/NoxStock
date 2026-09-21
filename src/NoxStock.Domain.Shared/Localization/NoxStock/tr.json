@@ -3,6 +3,8 @@
   "texts": {
     "AppName": "NoxStock",
     "NoxStock:CreditLimitExceeded": "{PartnerName} için tanımlı limit aşılır. Limit: {CreditLimit}; işlem sonrası açık bakiye: {ProjectedExposure}.",
+    "NoxStock:InsufficientStock": "Yetersiz stok. {InsufficientProducts}",
+    "NoxStock:StockChanged": "Stok veya belge başka bir işlem tarafından değiştirildi. Güncel durumu kontrol edip işlemi yeniden deneyin.",
     "NoxStock:AccountOpeningAmountMustBePositive": "Açılış bakiyesi sıfırdan büyük olmalıdır.",
     "NoxStock:AccountOpeningInactiveAccount": "Açılış bakiyesi yalnız aktif hesaplara girilebilir.",
     "NoxStock:AccountOpeningAlreadyExists": "Bu hesap için aktif bir açılış bakiyesi zaten kaydedilmiş.",
@@ -543,6 +545,19 @@
     "NoxStock:SaleBelowInventoryCost": "{ProductName} için net satış fiyatı ({NetSalePrice} TL), güncel stok maliyetinin ({InventoryCost} TL) altındadır.",
     "NoxStock:ProductCostUnavailable": "Ürünün fiyatlandırmada kullanılabilecek bir maliyet bilgisi yok.",
     "NoxStock:ManualSalePriceUnavailable": "Manuel fiyatlı ürün için KDV hariç aktif satış fiyatı girilmelidir.",
-    "NoxStock:ExistingInventoryCostUnavailable": "{ProductName} ürününün mevcut stoğu için güvenilir maliyet bulunamadığından ağırlıklı ortalama hesaplanamadı."
+    "NoxStock:ExistingInventoryCostUnavailable": "{ProductName} ürününün mevcut stoğu için güvenilir maliyet bulunamadığından ağırlıklı ortalama hesaplanamadı.",
+    "NoxStock:CommandInProgress": "Bu istek hâlâ işleniyor. Kısa süre sonra aynı işlem anahtarıyla tekrar deneyin.",
+    "NoxStock:CommandFailed": "Bu işlem anahtarıyla yapılan önceki istek tamamlanmadı. Sorunu düzelttikten sonra yeni bir işlem anahtarıyla deneyin.",
+    "NoxStock:OperationKeyAlreadyUsed": "Bu işlem anahtarı başka bir belge için zaten kullanıldı.",
+    "NoxStock:CommandExpired": "Bu istek tamamlanmadan zaman aşımına uğradı. Yeniden denemek için yeni bir işlem başlatın.",
+    "NoxStock:PaymentAllocationRequired": "Dağıtım için en az bir fatura seçin.",
+    "NoxStock:PaymentAllocationAmountMustBePositive": "Dağıtım tutarı sıfırdan büyük olmalıdır.",
+    "NoxStock:PaymentAllocationExceedsSourceAmount": "Dağıtım, kullanılabilir ödeme tutarını aşıyor.",
+    "NoxStock:PaymentAllocationExceedsDocumentBalance": "Dağıtım, fatura kalan bakiyesini aşıyor.",
+    "NoxStock:DuplicatePaymentAllocation": "Bu ödeme zaten faturaya dağıtılmış.",
+    "NoxStock:PaymentAllocationCurrencyMismatch": "Ödeme ve fatura para birimleri aynı olmalıdır.",
+    "NoxStock:PaymentAllocationBusinessPartnerMismatch": "Ödeme ve fatura aynı cariye ait olmalıdır.",
+    "NoxStock:PaymentAllocationSourceNotActive": "İptal edilmiş ödeme dağıtılamaz.",
+    "NoxStock:DocumentDoesNotAcceptAllocation": "Bu fatura ödeme dağıtımı kabul edemez."
   }
 }
