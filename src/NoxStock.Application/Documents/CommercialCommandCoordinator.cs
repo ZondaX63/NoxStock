@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Uow;
 
@@ -32,17 +33,18 @@ public class CommercialCommandCoordinator : ITransientDependency
         Guid? documentId,
         Func<Task<T>> execute,
         Func<Guid, Task<T>> replay,
-        Func<T, Guid>? resultDocumentId = null)
+        Func<T, Guid>? resultDocumentId = null,
+        string? payloadFingerprint = null)
     {
         if (operationKey is null)
         {
             return await ExecuteInTransactionAsync(execute);
         }
 
-        var reservation = await ReserveOrReadAsync(tenantId, type, operationKey, documentId);
+        var reservation = await ReserveOrReadAsync(tenantId, type, operationKey, documentId, payloadFingerprint);
         if (!reservation.Reserved)
         {
-            return await ResolveReplayAsync(reservation.Command, documentId, replay);
+            return await ResolveReplayAsync(reservation.Command, documentId, replay, payloadFingerprint);
         }
 
         try
@@ -51,7 +53,7 @@ public class CommercialCommandCoordinator : ITransientDependency
             var command = await _commandRepository.GetAsync(reservation.Command.Id);
             if (command.Status != CommercialCommandStatus.Processing)
             {
-                return await ResolveReplayAsync(command, documentId, replay);
+                return await ResolveReplayAsync(command, documentId, replay, payloadFingerprint);
             }
             command.ExecutionToken = Guid.NewGuid();
             command.LeaseExpiresAt = DateTime.UtcNow.Add(LeaseDuration);
@@ -84,7 +86,7 @@ public class CommercialCommandCoordinator : ITransientDependency
     }
 
     private async Task<(bool Reserved, CommercialCommand Command)> ReserveOrReadAsync(
-        Guid? tenantId, CommercialCommandType type, string operationKey, Guid? documentId)
+        Guid? tenantId, CommercialCommandType type, string operationKey, Guid? documentId, string? payloadFingerprint)
     {
         try
         {
@@ -93,6 +95,7 @@ public class CommercialCommandCoordinator : ITransientDependency
                 x.Type == type && x.OperationKey == operationKey);
             if (existing is not null)
             {
+                EnsurePayloadMatches(existing, payloadFingerprint);
                 await uow.CompleteAsync();
                 return (false, existing);
             }
@@ -101,6 +104,7 @@ public class CommercialCommandCoordinator : ITransientDependency
             {
                 DocumentId = documentId
             };
+            if (payloadFingerprint is not null) command.SetProperty("PayloadFingerprint", payloadFingerprint);
             await _commandRepository.InsertAsync(command);
             await uow.CompleteAsync();
             return (true, command);
@@ -116,8 +120,9 @@ public class CommercialCommandCoordinator : ITransientDependency
     }
 
     private async Task<T> ResolveReplayAsync<T>(
-        CommercialCommand command, Guid? expectedDocumentId, Func<Guid, Task<T>> replay)
+        CommercialCommand command, Guid? expectedDocumentId, Func<Guid, Task<T>> replay, string? payloadFingerprint)
     {
+        EnsurePayloadMatches(command, payloadFingerprint);
         if (expectedDocumentId.HasValue && command.DocumentId.HasValue && command.DocumentId != expectedDocumentId)
         {
             throw new BusinessException("NoxStock:OperationKeyAlreadyUsed");
@@ -150,6 +155,13 @@ public class CommercialCommandCoordinator : ITransientDependency
         }
 
         throw new BusinessException("NoxStock:CommandInProgress");
+    }
+
+    private static void EnsurePayloadMatches(CommercialCommand command, string? payloadFingerprint)
+    {
+        if (payloadFingerprint is not null &&
+            !string.Equals(command.GetProperty<string>("PayloadFingerprint"), payloadFingerprint, StringComparison.Ordinal))
+            throw new BusinessException("NoxStock:OperationKeyAlreadyUsed");
     }
 
     private async Task<CommercialCommand?> GetCommandAsync(CommercialCommandType type, string operationKey)

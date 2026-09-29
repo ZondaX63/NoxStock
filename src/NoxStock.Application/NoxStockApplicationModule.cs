@@ -11,6 +11,10 @@ using Volo.Abp.TenantManagement;
 using Volo.Abp.Application.Services;
 using Volo.Abp.DependencyInjection;
 using NoxStock.Licensing;
+using Microsoft.AspNetCore.DataProtection;
+using System.IO;
+using NoxStock.TenantBackups;
+using Volo.Abp.BackgroundWorkers;
 
 namespace NoxStock;
 
@@ -23,11 +27,27 @@ namespace NoxStock;
     typeof(AbpAccountApplicationModule),
     typeof(AbpTenantManagementApplicationModule),
     typeof(AbpSettingManagementApplicationModule)
+    ,typeof(AbpBackgroundWorkersModule)
     )]
 public class NoxStockApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        var dataProtection = context.Services.AddDataProtection().SetApplicationName("NoxStock");
+        var keyRingPath = context.Services.GetConfiguration()["DataProtection:KeyRingPath"];
+        if (!string.IsNullOrWhiteSpace(keyRingPath))
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
+        }
+        context.Services.AddTransient<ITenantBackupStorage, TenantBackupBlobStorage>();
+        context.Services.AddTransient<IBackupEncryptionService, AesGcmBackupEncryptionService>();
+        context.Services.AddTransient<ITenantBackupContributor, TenantSettingsBackupContributor>();
+        context.Services.AddTransient<ITenantBackupContributor, CatalogBackupContributor>();
+        context.Services.AddTransient<ITenantBackupContributor, PartiesBackupContributor>();
+        context.Services.AddTransient<ITenantBackupContributor, DocumentsBackupContributor>();
+        context.Services.AddTransient<ITenantBackupContributor, InventoryBackupContributor>();
+        context.Services.AddTransient<ITenantBackupContributor, FinanceBackupContributor>();
+        context.Services.AddTransient<ITenantBackupContributor, CommandsBackupContributor>();
         context.Services.OnRegistered(registrationContext =>
         {
             if (typeof(IApplicationService).IsAssignableFrom(registrationContext.ImplementationType))

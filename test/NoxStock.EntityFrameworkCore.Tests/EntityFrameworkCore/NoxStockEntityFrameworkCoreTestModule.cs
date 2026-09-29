@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Volo.Abp;
 using Volo.Abp.EntityFrameworkCore;
@@ -32,6 +34,7 @@ public class NoxStockEntityFrameworkCoreTestModule : AbpModule
 
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        context.Services.AddSingleton<IHostEnvironment>(new TenantBackupTestHostEnvironment());
         Configure<FeatureManagementOptions>(options =>
         {
             options.SaveStaticFeaturesToDatabase = false;
@@ -82,6 +85,14 @@ public class NoxStockEntityFrameworkCoreTestModule : AbpModule
         }
 
         return connection;
+    }
+
+    private sealed class TenantBackupTestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+        public string ApplicationName { get; set; } = "NoxStock.EntityFrameworkCore.Tests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 
     private static void ConfigurePostgreSql(IServiceCollection services, string connectionString)

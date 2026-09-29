@@ -60,6 +60,13 @@ public static class ProductionSecurityConfigurationValidator
         RequireSecret(configuration["AuthServer:CertificatePassPhrase"], "AuthServer:CertificatePassPhrase");
         RequireSecret(configuration["StringEncryption:DefaultPassPhrase"], "StringEncryption:DefaultPassPhrase");
 
+        var dataProtectionKeyRing = configuration["DataProtection:KeyRingPath"];
+        if (string.IsNullOrWhiteSpace(dataProtectionKeyRing) || !Directory.Exists(dataProtectionKeyRing))
+        {
+            throw new InvalidOperationException(
+                "DataProtection:KeyRingPath must reference a shared, persistent and accessible key ring in Production.");
+        }
+
         var certificatePath = Path.Combine(environment.ContentRootPath, "openiddict.pfx");
         if (!File.Exists(certificatePath))
         {

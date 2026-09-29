@@ -43,14 +43,15 @@ public class PaymentAllocationManager : ITransientDependency
         _clock = clock;
     }
 
-    public async Task<PaymentAllocation> CreateAsync(AccountTransaction transaction, Document document, decimal amount, DateTime allocationDate)
+    public async Task<PaymentAllocation> CreateAsync(AccountTransaction transaction, Document document, decimal amount, DateTime allocationDate, string? operationKey = null)
     {
-        return (await CreateBatchAsync(transaction.Id, [new PaymentAllocationLine(document.Id, amount, allocationDate)])).Single();
+        return (await CreateBatchAsync(transaction.Id, [new PaymentAllocationLine(document.Id, amount, allocationDate)], operationKey)).Single();
     }
 
     // Source transaction is locked before documents, which are locked by sorted ID.
     // PostgreSQL retains these locks until the ambient commercial UoW completes.
-    public async Task<List<PaymentAllocation>> CreateBatchAsync(Guid accountTransactionId, IReadOnlyCollection<PaymentAllocationLine> lines)
+    public async Task<List<PaymentAllocation>> CreateBatchAsync(Guid accountTransactionId, IReadOnlyCollection<PaymentAllocationLine> lines,
+        string? operationKey = null)
     {
         var tenantId = _currentTenant.RequireTenantId();
         if (lines.Count == 0)
@@ -61,6 +62,11 @@ public class PaymentAllocationManager : ITransientDependency
             throw new BusinessException("NoxStock:DuplicatePaymentAllocation");
 
         await _locks.LockAsync(tenantId, [accountTransactionId], lines.Select(x => x.DocumentId).ToArray());
+        if (!string.IsNullOrWhiteSpace(operationKey))
+        {
+            var replay = await _allocations.GetListAsync(x => x.AccountTransactionId == accountTransactionId && x.OperationKey == operationKey);
+            if (replay.Count > 0) return replay.OrderBy(x => x.DocumentId).ToList();
+        }
         var transaction = await _transactions.GetAsync(accountTransactionId);
         var documentIds = lines.Select(x => x.DocumentId).ToArray();
         var documents = await _documents.GetListAsync(x => documentIds.Contains(x.Id));
@@ -95,6 +101,7 @@ public class PaymentAllocationManager : ITransientDependency
             var allocation = new PaymentAllocation(_guids.Create(), tenantId, transaction.Id, document.Id,
                 document.BusinessPartnerId, line.Amount, document.Currency.ToUpperInvariant(),
                 line.AllocationDate == default ? _clock.Now : line.AllocationDate);
+            allocation.OperationKey = operationKey;
             await _allocations.InsertAsync(allocation);
             document.SetPaidAmountFromAllocations(paid);
             await _documents.UpdateAsync(document);
@@ -143,7 +150,9 @@ public class PaymentAllocationManager : ITransientDependency
         allocation.Status = PaymentAllocationStatus.Reversed;
         allocation.ReversedAt = _clock.Now;
         allocation.ReversedBy = userId;
-        await _allocations.UpdateAsync(allocation);
+        // RecalculateAsync queries active rows in this same transaction. Flush the
+        // state transition first so the just-reversed row cannot be counted again.
+        await _allocations.UpdateAsync(allocation, autoSave: true);
     }
 
     private static void Validate(AccountTransaction transaction, Document document)

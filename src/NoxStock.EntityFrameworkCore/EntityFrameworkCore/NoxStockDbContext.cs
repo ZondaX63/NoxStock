@@ -11,6 +11,7 @@ using NoxStock.StockMovements;
 using NoxStock.ExchangeRates;
 using NoxStock.Licensing;
 using NoxStock.InventoryCounts;
+using NoxStock.TenantBackups;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -59,6 +60,8 @@ public class NoxStockDbContext :
     public DbSet<StockMovement> StockMovements { get; set; }
     public DbSet<InventoryCount> InventoryCounts { get; set; }
     public DbSet<InventoryCountItem> InventoryCountItems { get; set; }
+    public DbSet<TenantBackup> TenantBackups { get; set; }
+    public DbSet<TenantCloneOperation> TenantCloneOperations { get; set; }
     public DbSet<LicensePlan> LicensePlans { get; set; }
     public DbSet<TenantLicense> TenantLicenses { get; set; }
     public DbSet<TenantLicenseFeature> TenantLicenseFeatures { get; set; }
@@ -371,6 +374,7 @@ public class NoxStockDbContext :
             b.ConfigureByConvention();
             b.Property(x => x.Amount).HasColumnType("decimal(18,4)");
             b.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            b.Property(x => x.OperationKey).HasMaxLength(100);
             b.Property(x => x.Status).HasDefaultValue(PaymentAllocationStatus.Active);
             b.HasCheckConstraint("CK_AppPaymentAllocations_Amount_Positive", "\"Amount\" > 0");
             b.HasOne<AccountTransaction>().WithMany().HasForeignKey(x => x.AccountTransactionId)
@@ -484,6 +488,39 @@ public class NoxStockDbContext :
                 .IsRequired();
             b.HasIndex(x => new { x.TenantId, x.InventoryCountId, x.ProductId })
                 .IsUnique();
+        });
+
+        builder.Entity<TenantBackup>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "TenantBackups", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.ChecksumSha256).HasMaxLength(64);
+            b.Property(x => x.StorageName).HasMaxLength(256);
+            b.Property(x => x.FailureCode).HasMaxLength(128);
+            b.Property(x => x.RequestedAtUtc).HasColumnType("timestamp with time zone");
+            b.Property(x => x.CompletedAtUtc).HasColumnType("timestamp with time zone");
+            b.Property(x => x.ExpiresAtUtc).HasColumnType("timestamp with time zone");
+            b.HasIndex(x => new { x.TenantId, x.RequestedAtUtc });
+            b.HasIndex(x => new { x.Status, x.ExpiresAtUtc });
+        });
+
+        builder.Entity<TenantCloneOperation>(b =>
+        {
+            b.ToTable(NoxStockConsts.DbTablePrefix + "TenantCloneOperations", NoxStockConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.TargetTenantName).IsRequired().HasMaxLength(64);
+            b.Property(x => x.TargetTenantCode).IsRequired().HasMaxLength(64);
+            b.Property(x => x.OperationKey).HasMaxLength(128);
+            b.Property(x => x.FailureCode).HasMaxLength(128);
+            b.Property(x => x.ProtectedPackagePassword).IsRequired().HasMaxLength(2048);
+            b.Property(x => x.ProtectedAdminPassword).IsRequired().HasMaxLength(2048);
+            b.Property(x => x.AdminEmailAddress).IsRequired().HasMaxLength(256);
+            b.Property(x => x.RequestedAtUtc).HasColumnType("timestamp with time zone");
+            b.Property(x => x.CompletedAtUtc).HasColumnType("timestamp with time zone");
+            b.HasIndex(x => x.OperationKey).IsUnique().HasFilter("\"OperationKey\" IS NOT NULL AND \"IsDeleted\" = FALSE");
+            b.HasIndex(x => new { x.SourceBackupId, x.TargetTenantCode, x.TargetTenantName }).IsUnique()
+                .HasFilter("\"Status\" IN (1, 2, 3, 4, 5, 6) AND \"IsDeleted\" = FALSE");
+            b.HasIndex(x => new { x.Status, x.RequestedAtUtc });
         });
 
         builder.Entity<LicensePlan>(b =>

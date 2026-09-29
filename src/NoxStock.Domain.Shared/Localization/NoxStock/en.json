@@ -148,6 +148,11 @@
     "Permission:Personnel": "Personnel Management",
     "Permission:Personnel.ManagePermissions": "Managing personnel permissions",
     "Permission:PrintLabels": "Printing barcode/QR labels",
+    "Permission:TenantBackups": "Tenant backups",
+    "Permission:TenantBackups.Create": "Creating backups",
+    "Permission:TenantBackups.Download": "Downloading backups",
+    "Permission:TenantBackups.Delete": "Deleting backups",
+    "Permission:TenantBackups.Restore": "Backup restore and new-tenant clone",
     "Permission:ExchangeRates.Refresh": "Refreshing global exchange rates",
     "Topbar:User": "User",
     "Topbar:CompanyAccount": "Company account",
@@ -522,6 +527,12 @@
     "NoxStock:PaymentAllocationCurrencyMismatch": "Payment and invoice currencies must match.",
     "NoxStock:PaymentAllocationBusinessPartnerMismatch": "Payment and invoice must belong to the same business partner.",
     "NoxStock:PaymentAllocationSourceNotActive": "A cancelled payment cannot be allocated.",
-    "NoxStock:DocumentDoesNotAcceptAllocation": "This invoice cannot accept a payment allocation."
+    "NoxStock:DocumentDoesNotAcceptAllocation": "This invoice cannot accept a payment allocation.",
+    "NoxStock:BackupPackageTooLarge": "The encrypted backup package exceeds the supported size limit.",
+    "NoxStock:BackupCloneInputInvalid": "Enter a valid clone request and operation key.",
+    "NoxStock:BackupCloneSourceUnavailable": "The selected backup is unavailable, expired, or has been deleted.",
+    "NoxStock:BackupCloneAlreadyRequested": "A clone request for this operation is already active.",
+    "NoxStock:BackupCloneCannotCancel": "Only a queued clone request can be cancelled.",
+    "NoxStock:BackupCloneFailed": "The clone could not be completed. Start a new clone request."
   }
 }

@@ -13,6 +13,7 @@ public class PaymentAllocation : FullAuditedEntity<Guid>, IMultiTenant
     public decimal Amount { get; set; }
     public string Currency { get; set; } = "TRY";
     public DateTime AllocationDate { get; set; }
+    public string? OperationKey { get; set; }
     public PaymentAllocationStatus Status { get; set; } = PaymentAllocationStatus.Active;
     public DateTime? ReversedAt { get; set; }
     public Guid? ReversedBy { get; set; }

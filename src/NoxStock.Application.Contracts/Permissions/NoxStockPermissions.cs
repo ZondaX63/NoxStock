@@ -147,6 +147,15 @@ public static class NoxStockPermissions
         public const string Default = GroupName + ".PrintLabels";
     }
 
+    public static class TenantBackups
+    {
+        public const string Default = GroupName + ".TenantBackups";
+        public const string Create = Default + ".Create";
+        public const string Download = Default + ".Download";
+        public const string Delete = Default + ".Delete";
+        public const string Restore = Default + ".Restore";
+    }
+
     public static class ExchangeRates
     {
         public const string Refresh = GroupName + ".ExchangeRates.Refresh";

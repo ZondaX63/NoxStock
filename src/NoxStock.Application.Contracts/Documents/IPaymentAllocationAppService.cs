@@ -9,6 +9,6 @@ public interface IPaymentAllocationAppService : IApplicationService
 {
     Task<PaymentAllocationDto> CreateAsync(CreatePaymentAllocationDto input);
     Task<List<PaymentAllocationDto>> CreateBatchAsync(CreatePaymentAllocationBatchDto input);
-    Task ReverseAsync(Guid id);
+    Task ReverseAsync(Guid id, ReversePaymentAllocationDto input);
     Task<List<PaymentAllocationDto>> GetForDocumentAsync(Guid documentId);
 }

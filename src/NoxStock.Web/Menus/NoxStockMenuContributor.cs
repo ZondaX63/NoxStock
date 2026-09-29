@@ -154,6 +154,12 @@ public class NoxStockMenuContributor : IMenuContributor
                     l["Menu:Settings"],
                     url: "/Settings"
                 ).RequirePermissions(NoxStockPermissions.Settings.Default)
+            ).AddItem(
+                new ApplicationMenuItem(
+                    "Management.TenantBackups",
+                    "Yedekler",
+                    url: "/TenantBackups"
+                ).RequirePermissions(NoxStockPermissions.TenantBackups.Default)
             )
         );
         }

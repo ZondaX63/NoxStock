@@ -56,6 +56,8 @@ using NoxStock.Web.Diagnostics;
 using NoxStock.Web.MultiTenancy;
 using Volo.Abp.Auditing;
 using NoxStock.Web.Licensing;
+using NoxStock.TenantBackups;
+using Volo.Abp.BackgroundWorkers;
 
 namespace NoxStock.Web;
 
@@ -119,6 +121,7 @@ public class NoxStockWebModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.AddHostedService<LicenseLifecycleBackgroundService>();
+        context.Services.AddTransient<TenantBackupCleanupWorker>();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
         var configuration = context.Services.GetConfiguration();
 
@@ -407,6 +410,8 @@ public class NoxStockWebModule : AbpModule
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
     {
+        context.ServiceProvider.GetRequiredService<IBackgroundWorkerManager>()
+            .AddAsync(context.ServiceProvider.GetRequiredService<TenantBackupCleanupWorker>()).GetAwaiter().GetResult();
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
 

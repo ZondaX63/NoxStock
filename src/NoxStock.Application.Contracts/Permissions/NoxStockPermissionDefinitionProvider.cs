@@ -85,6 +85,14 @@ public class NoxStockPermissionDefinitionProvider : PermissionDefinitionProvider
         AddTenantChild(personnelPermission, NoxStockPermissions.Personnel.ManagePermissions, L("Permission:Personnel.ManagePermissions"));
 
         AddTenantPermission(myGroup, NoxStockPermissions.PrintLabels.Default, L("Permission:PrintLabels"));
+        var backupsPermission = myGroup.AddPermission(
+            NoxStockPermissions.TenantBackups.Default,
+            L("Permission:TenantBackups"),
+            multiTenancySide: MultiTenancySides.Both);
+        backupsPermission.AddChild(NoxStockPermissions.TenantBackups.Create, L("Permission:TenantBackups.Create"), multiTenancySide: MultiTenancySides.Tenant);
+        backupsPermission.AddChild(NoxStockPermissions.TenantBackups.Download, L("Permission:TenantBackups.Download"), multiTenancySide: MultiTenancySides.Both);
+        backupsPermission.AddChild(NoxStockPermissions.TenantBackups.Delete, L("Permission:TenantBackups.Delete"), multiTenancySide: MultiTenancySides.Both);
+        backupsPermission.AddChild(NoxStockPermissions.TenantBackups.Restore, L("Permission:TenantBackups.Restore"), multiTenancySide: MultiTenancySides.Host);
         myGroup.AddPermission(
             NoxStockPermissions.ExchangeRates.Refresh,
             L("Permission:ExchangeRates.Refresh"),

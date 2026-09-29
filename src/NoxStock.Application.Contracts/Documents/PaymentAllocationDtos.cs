@@ -17,6 +17,9 @@ public class CreatePaymentAllocationDto
     public decimal Amount { get; set; }
 
     public DateTime AllocationDate { get; set; }
+
+    [StringLength(100)]
+    public string? OperationKey { get; set; }
 }
 
 public class CreatePaymentAllocationBatchDto
@@ -27,6 +30,15 @@ public class CreatePaymentAllocationBatchDto
     [Required]
     [MinLength(1)]
     public List<CreatePaymentAllocationLineDto> Allocations { get; set; } = [];
+
+    [StringLength(100)]
+    public string? OperationKey { get; set; }
+}
+
+public class ReversePaymentAllocationDto
+{
+    [StringLength(100)]
+    public string? OperationKey { get; set; }
 }
 
 public class CreatePaymentAllocationLineDto
@@ -50,4 +62,5 @@ public class PaymentAllocationDto : FullAuditedEntityDto<Guid>
     public DateTime AllocationDate { get; set; }
     public PaymentAllocationStatus Status { get; set; }
     public DateTime? ReversedAt { get; set; }
+    public string? OperationKey { get; set; }
 }

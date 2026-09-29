@@ -137,6 +137,11 @@
     "Permission:Personnel": "Personel yönetimi",
     "Permission:Personnel.ManagePermissions": "Personel yetkilerini yönetme",
     "Permission:PrintLabels": "Barkod/QR etiket yazdırma",
+    "Permission:TenantBackups": "Tenant yedekleri",
+    "Permission:TenantBackups.Create": "Yedek oluşturma",
+    "Permission:TenantBackups.Download": "Yedek indirme",
+    "Permission:TenantBackups.Delete": "Yedek silme",
+    "Permission:TenantBackups.Restore": "Yedek geri yükleme ve yeni tenant clone",
     "Permission:ExchangeRates.Refresh": "Global döviz kurlarını yenileme",
     "Menu:Dashboard": "Genel görünüm",
     "Menu:HomePage": "ana sayfa",
@@ -558,6 +563,12 @@
     "NoxStock:PaymentAllocationCurrencyMismatch": "Ödeme ve fatura para birimleri aynı olmalıdır.",
     "NoxStock:PaymentAllocationBusinessPartnerMismatch": "Ödeme ve fatura aynı cariye ait olmalıdır.",
     "NoxStock:PaymentAllocationSourceNotActive": "İptal edilmiş ödeme dağıtılamaz.",
-    "NoxStock:DocumentDoesNotAcceptAllocation": "Bu fatura ödeme dağıtımı kabul edemez."
+    "NoxStock:DocumentDoesNotAcceptAllocation": "Bu fatura ödeme dağıtımı kabul edemez.",
+    "NoxStock:BackupPackageTooLarge": "Şifrelenmiş yedek paketi desteklenen boyut sınırını aşıyor.",
+    "NoxStock:BackupCloneInputInvalid": "Geçerli bir clone isteği ve işlem anahtarı girin.",
+    "NoxStock:BackupCloneSourceUnavailable": "Seçili yedek kullanılamıyor, süresi dolmuş veya silinmiş.",
+    "NoxStock:BackupCloneAlreadyRequested": "Bu işlem için zaten etkin bir clone isteği var.",
+    "NoxStock:BackupCloneCannotCancel": "Yalnız kuyruktaki clone isteği iptal edilebilir.",
+    "NoxStock:BackupCloneFailed": "Clone tamamlanamadı. Yeni bir clone isteği başlatın."
   }
 }
