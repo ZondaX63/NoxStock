@@ -264,18 +264,23 @@ public class ReportingAppService : ApplicationService, IReportingAppService
             select new VatAggregateRow
             {
                 VatRate = vatGroup.Key,
-                SalesVat = vatGroup
+                // PostgreSQL preserves the combined scale of every factor here
+                // (often 30 decimal places). Npgsql cannot materialize that
+                // numeric result as System.Decimal even when its magnitude is
+                // modest. Round in SQL before the value crosses the provider
+                // boundary; reports are displayed as TRY money amounts.
+                SalesVat = Math.Round(vatGroup
                     .Where(row => row.document.Type == DocumentType.SaleInvoice || row.document.Type == DocumentType.PosSale)
                     .Sum(row =>
                         row.item.Quantity * row.item.UnitPrice *
                         (1m - row.item.DiscountRate / 100m) * row.item.VatRate / 100m *
-                        (row.document.Currency == "TRY" || row.document.ExchangeRate <= 0 ? 1m : row.document.ExchangeRate)),
-                PurchaseVat = vatGroup
+                        (row.document.Currency == "TRY" || row.document.ExchangeRate <= 0 ? 1m : row.document.ExchangeRate)), 2),
+                PurchaseVat = Math.Round(vatGroup
                     .Where(row => row.document.Type == DocumentType.PurchaseInvoice)
                     .Sum(row =>
                         row.item.Quantity * row.item.UnitPrice *
                         (1m - row.item.DiscountRate / 100m) * row.item.VatRate / 100m *
-                        (row.document.Currency == "TRY" || row.document.ExchangeRate <= 0 ? 1m : row.document.ExchangeRate))
+                        (row.document.Currency == "TRY" || row.document.ExchangeRate <= 0 ? 1m : row.document.ExchangeRate)), 2)
             });
         var vatRows = vatAggregates.Select(row => new VatReportItemDto
         {

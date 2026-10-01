@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoxStock.Permissions;
+using NoxStock.Settings;
 using NoxStock.TenantBackups;
+using Volo.Abp;
+using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.MultiTenancy;
 
 namespace NoxStock.Web.Pages.TenantBackups;
@@ -16,6 +19,8 @@ public class IndexModel : NoxStockPageModel
 {
     private readonly ICurrentTenant _currentTenant;
     private readonly ITenantRestoreAppService _restore;
+    private readonly ITenantOperationalDataResetAppService _resetService;
+    private readonly IPermissionChecker _permissionChecker;
 
     public bool IsHost { get; private set; }
     [BindProperty] public Guid SourceBackupId { get; set; }
@@ -25,22 +30,44 @@ public class IndexModel : NoxStockPageModel
     [BindProperty] public string AdminEmailAddress { get; set; } = string.Empty;
     [BindProperty] public string AdminPassword { get; set; } = string.Empty;
     [BindProperty] public string OperationKey { get; set; } = Guid.NewGuid().ToString("N");
+    [BindProperty] public TenantOperationalDataResetInputDto ResetInput { get; set; } = new();
+    public bool CanResetOperationalData { get; private set; }
     public TenantBackupRestorePreviewDto? Preview { get; private set; }
     public TenantCloneOperationDto? CloneOperation { get; private set; }
     public IReadOnlyList<TenantBackupDto> CloneSources { get; private set; } = [];
 
-    public IndexModel(ICurrentTenant currentTenant, ITenantRestoreAppService restore)
+    public IndexModel(ICurrentTenant currentTenant, ITenantRestoreAppService restore,
+        ITenantOperationalDataResetAppService resetService, IPermissionChecker permissionChecker)
     {
         _currentTenant = currentTenant;
         _restore = restore;
+        _resetService = resetService;
+        _permissionChecker = permissionChecker;
     }
 
     public async Task OnGetAsync(Guid? operationId = null)
     {
         IsHost = !_currentTenant.Id.HasValue;
+        CanResetOperationalData = !IsHost && await _permissionChecker.IsGrantedAsync(NoxStockPermissions.Settings.Edit);
         if (!IsHost) return;
         CloneSources = await _restore.GetCloneSourcesAsync();
         if (operationId.HasValue) CloneOperation = await _restore.GetCloneOperationAsync(operationId.Value);
+    }
+
+    public async Task<IActionResult> OnPostResetDataAsync()
+    {
+        try
+        {
+            var result = await _resetService.ResetAsync(ResetInput);
+            TempData["TenantDataResetSummary"] =
+                $"{result.TotalCount} operasyon kaydı temizlendi. Ürün: {result.ProductCount}, belge: {result.DocumentCount}, cari: {result.BusinessPartnerCount}, hesap: {result.AccountCount}.";
+        }
+        catch (BusinessException exception)
+        {
+            TempData["TenantDataResetError"] = exception.Message;
+        }
+
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostCloneAsync()

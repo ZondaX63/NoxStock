@@ -5,152 +5,88 @@
 @model NoxStock.Web.Pages.Settings.IndexModel
 @{
     Layout = "_AppLayout";
-    ViewData["Title"] = "Firma Ayarları";
+    ViewData["Title"] = "Ayarlar";
     var license = Model.License;
     string StatusText(LicenseStatus? status) => status switch
     {
-        LicenseStatus.Trial => "Deneme",
-        LicenseStatus.Active => "Aktif",
-        LicenseStatus.GracePeriod => "Ek süre",
-        LicenseStatus.PastDue => "Ödeme bekliyor",
-        LicenseStatus.Suspended => "Askıya alındı",
-        LicenseStatus.Expired => "Süresi doldu",
-        LicenseStatus.Cancelled => "İptal edildi",
-        _ => "Lisans bulunamadı"
+        LicenseStatus.Trial => "Deneme", LicenseStatus.Active => "Aktif", LicenseStatus.GracePeriod => "Ek süre",
+        LicenseStatus.PastDue => "Ödeme bekliyor", LicenseStatus.Suspended => "Askıya alındı",
+        LicenseStatus.Expired => "Süresi doldu", LicenseStatus.Cancelled => "İptal edildi", _ => "Lisans bulunamadı"
     };
     string LimitText(string name) => name switch
     {
-        "MaxUsers" => "Kullanıcı limiti",
-        "MaxProducts" => "Ürün limiti",
-        "MaxBranches" => "Şube limiti",
-        _ => name
+        "MaxUsers" => "Kullanıcı", "MaxProducts" => "Ürün", "MaxBranches" => "Şube", _ => name
     };
 }
 
-<form method="post" id="CompanySettingsForm" class="settings-workspace" data-nx-submit-lock>
-    <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+<form method="post" id="CompanySettingsForm" class="mx-auto max-w-7xl space-y-6" data-nx-submit-lock>
+    <header class="flex flex-col gap-4 border-b border-slate-200 pb-6 dark:border-slate-700 lg:flex-row lg:items-end lg:justify-between">
         <div>
-            <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Firma Ayarları</h2>
-            <p class="mt-1 text-sm text-slate-500">Firma, belge ve stok varsayımları.</p>
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">Çalışma alanı</p>
+            <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Ayarlar</h1>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Firma bilgilerinizi, satış varsayımlarınızı ve belge numaralandırma kurallarınızı tek yerden yönetin.</p>
         </div>
-        <button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
-            <span class="material-icons-round text-base">save</span>Kaydet
-        </button>
-    </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="~/TenantBackups" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"><span class="material-icons-round text-base">backup</span>Yedekleme merkezi</a>
+            <button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"><span class="material-icons-round text-base">save</span>Değişiklikleri kaydet</button>
+        </div>
+    </header>
 
     @if (TempData["SettingsSaved"] is string settingsSaved)
     {
-        <div class="mb-5 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><span class="material-icons-round text-base">check_circle</span>@settingsSaved</div>
+        <div role="status" class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200"><span class="material-icons-round text-base">check_circle</span>@settingsSaved</div>
     }
+    <div asp-validation-summary="ModelOnly" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200"></div>
 
-    @if (TempData["TenantDataResetSummary"] is string resetSummary)
-    {
-        <div class="mb-5 flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200"><span class="material-icons-round mt-0.5 text-base">check_circle</span><span>@resetSummary</span></div>
-    }
+    <nav class="flex gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-label="Ayarlar bölümleri">
+        <a href="#company" class="shrink-0 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200">Firma</a>
+        <a href="#commerce" class="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700">Ticari varsayımlar</a>
+        <a href="#numbering" class="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700">Numaralandırma</a>
+        <a href="#license" class="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700">Plan ve erişim</a>
+    </nav>
 
-    @if (TempData["TenantDataResetError"] is string resetError)
-    {
-        <div class="mb-5 flex items-start gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200"><span class="material-icons-round mt-0.5 text-base">error</span><span>@resetError</span></div>
-    }
-
-    <div asp-validation-summary="ModelOnly" class="mb-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
-
-    <section class="mb-6 overflow-hidden rounded-lg border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-slate-50 shadow-sm dark:border-indigo-900/70 dark:from-indigo-950/30 dark:via-slate-900 dark:to-slate-900">
-        <div class="flex flex-col gap-4 border-b border-indigo-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-indigo-900/60 sm:px-6">
-            <div class="flex items-start gap-3"><span class="material-icons-round mt-0.5 text-2xl text-indigo-600 dark:text-indigo-300">workspace_premium</span><div><p class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">Lisansım</p><h3 class="mt-1 text-lg font-bold text-slate-800 dark:text-white">Plan, erişim ve kullanım limitleri</h3><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Lisansınızın çalışma alanına uyguladığı hakları buradan takip edin.</p></div></div>
-            <span class="inline-flex w-fit items-center rounded-full px-3 py-1.5 text-xs font-bold @(license?.CanWrite == true ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300")">@StatusText(license?.Status)</span>
-        </div>
-        <div class="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4 sm:p-6">
-            <div class="rounded-md border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Lisans türü</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(string.IsNullOrWhiteSpace(license?.PlanCode) ? "-" : license.PlanCode)</p></div>
-            <div class="rounded-md border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Yazma erişimi</p><p class="mt-2 text-lg font-bold @(license?.CanWrite == true ? "text-emerald-600" : "text-rose-600")">@(license?.CanWrite == true ? "Açık" : "Kapalı")</p></div>
-            <div class="rounded-md border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Geçerlilik</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(license?.ExpiresAtUtc?.ToLocalTime().ToString("dd.MM.yyyy") ?? "-" )</p></div>
-            <div class="rounded-md border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Ek süre sonu</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(license?.GracePeriodEndsAtUtc?.ToLocalTime().ToString("dd.MM.yyyy") ?? "-" )</p></div>
-        </div>
-        <div class="grid gap-4 border-t border-indigo-100 p-5 lg:grid-cols-2 dark:border-indigo-900/60 sm:p-6">
-            <div><h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">Plan limitleri</h4><div class="mt-3 grid gap-2 sm:grid-cols-3">@if (license?.Limits?.Any() == true) { foreach (var limit in license.Limits.OrderBy(item => item.Key)) { <div class="rounded-md border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800"><span class="block text-xs text-slate-500">@LimitText(limit.Key)</span><strong class="mt-1 block text-sm text-slate-800 dark:text-white">@(limit.Value?.ToString("N0") ?? "Sınırsız")</strong></div> } } else { <p class="text-sm text-slate-500">Tanımlı limit bulunmuyor.</p> }</div></div>
-            <div><h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">Özellik erişimleri</h4><div class="mt-3 flex flex-wrap gap-2">@if (license?.Features?.Any() == true) { foreach (var feature in license.Features.OrderBy(item => item.Key)) { <span class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold @(feature.Value ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400")"><span class="material-icons-round text-sm">@(feature.Value ? "check_circle" : "block")</span>@feature.Key</span> } } else { <p class="text-sm text-slate-500">Bu plan için ayrı özellik tanımı bulunmuyor.</p> }</div></div>
+    <section id="company" class="scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div class="border-b border-slate-100 px-5 py-5 dark:border-slate-700 sm:px-6"><div class="flex gap-3"><span class="material-icons-round text-indigo-600 dark:text-indigo-300">business</span><div><h2 class="font-bold text-slate-900 dark:text-white">Firma bilgileri</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Bu bilgiler yeni belge ve yazdırma görünümünde firma kimliği olarak kullanılır.</p></div></div></div>
+        <div class="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3 sm:p-6">
+            <div class="xl:col-span-2"><label asp-for="Settings.CompanyName" class="field-label">Firma unvanı</label><input asp-for="Settings.CompanyName" class="field-input" autocomplete="organization" /><span asp-validation-for="Settings.CompanyName" class="field-error"></span></div>
+            <div><label asp-for="Settings.TaxNumber" class="field-label">Vergi numarası</label><input asp-for="Settings.TaxNumber" inputmode="numeric" class="field-input" /><span asp-validation-for="Settings.TaxNumber" class="field-error"></span></div>
+            <div><label asp-for="Settings.TaxOffice" class="field-label">Vergi dairesi</label><input asp-for="Settings.TaxOffice" class="field-input" /><span asp-validation-for="Settings.TaxOffice" class="field-error"></span></div>
+            <div><label asp-for="Settings.Phone" class="field-label">Telefon</label><input asp-for="Settings.Phone" class="field-input" autocomplete="tel" /><span asp-validation-for="Settings.Phone" class="field-error"></span></div>
+            <div><label asp-for="Settings.Email" class="field-label">E-posta</label><input asp-for="Settings.Email" type="email" class="field-input" autocomplete="email" /><span asp-validation-for="Settings.Email" class="field-error"></span></div>
+            <div class="md:col-span-2 xl:col-span-3"><label asp-for="Settings.Address" class="field-label">Adres</label><textarea asp-for="Settings.Address" rows="3" class="field-input resize-y"></textarea><span asp-validation-for="Settings.Address" class="field-error"></span></div>
         </div>
     </section>
 
-    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <section class="border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6">
-            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Firma Bilgileri</h3></div>
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <div class="xl:col-span-2"><label asp-for="Settings.CompanyName" class="field-label">Firma unvanı</label><input asp-for="Settings.CompanyName" class="field-input" /><span asp-validation-for="Settings.CompanyName" class="field-error"></span></div>
-                <div><label asp-for="Settings.TaxNumber" class="field-label">Vergi no</label><input asp-for="Settings.TaxNumber" inputmode="numeric" class="field-input" /><span asp-validation-for="Settings.TaxNumber" class="field-error"></span></div>
-                <div><label asp-for="Settings.TaxOffice" class="field-label">Vergi dairesi</label><input asp-for="Settings.TaxOffice" class="field-input" /><span asp-validation-for="Settings.TaxOffice" class="field-error"></span></div>
-                <div><label asp-for="Settings.Phone" class="field-label">Telefon</label><input asp-for="Settings.Phone" class="field-input" /><span asp-validation-for="Settings.Phone" class="field-error"></span></div>
-                <div><label asp-for="Settings.Email" class="field-label">E-posta</label><input asp-for="Settings.Email" type="email" class="field-input" /><span asp-validation-for="Settings.Email" class="field-error"></span></div>
-                <div class="md:col-span-2 xl:col-span-3"><label asp-for="Settings.Address" class="field-label">Adres</label><textarea asp-for="Settings.Address" rows="3" class="field-input resize-y"></textarea><span asp-validation-for="Settings.Address" class="field-error"></span></div>
-            </div>
-        </section>
+    <section id="commerce" class="scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div class="border-b border-slate-100 px-5 py-5 dark:border-slate-700 sm:px-6"><div class="flex gap-3"><span class="material-icons-round text-indigo-600 dark:text-indigo-300">tune</span><div><h2 class="font-bold text-slate-900 dark:text-white">Ticari varsayımlar</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Yeni ürün ve belgelerde başlangıç değerleri olarak kullanılır; geçmiş belgeler değişmez.</p></div></div></div>
+        <div class="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4 sm:p-6">
+            <div><label asp-for="Settings.DefaultCurrency" class="field-label">Varsayılan para birimi</label><select asp-for="Settings.DefaultCurrency" class="field-input"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option></select><p class="mt-1 text-xs text-slate-500">Türk lirası, ABD doları veya Euro.</p><span asp-validation-for="Settings.DefaultCurrency" class="field-error"></span></div>
+            <div><label asp-for="Settings.DefaultVatRate" class="field-label">Varsayılan KDV (%)</label><input asp-for="Settings.DefaultVatRate" type="number" min="0" max="100" step="0.01" class="field-input" /><span asp-validation-for="Settings.DefaultVatRate" class="field-error"></span></div>
+            <div><label asp-for="Settings.DefaultUnit" class="field-label">Varsayılan birim</label><select asp-for="Settings.DefaultUnit" class="field-input"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select><span asp-validation-for="Settings.DefaultUnit" class="field-error"></span></div>
+            <div><label asp-for="Settings.DefaultLabelFormat" class="field-label">Etiket tipi</label><select asp-for="Settings.DefaultLabelFormat" class="field-input"><option value="barcode">Barkod</option><option value="qr">QR</option></select><span asp-validation-for="Settings.DefaultLabelFormat" class="field-error"></span></div>
+            <div><label asp-for="Settings.DefaultCashAccountId" class="field-label">Varsayılan kasa</label><select asp-for="Settings.DefaultCashAccountId" asp-items="Model.CashAccounts" class="field-input"></select></div>
+            <div><label asp-for="Settings.DefaultBankAccountId" class="field-label">Varsayılan banka / kart</label><select asp-for="Settings.DefaultBankAccountId" asp-items="Model.BankAccounts" class="field-input"></select></div>
+            <div><label for="ThemeMode" class="field-label">Görünüm</label><select id="ThemeMode" class="field-input"><option value="light">Açık tema</option><option value="dark">Koyu tema</option></select></div>
+        </div>
+    </section>
 
-        <section class="border-b border-slate-200 p-5 dark:border-slate-700 sm:p-6">
-            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Ticari Varsayımlar</h3></div>
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div><label asp-for="Settings.DefaultCurrency" class="field-label">Varsayılan para birimi</label><select asp-for="Settings.DefaultCurrency" class="field-input"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option></select><span asp-validation-for="Settings.DefaultCurrency" class="field-error"></span></div>
-                <div><label asp-for="Settings.DefaultVatRate" class="field-label">Varsayılan KDV (%)</label><input asp-for="Settings.DefaultVatRate" type="number" min="0" max="100" step="0.01" class="field-input" /><span asp-validation-for="Settings.DefaultVatRate" class="field-error"></span></div>
-                <div><label asp-for="Settings.DefaultUnit" class="field-label">Varsayılan birim</label><select asp-for="Settings.DefaultUnit" class="field-input"><option>Adet</option><option>Kg</option><option>Lt</option><option>Mt</option><option>Koli</option></select><span asp-validation-for="Settings.DefaultUnit" class="field-error"></span></div>
-                <div><label asp-for="Settings.DefaultLabelFormat" class="field-label">Etiket kodu</label><select asp-for="Settings.DefaultLabelFormat" class="field-input"><option value="barcode">Barkod</option><option value="qr">QR</option></select><span asp-validation-for="Settings.DefaultLabelFormat" class="field-error"></span></div>
-                <div><label asp-for="Settings.DefaultCashAccountId" class="field-label">Varsayılan kasa</label><select asp-for="Settings.DefaultCashAccountId" asp-items="Model.CashAccounts" class="field-input"></select></div>
-                <div><label asp-for="Settings.DefaultBankAccountId" class="field-label">Varsayılan banka / kart</label><select asp-for="Settings.DefaultBankAccountId" asp-items="Model.BankAccounts" class="field-input"></select></div>
-                <div><label for="ThemeMode" class="field-label">Görünüm</label><select id="ThemeMode" class="field-input"><option value="light">Açık</option><option value="dark">Koyu</option></select></div>
-            </div>
-        </section>
+    <section id="numbering" class="scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div class="border-b border-slate-100 px-5 py-5 dark:border-slate-700 sm:px-6"><div class="flex gap-3"><span class="material-icons-round text-indigo-600 dark:text-indigo-300">tag</span><div><h2 class="font-bold text-slate-900 dark:text-white">Belge numaralandırma</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Önekleri dilediğiniz gibi değiştirin. Değişiklik yalnız yeni oluşturulan belgeleri etkiler; geçmiş numaralar korunur.</p></div></div></div>
+        <div class="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3 sm:p-6">
+            <div><label asp-for="Settings.SaleInvoiceNumberPrefix" class="field-label">Satış faturası</label><input asp-for="Settings.SaleInvoiceNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.SaleInvoiceNumberPrefix" class="field-error"></span></div>
+            <div><label asp-for="Settings.PurchaseInvoiceNumberPrefix" class="field-label">Alış faturası</label><input asp-for="Settings.PurchaseInvoiceNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PurchaseInvoiceNumberPrefix" class="field-error"></span></div>
+            <div><label asp-for="Settings.PosSaleNumberPrefix" class="field-label">Perakende satış fişi</label><input asp-for="Settings.PosSaleNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PosSaleNumberPrefix" class="field-error"></span></div>
+            <div><label asp-for="Settings.OfferNumberPrefix" class="field-label">Teklif</label><input asp-for="Settings.OfferNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.OfferNumberPrefix" class="field-error"></span></div>
+            <div><label asp-for="Settings.SaleOrderNumberPrefix" class="field-label">Satış siparişi</label><input asp-for="Settings.SaleOrderNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.SaleOrderNumberPrefix" class="field-error"></span></div>
+            <div><label asp-for="Settings.PurchaseOrderNumberPrefix" class="field-label">Alış siparişi</label><input asp-for="Settings.PurchaseOrderNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PurchaseOrderNumberPrefix" class="field-error"></span></div>
+        </div>
+    </section>
 
-        <section class="p-5 sm:p-6">
-            <div class="mb-5"><h3 class="font-semibold text-slate-800 dark:text-white">Belge Numaralandırma</h3></div>
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <div><label asp-for="Settings.SaleInvoiceNumberPrefix" class="field-label">Satış faturası öneki</label><input asp-for="Settings.SaleInvoiceNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.SaleInvoiceNumberPrefix" class="field-error"></span></div>
-                <div><label asp-for="Settings.PurchaseInvoiceNumberPrefix" class="field-label">Alış faturası öneki</label><input asp-for="Settings.PurchaseInvoiceNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PurchaseInvoiceNumberPrefix" class="field-error"></span></div>
-                <div><label asp-for="Settings.OfferNumberPrefix" class="field-label">Teklif öneki</label><input asp-for="Settings.OfferNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.OfferNumberPrefix" class="field-error"></span></div>
-                <div><label asp-for="Settings.SaleOrderNumberPrefix" class="field-label">Satış siparişi öneki</label><input asp-for="Settings.SaleOrderNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.SaleOrderNumberPrefix" class="field-error"></span></div>
-                <div><label asp-for="Settings.PurchaseOrderNumberPrefix" class="field-label">Alış siparişi öneki</label><input asp-for="Settings.PurchaseOrderNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PurchaseOrderNumberPrefix" class="field-error"></span></div>
-                <div><label asp-for="Settings.PosSaleNumberPrefix" class="field-label">POS fişi öneki</label><input asp-for="Settings.PosSaleNumberPrefix" class="field-input uppercase" /><span asp-validation-for="Settings.PosSaleNumberPrefix" class="field-error"></span></div>
-            </div>
-        </section>
-    </div>
+    <section id="license" class="scroll-mt-6 overflow-hidden rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-slate-50 shadow-sm dark:border-indigo-900/70 dark:from-indigo-950/30 dark:via-slate-900 dark:to-slate-900">
+        <div class="flex flex-col gap-4 border-b border-indigo-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-indigo-900/60 sm:px-6"><div class="flex gap-3"><span class="material-icons-round text-indigo-600 dark:text-indigo-300">workspace_premium</span><div><h2 class="font-bold text-slate-900 dark:text-white">Plan ve erişim</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Bu çalışma alanının lisans kapsamı ve kullanım sınırları.</p></div></div><span class="inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-bold @(license?.CanWrite == true ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300")">@StatusText(license?.Status)</span></div>
+        <div class="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4 sm:p-6"><div class="rounded-lg border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Plan</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(string.IsNullOrWhiteSpace(license?.PlanCode) ? "—" : license.PlanCode)</p></div><div class="rounded-lg border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Yazma erişimi</p><p class="mt-2 text-lg font-bold @(license?.CanWrite == true ? "text-emerald-600" : "text-rose-600")">@(license?.CanWrite == true ? "Açık" : "Kapalı")</p></div><div class="rounded-lg border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Geçerlilik</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(license?.ExpiresAtUtc?.ToLocalTime().ToString("dd.MM.yyyy") ?? "—")</p></div><div class="rounded-lg border border-slate-200 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-800/70"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Ek süre sonu</p><p class="mt-2 text-lg font-bold text-slate-800 dark:text-white">@(license?.GracePeriodEndsAtUtc?.ToLocalTime().ToString("dd.MM.yyyy") ?? "—")</p></div></div>
+        <div class="grid gap-4 border-t border-indigo-100 p-5 lg:grid-cols-2 dark:border-indigo-900/60 sm:p-6"><div><h3 class="text-sm font-bold text-slate-700 dark:text-slate-200">Plan limitleri</h3><div class="mt-3 grid gap-2 sm:grid-cols-3">@if (license?.Limits?.Any() == true) { foreach (var limit in license.Limits.OrderBy(item => item.Key)) { <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800"><span class="block text-xs text-slate-500">@LimitText(limit.Key)</span><strong class="mt-1 block text-sm text-slate-800 dark:text-white">@(limit.Value?.ToString("N0") ?? "Sınırsız")</strong></div> } } else { <p class="text-sm text-slate-500">Tanımlı limit bulunmuyor.</p> }</div></div><div><h3 class="text-sm font-bold text-slate-700 dark:text-slate-200">Özellik erişimleri</h3><div class="mt-3 flex flex-wrap gap-2">@if (license?.Features?.Any() == true) { foreach (var feature in license.Features.OrderBy(item => item.Key)) { <span class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold @(feature.Value ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400")"><span class="material-icons-round text-sm">@(feature.Value ? "check_circle" : "block")</span>@feature.Key</span> } } else { <p class="text-sm text-slate-500">Bu plan için ayrı özellik tanımı bulunmuyor.</p> }</div></div></div>
+    </section>
 </form>
-
-@if (Model.CanResetOperationalData)
-{
-    <section class="mt-6 overflow-hidden rounded-lg border border-rose-200 bg-white shadow-sm dark:border-rose-900/60 dark:bg-slate-800">
-        <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-            <div class="flex items-start gap-3">
-                <span class="material-icons-round mt-0.5 text-2xl text-rose-600 dark:text-rose-300">delete_forever</span>
-                <div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-300">Tehlikeli alan</p>
-                    <h3 class="mt-1 font-semibold text-slate-800 dark:text-white">Ticari verileri sıfırla</h3>
-                    <p class="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">Ürünler, markalar, kategoriler, cariler, hesaplar, belgeler, stok ve hareket kayıtları bu çalışma alanından kaldırılır. Firma profili, kullanıcılar ve lisans korunur.</p>
-                </div>
-            </div>
-            <button type="button" class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-950/30" data-bs-toggle="modal" data-bs-target="#TenantDataResetModal"><span class="material-icons-round text-base">delete_sweep</span>Verileri sıfırla</button>
-        </div>
-    </section>
-
-    <div class="modal fade" id="TenantDataResetModal" tabindex="-1" aria-labelledby="TenantDataResetModalTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-rose-200 dark:border-rose-900/70 dark:bg-slate-800">
-                <form id="TenantDataResetForm" method="post" asp-page-handler="ResetData" data-nx-submit-lock>
-                    <div class="modal-header border-rose-100 dark:border-rose-900/60">
-                        <div class="flex items-center gap-2"><span class="material-icons-round text-rose-600 dark:text-rose-300">warning</span><h5 class="modal-title text-slate-800 dark:text-white" id="TenantDataResetModalTitle">Ticari verileri sıfırla</h5></div>
-                        <button type="button" class="btn-close dark:invert" data-bs-dismiss="modal" aria-label="Kapat"></button>
-                    </div>
-                    <div class="modal-body text-slate-700 dark:text-slate-200">
-                        <p class="text-sm leading-6">Bu işlem uygulama içinden geri alınamaz. Faturalar/POS fişleri, ürünler, stok hareketleri, cariler ve kasa/banka hesapları temizlenir.</p>
-                        <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Devam etmek için aşağıya <strong class="text-rose-700 dark:text-rose-300">SIFIRLA</strong> yazın.</p>
-                        <label asp-for="ResetInput.Confirmation" class="field-label mt-4">Onay metni</label>
-                        <input asp-for="ResetInput.Confirmation" id="TenantDataResetConfirmation" class="field-input" autocomplete="off" placeholder="SIFIRLA" />
-                        <label class="mt-4 flex cursor-pointer items-start gap-2 text-sm text-slate-600 dark:text-slate-300"><input id="TenantDataResetAcknowledge" type="checkbox" class="mt-1 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" /><span>Bu tenantın ticari kayıtlarının temizleneceğini anlıyorum.</span></label>
-                    </div>
-                    <div class="modal-footer border-rose-100 dark:border-rose-900/60">
-                        <button type="button" class="inline-flex h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200" data-bs-dismiss="modal">Vazgeç</button>
-                        <button id="TenantDataResetSubmit" type="submit" class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-rose-600 px-3 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-45" disabled><span class="material-icons-round text-base">delete_forever</span>Kalıcı olarak sıfırla</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-}
 
 @section Scripts { <abp-script src="/Pages/Settings/Index.js" /> }

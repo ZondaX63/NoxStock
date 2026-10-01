@@ -42,6 +42,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
       App__RequireProductionEnvironment: "true"
+      DataProtection__KeyRingPath: "/root/.aspnet/DataProtection-Keys"
       ASPNETCORE_URLS: "http://+:80"
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NoxStock;User ID=postgres;Password=${NOXSTOCK_DB_PASSWORD:?NOXSTOCK_DB_PASSWORD is required};"
       App__SelfUrl: "${NOXSTOCK_PUBLIC_URL:?NOXSTOCK_PUBLIC_URL must be an HTTPS URL}"

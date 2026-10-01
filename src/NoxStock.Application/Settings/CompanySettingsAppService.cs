@@ -62,18 +62,20 @@ public class CompanySettingsAppService : ApplicationService, ICompanySettingsApp
     {
         CurrentTenant.RequireTenantId();
         input.DefaultCurrency = NormalizeCurrency(input.DefaultCurrency);
-        input.DefaultUnit = input.DefaultUnit.Trim();
-        input.DefaultLabelFormat = input.DefaultLabelFormat.Trim().ToLowerInvariant();
+        input.DefaultUnit = string.IsNullOrWhiteSpace(input.DefaultUnit) ? "Adet" : input.DefaultUnit.Trim();
+        input.DefaultLabelFormat = string.IsNullOrWhiteSpace(input.DefaultLabelFormat)
+            ? "barcode"
+            : input.DefaultLabelFormat.Trim().ToLowerInvariant();
 
         await ValidateAccountAsync(input.DefaultCashAccountId, AccountType.Cash);
         await ValidateAccountAsync(input.DefaultBankAccountId, AccountType.Bank, AccountType.CreditCard);
 
-        await SetValueAsync(NoxStockSettings.CompanyName, input.CompanyName.Trim());
-        await SetValueAsync(NoxStockSettings.TaxOffice, input.TaxOffice.Trim());
-        await SetValueAsync(NoxStockSettings.TaxNumber, input.TaxNumber.Trim());
-        await SetValueAsync(NoxStockSettings.Address, input.Address.Trim());
-        await SetValueAsync(NoxStockSettings.Phone, input.Phone.Trim());
-        await SetValueAsync(NoxStockSettings.Email, input.Email.Trim());
+        await SetValueAsync(NoxStockSettings.CompanyName, TrimOrEmpty(input.CompanyName));
+        await SetValueAsync(NoxStockSettings.TaxOffice, TrimOrEmpty(input.TaxOffice));
+        await SetValueAsync(NoxStockSettings.TaxNumber, TrimOrEmpty(input.TaxNumber));
+        await SetValueAsync(NoxStockSettings.Address, TrimOrEmpty(input.Address));
+        await SetValueAsync(NoxStockSettings.Phone, TrimOrEmpty(input.Phone));
+        await SetValueAsync(NoxStockSettings.Email, TrimOrEmpty(input.Email));
         await SetValueAsync(NoxStockSettings.DefaultCurrency, input.DefaultCurrency);
         await SetValueAsync(NoxStockSettings.DefaultVatRate, input.DefaultVatRate.ToString(CultureInfo.InvariantCulture));
         await SetValueAsync(NoxStockSettings.DefaultUnit, input.DefaultUnit);
@@ -135,7 +137,22 @@ public class CompanySettingsAppService : ApplicationService, ICompanySettingsApp
 
     private static string NormalizeCurrency(string currency)
     {
-        var value = currency.Trim().ToUpperInvariant();
+        var value = (currency ?? string.Empty).Trim().ToUpperInvariant();
+        // The UI sends ISO codes. Accept a legacy display label defensively so
+        // a cached client cannot persist a label instead of a currency code.
+        if (value.StartsWith("TRY ", StringComparison.Ordinal) || value.StartsWith("TRY—", StringComparison.Ordinal))
+        {
+            value = "TRY";
+        }
+        else if (value.StartsWith("USD ", StringComparison.Ordinal) || value.StartsWith("USD—", StringComparison.Ordinal))
+        {
+            value = "USD";
+        }
+        else if (value.StartsWith("EUR ", StringComparison.Ordinal) || value.StartsWith("EUR—", StringComparison.Ordinal))
+        {
+            value = "EUR";
+        }
+
         if (value is not ("TRY" or "USD" or "EUR"))
         {
             throw new BusinessException("NoxStock:UnsupportedCurrency");
@@ -146,6 +163,8 @@ public class CompanySettingsAppService : ApplicationService, ICompanySettingsApp
 
     private static string NormalizePrefix(string prefix)
     {
-        return prefix.Trim().ToUpperInvariant();
+        return TrimOrEmpty(prefix).ToUpperInvariant();
     }
+
+    private static string TrimOrEmpty(string? value) => value?.Trim() ?? string.Empty;
 }

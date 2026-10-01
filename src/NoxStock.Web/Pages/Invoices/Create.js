@@ -730,6 +730,19 @@ $(function () {
         }, 180);
     });
 
+    // The operator can replace the suggested code in the product card. Keep
+    // the value that was actually submitted so the newly created card can be
+    // selected on the invoice line after the modal closes.
+    $(document).on('submit', '#ProductCreateDialogForm', function () {
+        if (!quickProductRow || !quickProductRow.length) {
+            return;
+        }
+        var submittedSku = String($(this).find('#Product_Sku').val() || '').trim();
+        if (submittedSku) {
+            quickProductSku = submittedSku;
+        }
+    });
+
     productCreateModal.onResult(function () {
         var $targetRow = quickProductRow;
         var sku = quickProductSku;
@@ -739,8 +752,13 @@ $(function () {
             return;
         }
 
+        // A lookup performed before the card was saved can have cached an
+        // empty result for this SKU. Invalidate it before resolving the card.
+        // Otherwise the new product can be found by name but not by its code.
+        lookupCache.clear();
+
         // The Razor modal returns no DTO by design. Resolve the just-created
-        // card by its generated SKU, then select it on the originating row.
+        // card by its submitted SKU, then select it on the originating row.
         fetchLookup(productLookupUrl, sku).then(function (result) {
             var product = (result.items || []).find(function (item) {
                 return normalizeSearchText(item.sku) === normalizeSearchText(sku);

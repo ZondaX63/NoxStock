@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.DataProtection;
 using System.IO;
 using NoxStock.TenantBackups;
 using Volo.Abp.BackgroundWorkers;
+using Volo.Abp.BackgroundJobs;
 
 namespace NoxStock;
 
@@ -48,6 +49,13 @@ public class NoxStockApplicationModule : AbpModule
         context.Services.AddTransient<ITenantBackupContributor, InventoryBackupContributor>();
         context.Services.AddTransient<ITenantBackupContributor, FinanceBackupContributor>();
         context.Services.AddTransient<ITenantBackupContributor, CommandsBackupContributor>();
+        context.Services.AddTransient<TenantBackupJob>();
+        context.Services.AddTransient<TenantCloneJob>();
+        Configure<AbpBackgroundJobOptions>(options =>
+        {
+            options.AddJob<TenantBackupJob>();
+            options.AddJob<TenantCloneJob>();
+        });
         context.Services.OnRegistered(registrationContext =>
         {
             if (typeof(IApplicationService).IsAssignableFrom(registrationContext.ImplementationType))

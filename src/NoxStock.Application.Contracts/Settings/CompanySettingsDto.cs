@@ -25,7 +25,6 @@ public class CompanySettingsDto
     public string Email { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(3, MinimumLength = 3)]
     public string DefaultCurrency { get; set; } = "TRY";
 
     [Range(typeof(decimal), "0", "100")]

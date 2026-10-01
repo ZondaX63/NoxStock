@@ -2,66 +2,80 @@
 @model NoxStock.Web.Pages.TenantBackups.IndexModel
 @{
     Layout = "_AppLayout";
-    ViewData["Title"] = "Tenant Yedekleri";
+    ViewData["Title"] = Model.IsHost ? "Tenant Clone" : "Yedekleme Merkezi";
 }
 
-<div class="container py-4">
-    @if (Model.IsHost)
+<div class="mx-auto max-w-7xl space-y-6">
+@if (Model.IsHost)
+{
+    <header class="border-b border-slate-200 pb-6 dark:border-slate-700">
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">Platform işlemleri</p>
+        <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Yeni test tenantı oluştur</h1>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500 dark:text-slate-400">Başarılı bir yedeği yeni kimliklerle, boş bir test tenantına klonlayın. Bu işlem hiçbir mevcut tenantın verisini değiştirmez.</p>
+    </header>
+
+    @if (!ViewData.ModelState.IsValid) { <div asp-validation-summary="All" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200"></div> }
+    @if (Model.CloneOperation is not null)
     {
-        <div class="mb-4">
-            <h1 class="h3">Yeni Tenant Clone</h1>
-            <p class="text-muted">Süresi geçmemiş bir yedekten yeni kimliklerle boş bir test tenantı oluşturun.</p>
-            <div class="alert alert-warning mb-0">Bu işlem yeni test tenantı oluşturur; mevcut tenantın üzerine yazmaz.</div>
-        </div>
-        @if (!ViewData.ModelState.IsValid)
-        {
-            <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
-        }
-        @if (Model.CloneOperation is not null)
-        {
-            <div class="alert alert-info" id="cloneOperation" data-operation-id="@Model.CloneOperation.Id">
-                <strong>Clone işlemi kaydedildi.</strong>
-                <span id="cloneOperationStatus">Durum: @Model.CloneOperation.Status; işlenen kayıt: @Model.CloneOperation.ProcessedRecordCount.</span>
-                <span id="cloneOperationFailure" class="text-danger">@Model.CloneOperation.FailureCode</span>
-            </div>
-        }
-        @if (Model.Preview is not null)
-        {
-            <div class="card mb-3"><div class="card-body">
-                <h2 class="h6">Uyumluluk: @(Model.Preview.IsCompatible ? "Uygun" : "Uygun değil")</h2>
-                <div>Kaynak: @Model.Preview.SourceTenantName (<code>@Model.Preview.SourceTenantId</code>)</div>
-                <div>Hedef: @Model.Preview.TargetTenantName (<code>@Model.Preview.TargetTenantCode</code>)</div>
-                <ul class="mb-0 mt-2">
-                    @foreach (var module in Model.Preview.ModuleRecordCounts) { <li>@module.Key: @module.Value kayıt</li> }
-                    @foreach (var warning in Model.Preview.Warnings) { <li class="text-warning">@warning</li> }
-                </ul>
-            </div></div>
-        }
-        <form method="post" id="cloneForm" class="card">
-            <div class="card-body row g-3">
-                <input asp-for="OperationKey" type="hidden" />
-                <div class="col-12"><label class="form-label">Kaynak tenant yedeği</label><select asp-for="SourceBackupId" class="form-select"><option value="">Yedek seçin</option>@foreach (var backup in Model.CloneSources) { <option value="@backup.Id">@backup.TenantId — @backup.RequestedAtUtc.ToLocalTime():g (@((backup.FileSize ?? 0) / 1024) KB)</option> }</select><div class="form-text">Yalnız başarılı ve süresi geçmemiş yedekler gösterilir. Paket boyutu üst sınırı 512 MB’tır.</div></div>
-                <div class="col-md-6"><label class="form-label">Paket parolası</label><input asp-for="RestorePassword" type="password" autocomplete="off" class="form-control" /></div>
-                <div class="col-md-6"><label class="form-label">Tenant kodu</label><input asp-for="TargetTenantCode" class="form-control" placeholder="demo-clone" /></div>
-                <div class="col-md-6"><label class="form-label">İşletme adı</label><input asp-for="TargetTenantName" class="form-control" /></div>
-                <div class="col-md-6"><label class="form-label">Yeni yönetici e-postası</label><input asp-for="AdminEmailAddress" type="email" class="form-control" /></div>
-                <div class="col-md-6"><label class="form-label">Yeni yönetici parolası</label><input asp-for="AdminPassword" type="password" autocomplete="new-password" class="form-control" /></div>
-                <div class="col-12 d-flex gap-2"><button asp-page-handler="Clone" class="btn btn-primary">Yeni tenant oluştur</button><span id="cloneStatus" class="text-muted align-self-center"></span></div>
-            </div>
-        </form>
+        <section id="cloneOperation" data-operation-id="@Model.CloneOperation.Id" class="rounded-xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-900/70 dark:bg-indigo-950/25">
+            <div class="flex items-start gap-3"><span class="material-icons-round text-indigo-600 dark:text-indigo-300">sync</span><div><p class="font-semibold text-slate-900 dark:text-white">Clone işlemi kaydedildi</p><p id="cloneOperationStatus" class="mt-1 text-sm text-slate-600 dark:text-slate-300">Durum: @Model.CloneOperation.Status; işlenen kayıt: @Model.CloneOperation.ProcessedRecordCount.</p><p id="cloneOperationFailure" class="mt-1 text-sm text-rose-700 dark:text-rose-300">@Model.CloneOperation.FailureCode</p></div></div>
+        </section>
     }
-    else
+    @if (Model.Preview is not null)
     {
-        <div class="d-flex justify-content-between align-items-start mb-4">
-            <div><h1 class="h3">Tenant Yedekleri</h1><p class="text-muted mb-0">Ticari verilerinizi şifreli .noxbackup paketi olarak hazırlayın.</p></div>
-            <button class="btn btn-primary" id="createBackup">Yeni yedek oluştur</button>
-        </div>
-        <div class="alert alert-info">Paket parolası sunucuda saklanmaz. Parolayı güvenli ve ayrı bir yerde saklayın.</div>
-        <div class="card"><div class="table-responsive"><table class="table align-middle mb-0">
-            <thead><tr><th>Talep zamanı</th><th>Durum</th><th>Boyut</th><th>Son kullanım</th><th></th></tr></thead>
-            <tbody id="backupRows"><tr><td colspan="5" class="text-muted">Yükleniyor…</td></tr></tbody>
-        </table></div></div>
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h2 class="font-bold text-slate-900 dark:text-white">Paket özeti</h2>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2"><div class="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-900/50"><span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Kaynak</span><span class="mt-1 block text-slate-800 dark:text-slate-100">@Model.Preview.SourceTenantName</span></div><div class="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-900/50"><span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Hedef</span><span class="mt-1 block text-slate-800 dark:text-slate-100">@Model.Preview.TargetTenantName</span></div></div>
+            <div class="mt-3 flex flex-wrap gap-2">@foreach (var module in Model.Preview.ModuleRecordCounts) { <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200">@module.Key: @module.Value</span> } @foreach (var warning in Model.Preview.Warnings) { <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">@warning</span> }</div>
+        </section>
     }
+    <form method="post" id="cloneForm" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div class="border-b border-slate-100 px-5 py-5 dark:border-slate-700 sm:px-6"><h2 class="font-bold text-slate-900 dark:text-white">Clone bilgileri</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Paket parolası saklanmaz. Clone sadece yeni tenant için çalışır.</p></div>
+        <div class="grid gap-4 p-5 md:grid-cols-2 sm:p-6"><input asp-for="OperationKey" type="hidden" />
+            <div class="md:col-span-2"><label class="field-label">Kaynak tenant yedeği</label><select asp-for="SourceBackupId" class="field-input"><option value="">Yedek seçin</option>@foreach (var backup in Model.CloneSources) { <option value="@backup.Id">@backup.TenantId — @backup.RequestedAtUtc.ToLocalTime():g (@((backup.FileSize ?? 0) / 1024) KB)</option> }</select><p class="mt-1 text-xs text-slate-500">Yalnız başarılı, süresi geçmemiş paketler gösterilir. En fazla 512 MB.</p></div>
+            <div><label asp-for="RestorePassword" class="field-label">Paket parolası</label><input asp-for="RestorePassword" type="password" autocomplete="off" class="field-input" /><span asp-validation-for="RestorePassword" class="field-error"></span></div>
+            <div><label asp-for="TargetTenantCode" class="field-label">Yeni tenant kodu</label><input asp-for="TargetTenantCode" class="field-input" placeholder="demo-clone" /><span asp-validation-for="TargetTenantCode" class="field-error"></span></div>
+            <div><label asp-for="TargetTenantName" class="field-label">İşletme adı</label><input asp-for="TargetTenantName" class="field-input" /><span asp-validation-for="TargetTenantName" class="field-error"></span></div>
+            <div><label asp-for="AdminEmailAddress" class="field-label">Yeni yönetici e-postası</label><input asp-for="AdminEmailAddress" type="email" class="field-input" /><span asp-validation-for="AdminEmailAddress" class="field-error"></span></div>
+            <div><label asp-for="AdminPassword" class="field-label">Yeni yönetici parolası</label><input asp-for="AdminPassword" type="password" autocomplete="new-password" class="field-input" /><span asp-validation-for="AdminPassword" class="field-error"></span></div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 border-t border-slate-100 px-5 py-4 dark:border-slate-700 sm:px-6"><button asp-page-handler="Clone" class="inline-flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700"><span class="material-icons-round text-base">content_copy</span>Yeni tenant oluştur</button><span id="cloneStatus" class="text-sm text-slate-500"></span></div>
+    </form>
+}
+else
+{
+    <header class="flex flex-col gap-4 border-b border-slate-200 pb-6 dark:border-slate-700 lg:flex-row lg:items-end lg:justify-between">
+        <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">Veri güvenliği</p><h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Yedekleme merkezi</h1><p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Ticari verilerinizi şifreli bir <strong>.noxbackup</strong> paketi olarak hazırlayın ve güvenli bir yerde saklayın.</p></div>
+        <button class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700" id="createBackup"><span class="material-icons-round text-base">add</span>Yeni yedek oluştur</button>
+    </header>
+
+    @if (TempData["TenantDataResetSummary"] is string resetSummary) { <div class="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200"><span class="material-icons-round text-base">check_circle</span><span>@resetSummary</span></div> }
+    @if (TempData["TenantDataResetError"] is string resetError) { <div class="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200"><span class="material-icons-round text-base">error</span><span>@resetError</span></div> }
+
+    <section class="grid gap-4 lg:grid-cols-3">
+        <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-900/70 dark:bg-indigo-950/25 lg:col-span-2"><div class="flex gap-3"><span class="material-icons-round text-indigo-600 dark:text-indigo-300">lock</span><div><h2 class="font-bold text-slate-900 dark:text-white">Parola yalnız sizde kalır</h2><p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">Paket parolası sunucuda tutulmaz. Parolayı paketle birlikte değil, ayrı ve güvenilir bir yerde saklayın.</p></div></div></div>
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"><span class="material-icons-round text-slate-500">schedule</span><h2 class="mt-2 font-bold text-slate-900 dark:text-white">Saklama süresi</h2><p class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">Paketlerin son kullanım tarihini listeden takip edin ve süresi dolmadan indirin.</p></div>
+    </section>
+
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div class="flex flex-col gap-2 border-b border-slate-100 px-5 py-5 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><h2 class="font-bold text-slate-900 dark:text-white">Yedekleriniz</h2><p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Hazırlanmakta olan yedeklerin durumu otomatik güncellenir.</p></div><span id="backupRefreshState" class="text-xs font-medium text-slate-400">Güncelleniyor…</span></div>
+        <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100 text-sm dark:divide-slate-700"><thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-900/40"><tr><th class="px-5 py-3">Talep zamanı</th><th class="px-5 py-3">Durum</th><th class="px-5 py-3">Boyut</th><th class="px-5 py-3">Son kullanım</th><th class="px-5 py-3 text-right">İşlemler</th></tr></thead><tbody id="backupRows" class="divide-y divide-slate-100 dark:divide-slate-700"><tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">Yedekler yükleniyor…</td></tr></tbody></table></div>
+    </section>
+
+    @if (Model.CanResetOperationalData)
+    {
+        <section class="overflow-hidden rounded-xl border border-rose-200 bg-white shadow-sm dark:border-rose-900/60 dark:bg-slate-800">
+            <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div class="flex gap-3"><span class="material-icons-round text-rose-600 dark:text-rose-300">warning</span><div><p class="text-xs font-bold uppercase tracking-[0.16em] text-rose-600 dark:text-rose-300">Tehlikeli alan</p><h2 class="mt-1 font-bold text-slate-900 dark:text-white">Ticari verileri sıfırla</h2><p class="mt-1 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Ürün, stok, cari, hesap ve belge kayıtları temizlenir. Firma ayarları ve kullanıcılar korunur.</p></div></div><button type="button" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-rose-300 px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300" data-bs-toggle="modal" data-bs-target="#TenantDataResetModal"><span class="material-icons-round text-base">delete_sweep</span>Verileri sıfırla</button></div>
+        </section>
+    }
+
+    <div class="modal fade" id="CreateBackupModal" tabindex="-1" aria-labelledby="CreateBackupModalTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content dark:border-slate-700 dark:bg-slate-800"><div class="modal-header"><h2 class="modal-title text-base font-bold text-slate-900 dark:text-white" id="CreateBackupModalTitle">Yeni şifreli yedek</h2><button type="button" class="btn-close dark:invert" data-bs-dismiss="modal" aria-label="Kapat"></button></div><div class="modal-body"><p class="text-sm leading-6 text-slate-500 dark:text-slate-400">En az 12 karakterlik güçlü bir parola belirleyin. Bu parola kaybedilirse paket geri açılamaz.</p><label for="BackupPassword" class="field-label mt-4">Paket parolası</label><input id="BackupPassword" type="password" class="field-input" autocomplete="new-password" minlength="12" /><p id="backupPasswordError" class="mt-2 hidden text-sm text-rose-600"></p></div><div class="modal-footer"><button type="button" class="btn btn-light dark:bg-slate-700 dark:text-slate-100" data-bs-dismiss="modal">Vazgeç</button><button id="confirmCreateBackup" type="button" class="btn btn-primary">Yedeği sıraya al</button></div></div></div></div>
+
+    @if (Model.CanResetOperationalData)
+    {
+        <div class="modal fade" id="TenantDataResetModal" tabindex="-1" aria-labelledby="TenantDataResetModalTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-rose-200 dark:border-rose-900/70 dark:bg-slate-800"><form id="TenantDataResetForm" method="post" asp-page-handler="ResetData" data-nx-submit-lock><div class="modal-header"><h2 class="modal-title text-base font-bold text-slate-900 dark:text-white" id="TenantDataResetModalTitle">Ticari verileri sıfırla</h2><button type="button" class="btn-close dark:invert" data-bs-dismiss="modal" aria-label="Kapat"></button></div><div class="modal-body"><p class="text-sm leading-6 text-slate-600 dark:text-slate-300">Bu işlem uygulama içinden geri alınamaz. Önce güncel bir yedek indirdiğinizden emin olun.</p><label asp-for="ResetInput.Confirmation" class="field-label mt-4">Devam etmek için SIFIRLA yazın</label><input asp-for="ResetInput.Confirmation" id="TenantDataResetConfirmation" class="field-input" autocomplete="off" placeholder="SIFIRLA" /><label class="mt-4 flex cursor-pointer items-start gap-2 text-sm text-slate-600 dark:text-slate-300"><input id="TenantDataResetAcknowledge" type="checkbox" class="mt-1 h-4 w-4 rounded border-slate-300 text-rose-600" /><span>Bu tenantın ticari verilerinin kalıcı olarak temizleneceğini anlıyorum.</span></label></div><div class="modal-footer"><button type="button" class="btn btn-light dark:bg-slate-700 dark:text-slate-100" data-bs-dismiss="modal">Vazgeç</button><button id="TenantDataResetSubmit" type="submit" class="btn btn-danger" disabled>Kalıcı olarak sıfırla</button></div></form></div></div></div>
+    }
+}
 </div>
 
 @section Scripts { <abp-script src="/Pages/TenantBackups/Index.js" /> }
